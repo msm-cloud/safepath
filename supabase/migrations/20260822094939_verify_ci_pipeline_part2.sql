@@ -1,0 +1,3 @@
+-- Second smoke-test migration: creates a real diff on the
+-- test/verify-ci-pipeline branch to exercise validate-migrations.yml
+-- and deploy-migrations.yml end-to-end. Zero effect on the schema.
