@@ -2,6 +2,10 @@ packages:
   - 'mobile'
   - 'dashboard'
   - 'packages/*'
+# Expo's Metro bundler doesn't resolve pnpm's default isolated symlink
+# layout correctly (https://docs.expo.dev/guides/monorepos/) — hoisted
+# flattens node_modules like npm/yarn classic, which Metro expects.
+nodeLinker: hoisted
 allowBuilds:
   unrs-resolver: true
 minimumReleaseAgeExclude:
