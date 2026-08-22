@@ -320,5 +320,53 @@ await asUser(userG, async () => {
   );
 });
 
+console.log('\n--- alerts_notify_guardians_on_insert trigger (SOS notification backend) ---');
+// What this DOES prove locally: the trigger + function exist, are wired to
+// the right table/event, and firing them on a real INSERT never blocks or
+// errors the alert row from being created — even though pg_net and Vault
+// are both unavailable in this pglite environment. That's not an accident:
+// the migration's extension-creation is wrapped in a DO block with an
+// exception handler, and the trigger function itself wraps its Vault
+// lookup + net.http_post call in its own exception handler (see
+// supabase/migrations/20260822153852_alert_guardian_notification_trigger.sql)
+// specifically so a missing pg_net/vault schema — or any other notification
+// plumbing failure — degrades to a warning instead of ever blocking an SOS
+// alert from being recorded.
+//
+// What this does NOT and CANNOT prove locally: that net.http_post actually
+// reaches the deployed send-alert-email Edge Function, that the
+// Authorization header built from the Vault secret is correct, or that the
+// Edge Function successfully emails guardians. pglite doesn't bundle
+// pg_net (it needs real background workers + real networking, which a
+// single-process WASM Postgres can't provide) or Supabase Vault (a
+// Supabase-platform feature, not a core/contrib Postgres extension).
+// Verifying that end-to-end needs a real Supabase project with this
+// migration applied, the `edge_function_auth` Vault secret actually set,
+// the Function deployed, and a real alert row inserted.
+
+const triggerCatalog = await db.query(`
+  select
+    (select count(*) from pg_proc where proname = 'notify_guardians_on_alert') as fn_count,
+    (select count(*) from pg_trigger where tgname = 'alerts_notify_guardians_on_insert' and not tgisinternal) as trigger_count
+`);
+check(
+  'notify_guardians_on_alert() function and its trigger both exist',
+  Number(triggerCatalog.rows[0].fn_count) === 1 &&
+    Number(triggerCatalog.rows[0].trigger_count) === 1
+);
+
+await asUser(userA, async () => {
+  // This INSERT fires alerts_notify_guardians_on_insert for real. If the
+  // trigger's exception handling around the missing pg_net/vault schemas
+  // were broken, this insert would throw instead of returning a row.
+  const ins = await db.query(
+    `insert into public.alerts (user_id, last_lat, last_lng) values ('${userA}', 23.7, 90.5) returning id`
+  );
+  check(
+    'inserting an alert with the notification trigger attached does not error',
+    ins.rows.length === 1 && !!ins.rows[0].id
+  );
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;
