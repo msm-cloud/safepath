@@ -46,7 +46,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="contacts"
         options={{
-          title: 'Contacts',
+          // Emergency contacts land in this tab too, in a later step —
+          // title stays scoped to what's actually here for now.
+          title: 'Guardians',
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'person.2.fill', android: 'people', web: 'people' }}

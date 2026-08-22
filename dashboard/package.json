@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@safepath/shared-types": "workspace:*",
-    "@supabase/ssr": "^0.5.2",
+    "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.45.4",
     "next": "16.3.2",
     "react": "19.2.8",

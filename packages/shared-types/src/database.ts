@@ -247,6 +247,10 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: unknown;
       };
+      redeem_guardian_invite: {
+        Args: { p_invite_code: string };
+        Returns: Json;
+      };
     };
     Enums: {
       profile_role: 'user' | 'guardian';
