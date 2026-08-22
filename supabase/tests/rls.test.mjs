@@ -249,7 +249,7 @@ await asUser(userG, async () => {
   );
 });
 
-console.log('\n--- profiles visibility after acceptance (unchanged by this patch) ---');
+console.log('\n--- profiles visibility after acceptance ---');
 await asUser(userG, async () => {
   const profileOfA = await db.query(`select id from public.profiles where id = '${userA}'`);
   check('accepted guardian G can select A profile', profileOfA.rows.length === 1);
@@ -258,6 +258,28 @@ await asUser(userG, async () => {
 await asUser(userX, async () => {
   const profileOfA = await db.query(`select id from public.profiles where id = '${userA}'`);
   check('unrelated X still cannot select A profile', profileOfA.rows.length === 0);
+});
+
+// profiles_select_by_own_guardian (added alongside the auth/guardian-invite
+// feature): the reverse direction of the check above — the at-risk user
+// needs to see their own accepted guardian's profile (for full_name) too.
+await asUser(userA, async () => {
+  const profileOfG = await db.query(`select id from public.profiles where id = '${userG}'`);
+  check('A can select their own accepted guardian G profile', profileOfG.rows.length === 1);
+
+  const profileOfG2 = await db.query(`select id from public.profiles where id = '${userG2}'`);
+  check(
+    'A cannot select G2 profile — G2 only attempted redemption, never accepted',
+    profileOfG2.rows.length === 0
+  );
+});
+
+await asUser(userX, async () => {
+  const profileOfG = await db.query(`select id from public.profiles where id = '${userG}'`);
+  check(
+    "unrelated X cannot select G's profile via this policy either",
+    profileOfG.rows.length === 0
+  );
 });
 
 console.log(
