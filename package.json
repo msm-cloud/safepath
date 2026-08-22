@@ -1,0 +1,22 @@
+{
+  "name": "safepath",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SafePath monorepo — safety alert app connecting at-risk users with their guardians.",
+  "scripts": {
+    "lint": "pnpm -r --if-present run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "gen:types": "node scripts/gen-types.mjs",
+    "test:rls": "node supabase/tests/rls.test.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.5",
+    "eslint": "^9",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.3",
+    "supabase": "^2.115.0"
+  },
+  "packageManager": "pnpm@11.22.0"
+}

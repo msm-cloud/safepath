@@ -1,0 +1,53 @@
+name: Validate Supabase migrations
+
+# Safety check before merge, not a deploy: confirms migrations added/changed
+# in this PR apply cleanly to the linked project without actually applying
+# them, so a broken migration is caught in review instead of on merge to
+# main (see deploy-migrations.yml).
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+
+permissions:
+  contents: read
+
+# A new commit on the same PR makes the previous validation run moot —
+# cancel it instead of burning CI time on a stale diff.
+concurrency:
+  group: validate-migrations-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Dry-run migrations against linked project
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      # --dry-run prints what would be applied without touching the database
+      # — this is the whole point of this workflow, as opposed to
+      # deploy-migrations.yml's real `supabase db push`.
+      - name: Dry-run pending migrations
+        run: supabase db push --dry-run
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Fail clearly if migrations don't apply cleanly
+        if: failure()
+        run: |
+          echo "::error title=Migration validation failed::'supabase db push --dry-run' failed — the migrations in this PR do not apply cleanly to the linked project. Nothing was applied to any database. Fix the migration files and push a new commit to re-validate."
+          exit 1

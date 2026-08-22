@@ -1,0 +1,56 @@
+name: Deploy Supabase migrations
+
+# Deploys supabase/migrations/ to the live (production) Supabase project.
+# Runs only when a migration file actually changes on main, so this never
+# fires for app/UI-only commits.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/**'
+
+permissions:
+  contents: read
+
+# `supabase db push` is not designed to run twice concurrently against the
+# same project — serialize deploys instead of letting two rapid merges to
+# main race each other.
+concurrency:
+  group: deploy-migrations
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Push migrations to production
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Push migrations to production
+        run: supabase db push
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      # `supabase db push` failing already fails this step (and therefore the
+      # job/workflow) on its own — this step just makes that failure loud and
+      # unambiguous in the checks UI, instead of relying on someone to open
+      # the CLI log to notice.
+      - name: Fail clearly on a broken migration
+        if: failure()
+        run: |
+          echo "::error title=Migration deploy failed::'supabase db push' failed against the production project — a migration under supabase/migrations/ did not apply cleanly. Nothing further will run. Check the 'Push migrations to production' step above, fix the migration in a new PR, and merge again. A partially-applied migration may need manual review on the live database before retrying."
+          exit 1

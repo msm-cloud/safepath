@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Env files (each app has its own .env.example that IS committed)
+.env
+.env.local
+.env*.local
+
+# Build output
+dist/
+build/
+out/
+.next/
+.expo/
+.expo-shared/
+.turbo/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+*.pem
+
+# TypeScript
+*.tsbuildinfo
+
+# Native (Expo)
+/mobile/ios
+/mobile/android
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/

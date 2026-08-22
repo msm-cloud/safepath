@@ -1,0 +1,3 @@
+-- Smoke test migration: verifies deploy-migrations.yml and
+-- validate-migrations.yml actually run end-to-end. Intentionally has
+-- zero effect on the schema. Safe to remain in migration history.
