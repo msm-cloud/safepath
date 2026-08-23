@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/server';
 
+import ActiveAlerts from './active-alerts';
 import RedeemInviteForm from './redeem-invite-form';
 
 type LinkedUserRow = {
@@ -37,6 +38,11 @@ export default async function DashboardPage() {
         <p className="mt-1 text-sm text-zinc-500">People you&apos;re linked to as a guardian.</p>
       </section>
 
+      {/* Own client-side data lifecycle (initial fetch + Realtime
+          subscription) — see active-alerts.tsx. Renders nothing when
+          there's no active alert for any linked user. */}
+      <ActiveAlerts />
+
       <section>
         <RedeemInviteForm />
       </section>
@@ -59,8 +65,10 @@ export default async function DashboardPage() {
                 className="rounded-md border border-zinc-200 px-4 py-3 text-sm font-medium"
               >
                 {link.user?.full_name || 'Unnamed user'}
-                {/* Alerts/location for this user will be added here in a
-                    later step (SOS + journey tracking). Not built yet. */}
+                {/* An active alert for this user surfaces as its own card
+                    at the top of the page — see <ActiveAlerts /> above.
+                    Full journey/location history beyond "last known
+                    location" is still a later step. */}
               </li>
             ))}
           </ul>

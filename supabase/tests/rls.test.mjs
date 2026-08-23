@@ -368,5 +368,32 @@ await asUser(userA, async () => {
   );
 });
 
+console.log('\n--- enable_realtime_on_alerts migration (Realtime publication) ---');
+// What this proves locally: the migration applies without erroring even
+// though pglite has no logical replication support at all — confirmed
+// below by checking that no `supabase_realtime` publication exists here,
+// which means the ALTER PUBLICATION statement itself could not have
+// succeeded. The migration completing anyway is direct evidence its DO
+// block's exception handler is what actually ran, degrading to a notice
+// exactly like the pg_net setup above — not a false pass from the happy
+// path silently no-op'ing.
+//
+// What this does NOT and CANNOT prove locally: that Realtime actually
+// delivers postgres_changes events to a subscribed client, or that
+// delivery is correctly scoped by RLS. A database-only test can't exercise
+// that at all — it needs a real Supabase project's Realtime service and an
+// actual subscribed client. The RLS policy this relies on
+// (alerts_select_own_or_accepted_guardian) is already thoroughly covered
+// above via direct SELECT, and Realtime is documented to reuse those same
+// policies — strong indirect evidence, but not a substitute for a live
+// end-to-end check.
+const publicationExists = await db.query(`
+  select count(*) as n from pg_publication where pubname = 'supabase_realtime'
+`);
+check(
+  'confirms the graceful-degradation path ran: no supabase_realtime publication exists in pglite, yet the migration completed without error',
+  Number(publicationExists.rows[0].n) === 0
+);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;
