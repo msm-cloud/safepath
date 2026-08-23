@@ -320,6 +320,33 @@ await asUser(userG, async () => {
   );
 });
 
+console.log('\n--- alerts: resolved alerts remain visible (dashboard Past Alerts feature) ---');
+// alerts_select_own_or_accepted_guardian's USING clause has no `status`
+// filter at all — it was never scoped to 'active' only. Confirming that
+// directly here (rather than just reading the migration) is what lets the
+// dashboard's Past Alerts section query resolved alerts without any new
+// migration.
+await asUser(userA, async () => {
+  const seen = await db.query(
+    `select id, status from public.alerts where id = '${alertId}' and status = 'resolved'`
+  );
+  check('owner A can still select their own resolved alert', seen.rows.length === 1);
+});
+
+await asUser(userG, async () => {
+  const seen = await db.query(
+    `select id, status from public.alerts where id = '${alertId}' and status = 'resolved'`
+  );
+  check('accepted guardian G can still select the resolved alert', seen.rows.length === 1);
+});
+
+await asUser(userX, async () => {
+  const seen = await db.query(
+    `select id from public.alerts where id = '${alertId}' and status = 'resolved'`
+  );
+  check('unrelated X still cannot select the resolved alert', seen.rows.length === 0);
+});
+
 console.log('\n--- alerts_notify_guardians_on_insert trigger (SOS notification backend) ---');
 // What this DOES prove locally: the trigger + function exist, are wired to
 // the right table/event, and firing them on a real INSERT never blocks or
