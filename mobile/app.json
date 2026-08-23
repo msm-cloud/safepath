@@ -33,6 +33,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "SafePath uses your location to include it in SOS alerts, so your guardians can see where you are."
+        }
       ]
     ],
     "experiments": {
