@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
 import ActiveAlerts from './active-alerts';
+import PastAlerts from './past-alerts';
 import RedeemInviteForm from './redeem-invite-form';
 
 type LinkedUserRow = {
@@ -42,6 +43,9 @@ export default async function DashboardPage() {
           subscription) — see active-alerts.tsx. Renders nothing when
           there's no active alert for any linked user. */}
       <ActiveAlerts />
+
+      {/* Plain server-side fetch, not Realtime — see past-alerts.tsx. */}
+      <PastAlerts />
 
       <section>
         <RedeemInviteForm />
