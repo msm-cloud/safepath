@@ -1,5 +1,6 @@
 'use client';
 
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 
 import { createClient } from '@/lib/supabase/client';
@@ -78,85 +79,128 @@ export default function ActiveAlerts() {
 
     loadInitial();
 
-    // A fresh, unique topic per effect invocation — not a static string.
-    // React 18 StrictMode double-invokes effects on mount (mount ->
-    // cleanup -> mount) to catch exactly this kind of bug:
-    // RealtimeClient.channel() dedupes by exact topic string, and
-    // removeChannel() is async (it awaits a real unsubscribe round-trip
-    // before actually removing the channel from the client's internal
-    // list). With a static topic, the second (persisting) mount's
-    // channel() call could still find the FIRST mount's channel - mid-
-    // teardown from the cleanup that already ran - still registered under
-    // the same name, and get handed that stale instance back instead of a
-    // new one. subscribe() on a channel that isn't isClosed() is a silent
-    // no-op: no error, just no phx_join ever sent. A unique topic per
-    // invocation makes that collision structurally impossible, regardless
-    // of timing.
-    const topic = `dashboard-active-alerts-${crypto.randomUUID()}`;
+    let channel: RealtimeChannel | null = null;
 
-    const channel = supabase
-      .channel(topic)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'alerts' },
-        async (payload) => {
-          const row = payload.new as AlertsChangeRow;
-          if (row.status !== 'active') return;
+    async function setupRealtimeSubscription() {
+      // Realtime's postgres_changes authorization is keyed off the access
+      // token registered on the socket at the moment a channel's join is
+      // actually sent — RealtimeChannel.subscribe() snapshots
+      // socket.accessTokenValue synchronously into the join payload. The
+      // base client (@supabase/supabase-js's SupabaseClient) does
+      // automatically wire realtime.setAuth() to auth state changes
+      // internally, so this isn't a "missing entirely" problem — but that
+      // wiring is driven by an async onAuthStateChange/INITIAL_SESSION
+      // event with no guaranteed ordering against this effect running
+      // immediately on mount. If our channel finishes joining before that
+      // event fires, the join was already sent with no/stale
+      // access_token: the server still replies `status: ok` (joining
+      // doesn't require auth), but every subsequent postgres_changes
+      // event is then silently filtered as unauthenticated. Explicitly
+      // awaiting the session and setting it BEFORE we ever call
+      // .subscribe() makes the ordering deterministic instead of racing
+      // it.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', row.user_id)
-            .single();
+      if (cancelled) return;
 
-          if (cancelled) return;
+      if (session?.access_token) {
+        await supabase.realtime.setAuth(session.access_token);
+      }
 
-          setAlerts((prev) => {
-            if (prev.some((a) => a.id === row.id)) return prev;
-            return [
-              {
-                id: row.id,
-                user_id: row.user_id,
-                created_at: row.created_at,
-                last_lat: row.last_lat,
-                last_lng: row.last_lng,
-                full_name: profile?.full_name || 'Unnamed user',
-              },
-              ...prev,
-            ];
-          });
-        }
-      )
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'alerts' }, (payload) => {
-        const row = payload.new as AlertsChangeRow;
+      if (cancelled) return;
 
-        setAlerts((prev) => {
-          if (row.status !== 'active') {
-            // Resolved (by the user themself or another guardian) — the
-            // card disappears.
-            return prev.filter((a) => a.id !== row.id);
+      // A fresh, unique topic per effect invocation — not a static string.
+      // React 18 StrictMode double-invokes effects on mount (mount ->
+      // cleanup -> mount) to catch exactly this kind of bug:
+      // RealtimeClient.channel() dedupes by exact topic string, and
+      // removeChannel() is async (it awaits a real unsubscribe round-trip
+      // before actually removing the channel from the client's internal
+      // list). With a static topic, the second (persisting) mount's
+      // channel() call could still find the FIRST mount's channel - mid-
+      // teardown from the cleanup that already ran - still registered under
+      // the same name, and get handed that stale instance back instead of a
+      // new one. subscribe() on a channel that isn't isClosed() is a silent
+      // no-op: no error, just no phx_join ever sent. A unique topic per
+      // invocation makes that collision structurally impossible, regardless
+      // of timing.
+      const topic = `dashboard-active-alerts-${crypto.randomUUID()}`;
+
+      channel = supabase
+        .channel(topic)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'alerts' },
+          async (payload) => {
+            const row = payload.new as AlertsChangeRow;
+            if (row.status !== 'active') return;
+
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', row.user_id)
+              .single();
+
+            if (cancelled) return;
+
+            setAlerts((prev) => {
+              if (prev.some((a) => a.id === row.id)) return prev;
+              return [
+                {
+                  id: row.id,
+                  user_id: row.user_id,
+                  created_at: row.created_at,
+                  last_lat: row.last_lat,
+                  last_lng: row.last_lng,
+                  full_name: profile?.full_name || 'Unnamed user',
+                },
+                ...prev,
+              ];
+            });
           }
-          return prev.map((a) =>
-            a.id === row.id ? { ...a, last_lat: row.last_lat, last_lng: row.last_lng } : a
-          );
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'alerts' },
+          (payload) => {
+            const row = payload.new as AlertsChangeRow;
+
+            setAlerts((prev) => {
+              if (row.status !== 'active') {
+                // Resolved (by the user themself or another guardian) — the
+                // card disappears.
+                return prev.filter((a) => a.id !== row.id);
+              }
+              return prev.map((a) =>
+                a.id === row.id ? { ...a, last_lat: row.last_lat, last_lng: row.last_lng } : a
+              );
+            });
+          }
+        )
+        .subscribe((status, err) => {
+          // The original bug produced no error at all — the join was just
+          // silently never sent. Logging every non-SUBSCRIBED status (not
+          // just err) means a failed/stuck join is now always visible in the
+          // console instead of only showing up as "no alerts ever appear".
+          if (status === 'SUBSCRIBED') return;
+          console.error(`[ActiveAlerts] Realtime subscription (${topic}) status: ${status}`, err);
         });
-      })
-      .subscribe((status, err) => {
-        // The original bug produced no error at all — the join was just
-        // silently never sent. Logging every non-SUBSCRIBED status (not
-        // just err) means a failed/stuck join is now always visible in the
-        // console instead of only showing up as "no alerts ever appear".
-        if (status === 'SUBSCRIBED') return;
-        console.error(`[ActiveAlerts] Realtime subscription (${topic}) status: ${status}`, err);
-      });
+    }
+
+    setupRealtimeSubscription();
 
     return () => {
       cancelled = true;
       // `channel` is this specific effect invocation's own instance
       // (captured by closure, and now registered under its own unique
       // topic) — this always tears down exactly the channel this run
-      // created, never a different run's.
-      supabase.removeChannel(channel);
+      // created, never a different run's. It may still be null if the
+      // component unmounted before the async setup above (getSession +
+      // setAuth) finished — nothing to remove in that case.
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, []);
 
