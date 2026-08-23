@@ -78,8 +78,24 @@ export default function ActiveAlerts() {
 
     loadInitial();
 
+    // A fresh, unique topic per effect invocation — not a static string.
+    // React 18 StrictMode double-invokes effects on mount (mount ->
+    // cleanup -> mount) to catch exactly this kind of bug:
+    // RealtimeClient.channel() dedupes by exact topic string, and
+    // removeChannel() is async (it awaits a real unsubscribe round-trip
+    // before actually removing the channel from the client's internal
+    // list). With a static topic, the second (persisting) mount's
+    // channel() call could still find the FIRST mount's channel - mid-
+    // teardown from the cleanup that already ran - still registered under
+    // the same name, and get handed that stale instance back instead of a
+    // new one. subscribe() on a channel that isn't isClosed() is a silent
+    // no-op: no error, just no phx_join ever sent. A unique topic per
+    // invocation makes that collision structurally impossible, regardless
+    // of timing.
+    const topic = `dashboard-active-alerts-${crypto.randomUUID()}`;
+
     const channel = supabase
-      .channel('dashboard-active-alerts')
+      .channel(topic)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'alerts' },
@@ -125,10 +141,21 @@ export default function ActiveAlerts() {
           );
         });
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        // The original bug produced no error at all — the join was just
+        // silently never sent. Logging every non-SUBSCRIBED status (not
+        // just err) means a failed/stuck join is now always visible in the
+        // console instead of only showing up as "no alerts ever appear".
+        if (status === 'SUBSCRIBED') return;
+        console.error(`[ActiveAlerts] Realtime subscription (${topic}) status: ${status}`, err);
+      });
 
     return () => {
       cancelled = true;
+      // `channel` is this specific effect invocation's own instance
+      // (captured by closure, and now registered under its own unique
+      // topic) — this always tears down exactly the channel this run
+      // created, never a different run's.
       supabase.removeChannel(channel);
     };
   }, []);
