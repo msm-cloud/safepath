@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { useAuth } from '@/lib/auth-context';
+import { useLanguage } from '@/lib/language-context';
 import { getBestEffortLocation } from '@/lib/location';
 import { supabase } from '@/lib/supabase';
 import { useLocationPermission } from '@/lib/use-location-permission';
@@ -27,6 +28,7 @@ type ActiveAlert = {
 
 export default function SosScreen() {
   const { session } = useAuth();
+  const { t } = useLanguage();
   const userId = session?.user.id;
   const locationPermission = useLocationPermission();
 
@@ -136,13 +138,13 @@ export default function SosScreen() {
 
     if (error || !data) {
       setPhase('idle');
-      setErrorMessage(error?.message ?? 'Could not send the SOS alert. Try again.');
+      setErrorMessage(error?.message ?? t('sosCreateError'));
       return;
     }
 
     setActiveAlert({ id: data.id, createdAt: data.created_at });
     setPhase('active');
-  }, [userId]);
+  }, [userId, t]);
 
   const handlePressIn = () => {
     if (phase !== 'idle') return;
@@ -204,12 +206,12 @@ export default function SosScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.activeBadge}>
-          <Text style={styles.activeBadgeText}>SOS ALERT ACTIVE</Text>
+          <Text style={styles.activeBadgeText}>{t('alertActiveLabel')}</Text>
         </View>
         <Text style={styles.subtitle}>
-          Sent at {new Date(activeAlert.createdAt).toLocaleTimeString()}. Your accepted guardians
-          have been notified, and your location is being shared every 15 seconds while this screen
-          stays open.
+          {t('alertActiveSubtitle', {
+            time: new Date(activeAlert.createdAt).toLocaleTimeString(),
+          })}
         </Text>
 
         {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
@@ -222,7 +224,7 @@ export default function SosScreen() {
           {resolving ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.safeButtonText}>I&apos;m safe now</Text>
+            <Text style={styles.safeButtonText}>{t('imSafeNow')}</Text>
           )}
         </Pressable>
       </View>
@@ -231,19 +233,14 @@ export default function SosScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>SOS</Text>
-      <Text style={styles.subtitle}>
-        SafePath includes your location in SOS alerts so your guardians can find you.
-      </Text>
+      <Text style={styles.title}>{t('sosTitle')}</Text>
+      <Text style={styles.subtitle}>{t('sosSubtitle')}</Text>
 
       {locationPermission === 'denied' && (
         <View style={styles.permissionBanner}>
-          <Text style={styles.permissionBannerText}>
-            Location permission denied — your SOS alert will still work, but won&apos;t include your
-            location.
-          </Text>
+          <Text style={styles.permissionBannerText}>{t('locationDeniedBanner')}</Text>
           <Pressable onPress={() => Linking.openSettings()}>
-            <Text style={styles.permissionBannerLink}>Open Settings</Text>
+            <Text style={styles.permissionBannerLink}>{t('openSettings')}</Text>
           </Pressable>
         </View>
       )}
@@ -265,12 +262,12 @@ export default function SosScreen() {
             style={[styles.sosButtonFill, { height: fillHeight }]}
           />
           <View style={styles.sosButtonLabelWrap} pointerEvents="none">
-            <Text style={styles.sosButtonLabel}>HOLD{'\n'}FOR SOS</Text>
+            <Text style={styles.sosButtonLabel}>{t('holdForSosLabel')}</Text>
           </View>
         </Pressable>
       )}
 
-      <Text style={styles.holdHint}>Hold for 2 seconds. Release early to cancel.</Text>
+      <Text style={styles.holdHint}>{t('holdHint')}</Text>
     </View>
   );
 }

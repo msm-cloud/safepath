@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '@/lib/auth-context';
+import { useLanguage } from '@/lib/language-context';
 
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
   const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = async () => {
@@ -17,8 +19,42 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
-      {session?.user.email && <Text style={styles.email}>Signed in as {session.user.email}</Text>}
+      <Text style={styles.title}>{t('settingsTitle')}</Text>
+      {session?.user.email && (
+        <Text style={styles.email}>{t('signedInAs', { email: session.user.email })}</Text>
+      )}
+
+      <View style={styles.languageSection}>
+        <Text style={styles.languageLabel}>{t('languageLabel')}</Text>
+        <View style={styles.languageSwitch}>
+          <Pressable
+            style={[styles.languageOption, language === 'bn' && styles.languageOptionActive]}
+            onPress={() => setLanguage('bn')}
+          >
+            <Text
+              style={[
+                styles.languageOptionText,
+                language === 'bn' && styles.languageOptionTextActive,
+              ]}
+            >
+              {t('languageBn')}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.languageOption, language === 'en' && styles.languageOptionActive]}
+            onPress={() => setLanguage('en')}
+          >
+            <Text
+              style={[
+                styles.languageOptionText,
+                language === 'en' && styles.languageOptionTextActive,
+              ]}
+            >
+              {t('languageEn')}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
 
       <Pressable
         style={[styles.button, signingOut && styles.buttonDisabled]}
@@ -28,7 +64,7 @@ export default function SettingsScreen() {
         {signingOut ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Sign Out</Text>
+          <Text style={styles.buttonText}>{t('signOutButton')}</Text>
         )}
       </Pressable>
     </View>
@@ -50,6 +86,39 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 14,
     color: '#666',
+  },
+  languageSection: {
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  languageLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+  },
+  languageSwitch: {
+    flexDirection: 'row',
+    backgroundColor: '#eee',
+    borderRadius: 999,
+    padding: 4,
+    gap: 4,
+  },
+  languageOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+  },
+  languageOptionActive: {
+    backgroundColor: '#2f95dc',
+  },
+  languageOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  languageOptionTextActive: {
+    color: '#fff',
   },
   button: {
     backgroundColor: '#d33',

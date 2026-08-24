@@ -11,10 +11,12 @@ import {
   TextInput,
 } from 'react-native';
 
+import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import { isValidEmail, MIN_PASSWORD_LENGTH } from '@/lib/validation';
 
 export default function SignInScreen() {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -24,11 +26,11 @@ export default function SignInScreen() {
     setError(null);
 
     if (!isValidEmail(email)) {
-      setError('Enter a valid email address.');
+      setError(t('invalidEmail'));
       return;
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      setError(t('passwordTooShort', { n: MIN_PASSWORD_LENGTH }));
       return;
     }
 
@@ -57,11 +59,11 @@ export default function SignInScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Sign in to SafePath</Text>
+        <Text style={styles.title}>{t('signInTitle')}</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder={t('emailPlaceholder')}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -70,7 +72,7 @@ export default function SignInScreen() {
         />
         <TextInput
           style={styles.input}
-          placeholder="Password"
+          placeholder={t('passwordPlaceholder')}
           secureTextEntry
           autoCapitalize="none"
           autoComplete="password"
@@ -88,12 +90,12 @@ export default function SignInScreen() {
           {submitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
+            <Text style={styles.buttonText}>{t('signInButton')}</Text>
           )}
         </Pressable>
 
         <Link href="/(auth)/sign-up" style={styles.link}>
-          Don&apos;t have an account? Sign up
+          {t('signUpLink')}
         </Link>
       </ScrollView>
     </KeyboardAvoidingView>

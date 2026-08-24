@@ -11,10 +11,12 @@ import {
   TextInput,
 } from 'react-native';
 
+import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import { isValidEmail, MIN_PASSWORD_LENGTH } from '@/lib/validation';
 
 export default function SignUpScreen() {
+  const { t } = useLanguage();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,15 +29,15 @@ export default function SignUpScreen() {
     setInfo(null);
 
     if (fullName.trim().length === 0) {
-      setError('Enter your name.');
+      setError(t('enterYourName'));
       return;
     }
     if (!isValidEmail(email)) {
-      setError('Enter a valid email address.');
+      setError(t('invalidEmail'));
       return;
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      setError(t('passwordTooShort', { n: MIN_PASSWORD_LENGTH }));
       return;
     }
 
@@ -68,7 +70,7 @@ export default function SignUpScreen() {
       // rejected by RLS (profiles_update_own requires auth.uid() = id).
       // full_name was still captured via signup metadata above.
       setSubmitting(false);
-      setInfo('Check your email to confirm your account, then sign in.');
+      setInfo(t('checkEmailConfirm'));
       return;
     }
 
@@ -100,11 +102,11 @@ export default function SignUpScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Create your SafePath account</Text>
+        <Text style={styles.title}>{t('signUpTitle')}</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Full name"
+          placeholder={t('fullNamePlaceholder')}
           autoCapitalize="words"
           autoComplete="name"
           value={fullName}
@@ -112,7 +114,7 @@ export default function SignUpScreen() {
         />
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder={t('emailPlaceholder')}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -121,7 +123,7 @@ export default function SignUpScreen() {
         />
         <TextInput
           style={styles.input}
-          placeholder="Password (min 6 characters)"
+          placeholder={t('passwordSignupPlaceholder')}
           secureTextEntry
           autoCapitalize="none"
           autoComplete="password-new"
@@ -140,12 +142,12 @@ export default function SignUpScreen() {
           {submitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Sign Up</Text>
+            <Text style={styles.buttonText}>{t('signUpButton')}</Text>
           )}
         </Pressable>
 
         <Link href="/(auth)" style={styles.link}>
-          Already have an account? Sign in
+          {t('signInLink')}
         </Link>
       </ScrollView>
     </KeyboardAvoidingView>

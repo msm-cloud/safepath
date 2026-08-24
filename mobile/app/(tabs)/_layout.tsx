@@ -4,9 +4,11 @@ import { Tabs } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import { useLanguage } from '@/lib/language-context';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { t } = useLanguage();
 
   return (
     <Tabs
@@ -20,7 +22,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('homeTitle'),
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'house.fill', android: 'home', web: 'home' }}
@@ -33,7 +35,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="sos"
         options={{
-          title: 'SOS',
+          title: t('sosTitle'),
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'exclamationmark.triangle.fill', android: 'warning', web: 'warning' }}
@@ -48,7 +50,7 @@ export default function TabLayout() {
         options={{
           // Emergency contacts land in this tab too, in a later step —
           // title stays scoped to what's actually here for now.
-          title: 'Guardians',
+          title: t('guardiansTitle'),
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'person.2.fill', android: 'people', web: 'people' }}
@@ -61,7 +63,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: t('settingsTitle'),
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'gearshape.fill', android: 'settings', web: 'settings' }}

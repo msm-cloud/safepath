@@ -1,3 +1,5 @@
+import { t } from '@/lib/translations';
+import type { Language } from '@/lib/translations';
 import { createClient } from '@/lib/supabase/server';
 
 const PAST_ALERTS_LIMIT = 20;
@@ -26,7 +28,12 @@ type PastAlertRow = {
 //              and gl.guardian_id = auth.uid() and gl.status = 'accepted')
 // so it already permits a guardian to SELECT a linked user's resolved
 // alerts, not just active ones. No new migration needed for this feature.
-export default async function PastAlerts() {
+//
+// This is a Server Component, so it can't consume LanguageContext (React
+// Context only works in Client Components) — `language` comes in as a
+// plain prop from dashboard/page.tsx instead, and every string here uses
+// the pure t(language, key) function rather than the useLanguage() hook.
+export default async function PastAlerts({ language }: { language: Language }) {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -51,7 +58,7 @@ export default async function PastAlerts() {
   const alerts: PastAlertRow[] = (rows ?? []).map((row) => ({
     id: row.id,
     user_id: row.user_id,
-    full_name: row.user?.full_name || 'Unnamed user',
+    full_name: row.user?.full_name || t(language, 'unnamedUser'),
     created_at: row.created_at,
     resolved_at: row.resolved_at,
     last_lat: row.last_lat,
@@ -60,12 +67,12 @@ export default async function PastAlerts() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold tracking-tight">Past Alerts</h2>
+      <h2 className="text-lg font-semibold tracking-tight">{t(language, 'pastAlertsTitle')}</h2>
 
       {error && <p className="text-sm text-red-600">{error.message}</p>}
 
       {!error && alerts.length === 0 && (
-        <p className="text-sm text-zinc-500">No resolved alerts yet.</p>
+        <p className="text-sm text-zinc-500">{t(language, 'noResolvedAlertsYet')}</p>
       )}
 
       {!error && alerts.length > 0 && (
@@ -80,7 +87,7 @@ export default async function PastAlerts() {
                 <p className="text-zinc-500">
                   {new Date(alert.created_at).toLocaleString()}
                   {alert.resolved_at
-                    ? ` — ${formatDuration(alert.created_at, alert.resolved_at)}`
+                    ? ` — ${formatDuration(alert.created_at, alert.resolved_at, language)}`
                     : ''}
                 </p>
               </div>
@@ -91,10 +98,10 @@ export default async function PastAlerts() {
                   rel="noreferrer"
                   className="text-sm font-medium text-blue-700 underline"
                 >
-                  View last known location
+                  {t(language, 'viewLastKnownLocation')}
                 </a>
               ) : (
-                <p className="text-sm text-zinc-400">No location recorded</p>
+                <p className="text-sm text-zinc-400">{t(language, 'noLocationRecorded')}</p>
               )}
             </li>
           ))}
@@ -105,23 +112,23 @@ export default async function PastAlerts() {
 }
 
 // e.g. "Active for 12 minutes" / "Active for 2h 5m" / "Active for 3 days".
-function formatDuration(startIso: string, endIso: string): string {
+function formatDuration(startIso: string, endIso: string, language: Language): string {
   const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
   const totalMinutes = Math.max(0, Math.round(ms / 60000));
 
-  if (totalMinutes < 1) return 'Active for less than a minute';
+  if (totalMinutes < 1) return t(language, 'activeForLessThanMinute');
   if (totalMinutes < 60) {
-    return `Active for ${totalMinutes} minute${totalMinutes === 1 ? '' : 's'}`;
+    return t(language, 'activeForMinutes', { n: totalMinutes, s: totalMinutes === 1 ? '' : 's' });
   }
 
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   if (hours < 24) {
     return minutes > 0
-      ? `Active for ${hours}h ${minutes}m`
-      : `Active for ${hours} hour${hours === 1 ? '' : 's'}`;
+      ? t(language, 'activeForHoursMinutes', { h: hours, m: minutes })
+      : t(language, 'activeForHours', { h: hours, s: hours === 1 ? '' : 's' });
   }
 
   const days = Math.floor(hours / 24);
-  return `Active for ${days} day${days === 1 ? '' : 's'}`;
+  return t(language, 'activeForDays', { d: days, s: days === 1 ? '' : 's' });
 }

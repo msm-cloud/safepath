@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 import { signOutAction } from '@/lib/auth-actions';
 import { createClient } from '@/lib/supabase/server';
 
+import DashboardHeader from './dashboard-header';
+
 // Wraps both /dashboard and /dashboard/[userId] — gates both on auth.
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient();
@@ -17,14 +19,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
-        <span className="text-sm text-zinc-500">{user.email}</span>
-        <form action={signOutAction}>
-          <button type="submit" className="text-sm font-medium text-red-600 underline">
-            Sign out
-          </button>
-        </form>
-      </header>
+      <DashboardHeader email={user.email} signOutAction={signOutAction} />
       <div className="flex flex-1 flex-col">{children}</div>
     </div>
   );

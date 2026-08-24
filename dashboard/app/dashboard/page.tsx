@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/server';
+import { t, type Language } from '@/lib/translations';
 
 import ActiveAlerts from './active-alerts';
 import PastAlerts from './past-alerts';
@@ -23,6 +24,16 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
+  // Server Component, so no LanguageContext access (Context is
+  // Client-Component-only) — fetch the language directly here, and pass
+  // it down to PastAlerts as a prop for the same reason.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('preferred_language')
+    .eq('id', user.id)
+    .single();
+  const language: Language = profile?.preferred_language ?? 'bn';
+
   const { data, error } = await supabase
     .from('guardian_links')
     .select('id, user:profiles!guardian_links_user_id_fkey(id, full_name)')
@@ -35,8 +46,8 @@ export default async function DashboardPage() {
   return (
     <main className="flex flex-1 flex-col gap-10 p-16">
       <section>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="mt-1 text-sm text-zinc-500">People you&apos;re linked to as a guardian.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t(language, 'dashboardTitle')}</h1>
+        <p className="mt-1 text-sm text-zinc-500">{t(language, 'dashboardSubtitle')}</p>
       </section>
 
       {/* Own client-side data lifecycle (initial fetch + Realtime
@@ -45,7 +56,7 @@ export default async function DashboardPage() {
       <ActiveAlerts />
 
       {/* Plain server-side fetch, not Realtime — see past-alerts.tsx. */}
-      <PastAlerts />
+      <PastAlerts language={language} />
 
       <section>
         <RedeemInviteForm />
@@ -55,10 +66,7 @@ export default async function DashboardPage() {
         {error && <p className="text-sm text-red-600">{error.message}</p>}
 
         {!error && links.length === 0 && (
-          <p className="text-sm text-zinc-500">
-            You&apos;re not linked to anyone yet — use the form above to link to someone using the
-            invite code they share with you.
-          </p>
+          <p className="text-sm text-zinc-500">{t(language, 'noLinkedUsersYet')}</p>
         )}
 
         {!error && links.length > 0 && (
@@ -68,7 +76,7 @@ export default async function DashboardPage() {
                 key={link.id}
                 className="rounded-md border border-zinc-200 px-4 py-3 text-sm font-medium"
               >
-                {link.user?.full_name || 'Unnamed user'}
+                {link.user?.full_name || t(language, 'unnamedUser')}
                 {/* An active alert for this user surfaces as its own card
                     at the top of the page — see <ActiveAlerts /> above.
                     Full journey/location history beyond "last known
