@@ -73,6 +73,18 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="emergency-contacts"
+        options={{
+          title: t('emergencyContactsTitle'),
+          // Reachable from Settings via router.push(), not its own tab —
+          // href: null is Expo Router's documented way to keep a screen
+          // inside a tab group (so it inherits the same auth-protected
+          // Stack.Protected wrapping as the rest of (tabs)) without it
+          // showing up in the tab bar itself.
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
