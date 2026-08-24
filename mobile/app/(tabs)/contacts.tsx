@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 
 import { useAuth } from '@/lib/auth-context';
+import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
+import type { TranslationKey } from '@/lib/translations';
 
 // This tab currently only covers guardians. Emergency contact management
 // (a separate feature) lands here in a later step.
@@ -28,6 +30,7 @@ type GuardianLinkRow = {
 
 export default function GuardiansScreen() {
   const { session } = useAuth();
+  const { t } = useLanguage();
   const userId = session?.user.id;
 
   const [links, setLinks] = useState<GuardianLinkRow[]>([]);
@@ -109,7 +112,7 @@ export default function GuardiansScreen() {
   const handleShare = async () => {
     if (!newInviteCode) return;
     await Share.share({
-      message: `Use this SafePath invite code to connect as my guardian: ${newInviteCode}`,
+      message: t('shareInviteMessage', { code: newInviteCode }),
     });
   };
 
@@ -122,7 +125,7 @@ export default function GuardiansScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
         ListHeaderComponent={
           <View>
-            <Text style={styles.title}>Guardians</Text>
+            <Text style={styles.title}>{t('guardiansTitle')}</Text>
 
             <Pressable
               style={[styles.button, inviting && styles.buttonDisabled]}
@@ -132,7 +135,7 @@ export default function GuardiansScreen() {
               {inviting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Invite a Guardian</Text>
+                <Text style={styles.buttonText}>{t('inviteGuardianButton')}</Text>
               )}
             </Pressable>
 
@@ -140,16 +143,18 @@ export default function GuardiansScreen() {
 
             {newInviteCode && (
               <View style={styles.inviteCard}>
-                <Text style={styles.inviteCardLabel}>Share this code with your guardian</Text>
+                <Text style={styles.inviteCardLabel}>{t('shareCodeLabel')}</Text>
                 <Pressable onPress={handleCopy}>
                   <Text style={styles.inviteCode}>{newInviteCode}</Text>
                 </Pressable>
                 <View style={styles.inviteCardActions}>
                   <Pressable style={styles.smallButton} onPress={handleCopy}>
-                    <Text style={styles.smallButtonText}>{copied ? 'Copied!' : 'Copy'}</Text>
+                    <Text style={styles.smallButtonText}>
+                      {copied ? t('copiedButton') : t('copyButton')}
+                    </Text>
                   </Pressable>
                   <Pressable style={styles.smallButton} onPress={handleShare}>
-                    <Text style={styles.smallButtonText}>Share</Text>
+                    <Text style={styles.smallButtonText}>{t('shareButton')}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -157,13 +162,11 @@ export default function GuardiansScreen() {
 
             {listError && <Text style={styles.error}>{listError}</Text>}
 
-            <Text style={styles.sectionLabel}>Your guardians</Text>
+            <Text style={styles.sectionLabel}>{t('yourGuardiansLabel')}</Text>
 
             {loading && <ActivityIndicator style={styles.loadingIndicator} />}
             {!loading && links.length === 0 && (
-              <Text style={styles.subtitle}>
-                No guardians yet — invite one above and share the code with them.
-              </Text>
+              <Text style={styles.subtitle}>{t('noGuardiansYet')}</Text>
             )}
           </View>
         }
@@ -172,13 +175,15 @@ export default function GuardiansScreen() {
             <View style={styles.linkRowText}>
               <Text style={styles.linkName}>
                 {item.status === 'accepted' && item.guardian
-                  ? item.guardian.full_name || 'Unnamed guardian'
+                  ? item.guardian.full_name || t('unnamedGuardian')
                   : item.invite_code}
               </Text>
               <Text style={styles.linkMeta}>
                 {item.status === 'accepted'
-                  ? `Accepted ${item.accepted_at ? new Date(item.accepted_at).toLocaleDateString() : ''}`
-                  : `Created ${new Date(item.created_at).toLocaleDateString()}`}
+                  ? t('acceptedOn', {
+                      date: item.accepted_at ? new Date(item.accepted_at).toLocaleDateString() : '',
+                    })
+                  : t('createdOn', { date: new Date(item.created_at).toLocaleDateString() })}
               </Text>
             </View>
             <StatusBadge status={item.status} />
@@ -190,6 +195,13 @@ export default function GuardiansScreen() {
 }
 
 function StatusBadge({ status }: { status: GuardianLinkRow['status'] }) {
+  const { t } = useLanguage();
+  const statusKey: TranslationKey =
+    status === 'accepted'
+      ? 'statusAccepted'
+      : status === 'revoked'
+        ? 'statusRevoked'
+        : 'statusPending';
   const style =
     status === 'accepted'
       ? styles.badgeAccepted
@@ -198,7 +210,7 @@ function StatusBadge({ status }: { status: GuardianLinkRow['status'] }) {
         : styles.badgePending;
   return (
     <View style={[styles.badge, style]}>
-      <Text style={styles.badgeText}>{status}</Text>
+      <Text style={styles.badgeText}>{t(statusKey)}</Text>
     </View>
   );
 }

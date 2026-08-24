@@ -1,11 +1,15 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useLanguage } from '@/lib/language-context';
+
 // Placeholder screen — feed of recent alerts / status will live here.
 export default function HomeScreen() {
+  const { t } = useLanguage();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Home</Text>
-      <Text style={styles.subtitle}>Placeholder screen — no content yet.</Text>
+      <Text style={styles.title}>{t('homeTitle')}</Text>
+      <Text style={styles.subtitle}>{t('homePlaceholder')}</Text>
     </View>
   );
 }

@@ -1,9 +1,11 @@
 'use client';
 
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import { useLanguage } from '@/lib/language-context';
 import { createClient } from '@/lib/supabase/client';
+import type { TranslationKey } from '@/lib/translations';
 
 type ActiveAlert = {
   id: string;
@@ -30,6 +32,16 @@ type AlertsChangeRow = {
 // client-side filtering by guardian_links needed; the server already only
 // delivers what this connection is allowed to see.
 export default function ActiveAlerts() {
+  const { t } = useLanguage();
+  // The Realtime subscription effect below is deliberately untouched
+  // (empty dep array, intentional — see its own comments) — it must not
+  // re-run when the language changes. This ref gives its closures access
+  // to the always-current t() without needing to be a dependency.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
   const [alerts, setAlerts] = useState<ActiveAlert[]>([]);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   // Bumped every 30s purely to force a re-render so "how long ago" stays
@@ -72,7 +84,7 @@ export default function ActiveAlerts() {
           created_at: row.created_at,
           last_lat: row.last_lat,
           last_lng: row.last_lng,
-          full_name: row.user?.full_name || 'Unnamed user',
+          full_name: row.user?.full_name || tRef.current('unnamedUser'),
         }))
       );
     }
@@ -153,7 +165,7 @@ export default function ActiveAlerts() {
                   created_at: row.created_at,
                   last_lat: row.last_lat,
                   last_lng: row.last_lng,
-                  full_name: profile?.full_name || 'Unnamed user',
+                  full_name: profile?.full_name || tRef.current('unnamedUser'),
                 },
                 ...prev,
               ];
@@ -230,9 +242,11 @@ export default function ActiveAlerts() {
           className="flex flex-col gap-3 rounded-lg border-2 border-red-600 bg-red-50 p-5 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <p className="text-sm font-bold tracking-wide text-red-700 uppercase">Active Alert</p>
+            <p className="text-sm font-bold tracking-wide text-red-700 uppercase">
+              {t('activeAlertLabel')}
+            </p>
             <p className="mt-1 text-lg font-semibold text-zinc-900">{alert.full_name}</p>
-            <p className="text-sm text-zinc-600">{relativeTime(alert.created_at)}</p>
+            <p className="text-sm text-zinc-600">{relativeTime(alert.created_at, t)}</p>
             {alert.last_lat != null && alert.last_lng != null ? (
               <a
                 href={`https://www.google.com/maps?q=${alert.last_lat},${alert.last_lng}`}
@@ -240,10 +254,10 @@ export default function ActiveAlerts() {
                 rel="noreferrer"
                 className="text-sm font-medium text-blue-700 underline"
               >
-                View last known location
+                {t('viewLastKnownLocation')}
               </a>
             ) : (
-              <p className="text-sm text-zinc-500">No location available yet.</p>
+              <p className="text-sm text-zinc-500">{t('noLocationAvailableYet')}</p>
             )}
           </div>
           <button
@@ -252,7 +266,7 @@ export default function ActiveAlerts() {
             disabled={resolvingId === alert.id}
             className="shrink-0 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {resolvingId === alert.id ? 'Marking resolved…' : 'Mark Resolved'}
+            {resolvingId === alert.id ? t('markingResolvedButton') : t('markResolvedButton')}
           </button>
         </div>
       ))}
@@ -260,11 +274,14 @@ export default function ActiveAlerts() {
   );
 }
 
-function relativeTime(iso: string): string {
+function relativeTime(
+  iso: string,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 60) return t('secondsAgo', { n: seconds });
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return t('minutesAgo', { n: minutes });
   const hours = Math.floor(minutes / 60);
-  return `${hours}h ago`;
+  return t('hoursAgo', { n: hours });
 }
