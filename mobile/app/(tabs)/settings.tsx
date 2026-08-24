@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -7,6 +8,7 @@ import { useLanguage } from '@/lib/language-context';
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
   const { t, language, setLanguage } = useLanguage();
+  const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = async () => {
@@ -55,6 +57,10 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
       </View>
+
+      <Pressable style={styles.linkButton} onPress={() => router.push('/emergency-contacts')}>
+        <Text style={styles.linkButtonText}>{t('emergencyContactsLink')}</Text>
+      </Pressable>
 
       <Pressable
         style={[styles.button, signingOut && styles.buttonDisabled]}
@@ -119,6 +125,15 @@ const styles = StyleSheet.create({
   },
   languageOptionTextActive: {
     color: '#fff',
+  },
+  linkButton: {
+    marginTop: 24,
+    paddingVertical: 10,
+  },
+  linkButtonText: {
+    color: '#2f95dc',
+    fontSize: 15,
+    fontWeight: '600',
   },
   button: {
     backgroundColor: '#d33',

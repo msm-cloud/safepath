@@ -1,4 +1,5 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import * as SMS from 'expo-sms';
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,6 +14,7 @@ import {
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { getBestEffortLocation } from '@/lib/location';
+import { isOnline } from '@/lib/network';
 import { supabase } from '@/lib/supabase';
 import { useLocationPermission } from '@/lib/use-location-permission';
 
@@ -26,16 +28,32 @@ type ActiveAlert = {
   createdAt: string;
 };
 
+type EmergencyContact = {
+  id: string;
+  name: string;
+  phone: string;
+};
+
 export default function SosScreen() {
   const { session } = useAuth();
   const { t } = useLanguage();
   const userId = session?.user.id;
   const locationPermission = useLocationPermission();
 
+  const router = useRouter();
+
   const [phase, setPhase] = useState<Phase>('idle');
   const [activeAlert, setActiveAlert] = useState<ActiveAlert | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
+
+  // Cached proactively (not fetched lazily at trigger-time) so the offline
+  // SMS fallback below has this data available WITHOUT needing a fresh
+  // network call at the moment it's actually needed — by definition, if
+  // we've reached the offline path, a fresh Supabase fetch wouldn't work.
+  // null means "not loaded yet"; distinguishes from a genuine empty list.
+  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[] | null>(null);
+  const [fullName, setFullName] = useState<string | null>(null);
 
   const holdProgress = useRef(new Animated.Value(0)).current;
   const holdAnimation = useRef<Animated.CompositeAnimation | null>(null);
@@ -117,10 +135,45 @@ export default function SosScreen() {
     }, [phase, activeAlert])
   );
 
-  const triggerSos = useCallback(async () => {
-    if (!userId) return;
-    setErrorMessage(null);
-    setPhase('creating');
+  // Refreshes the cached emergency contacts + display name on every focus —
+  // same "resync on focus" pattern as the two effects above, so the offline
+  // fallback below is always working from a reasonably fresh snapshot
+  // rather than data from whenever the app first launched.
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      let cancelled = false;
+
+      supabase
+        .from('emergency_contacts')
+        .select('id, name, phone')
+        .eq('user_id', userId)
+        .then(({ data }) => {
+          if (!cancelled) setEmergencyContacts(data ?? []);
+        });
+
+      supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', userId)
+        .single()
+        .then(({ data }) => {
+          if (!cancelled) setFullName(data?.full_name ?? null);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }, [userId])
+  );
+
+  // --- Online path: UNCHANGED behavior from before offline support was
+  // added — same insert, same fields, same success handling. The only
+  // difference is the failure branch now returns false instead of setting
+  // error state directly, so the orchestrator below can fall back to the
+  // offline SMS path instead of just showing an error.
+  const triggerSosOnline = useCallback(async (): Promise<boolean> => {
+    if (!userId) return false;
 
     const location = await getBestEffortLocation();
 
@@ -137,14 +190,80 @@ export default function SosScreen() {
       .single();
 
     if (error || !data) {
-      setPhase('idle');
-      setErrorMessage(error?.message ?? t('sosCreateError'));
-      return;
+      return false;
     }
 
     setActiveAlert({ id: data.id, createdAt: data.created_at });
     setPhase('active');
-  }, [userId, t]);
+    return true;
+  }, [userId]);
+
+  // --- Offline path (new): reached when there's no network, or when the
+  // online insert above failed despite a network being reported present
+  // (e.g. a blip). Never attempts a Supabase call — instead opens the
+  // native SMS composer addressed to every saved emergency contact. Uses
+  // its own independent location lookup (deliberately not shared with
+  // triggerSosOnline above) so that function's internals stay untouched.
+  const triggerSosOffline = useCallback(
+    async (reason: 'offline' | 'insert_failed') => {
+      if (!emergencyContacts || emergencyContacts.length === 0) {
+        setPhase('idle');
+        setErrorMessage(
+          reason === 'offline' ? t('offlineNoContactsMessage') : t('insertFailedNoContactsMessage')
+        );
+        return;
+      }
+
+      const available = await SMS.isAvailableAsync();
+      if (!available) {
+        setPhase('idle');
+        setErrorMessage(t('smsNotAvailableMessage'));
+        return;
+      }
+
+      const location = await getBestEffortLocation();
+      const locationText = location
+        ? `https://www.google.com/maps?q=${location.lat},${location.lng}`
+        : t('emergencySmsLocationUnavailable');
+
+      const message = t('emergencySmsMessage', {
+        name: fullName?.trim() || t('emergencySmsNameFallback'),
+        time: new Date().toLocaleTimeString(),
+        location: locationText,
+      });
+
+      await SMS.sendSMSAsync(
+        emergencyContacts.map((contact) => contact.phone),
+        message
+      );
+
+      // No retry queue, no "was it actually sent" tracking — the native SMS
+      // composer requires the user's own tap on Send (a platform
+      // restriction on both iOS and Android), so once it's been handed off
+      // this is the complete offline action for this pass.
+      setPhase('idle');
+    },
+    [emergencyContacts, fullName, t]
+  );
+
+  const triggerSos = useCallback(async () => {
+    if (!userId) return;
+    setErrorMessage(null);
+    setPhase('creating');
+
+    const online = await isOnline();
+
+    if (online) {
+      const succeeded = await triggerSosOnline();
+      if (succeeded) return;
+      // Insert failed despite a network being reported present — fall back
+      // to the offline SMS path rather than just showing an error.
+      await triggerSosOffline('insert_failed');
+      return;
+    }
+
+    await triggerSosOffline('offline');
+  }, [userId, triggerSosOnline, triggerSosOffline]);
 
   const handlePressIn = () => {
     if (phase !== 'idle') return;
@@ -268,6 +387,15 @@ export default function SosScreen() {
       )}
 
       <Text style={styles.holdHint}>{t('holdHint')}</Text>
+
+      {emergencyContacts !== null && emergencyContacts.length === 0 && (
+        <Pressable style={styles.contactsNudge} onPress={() => router.push('/emergency-contacts')}>
+          <Text style={styles.contactsNudgeText}>
+            {t('noContactsNudgeText')}{' '}
+            <Text style={styles.contactsNudgeLink}>{t('addContactsLink')}</Text>
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -342,6 +470,18 @@ const styles = StyleSheet.create({
   holdHint: {
     fontSize: 12,
     color: '#888',
+  },
+  contactsNudge: {
+    marginTop: 8,
+  },
+  contactsNudgeText: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+  },
+  contactsNudgeLink: {
+    color: '#2f95dc',
+    fontWeight: '600',
   },
   activeBadge: {
     backgroundColor: '#d33',

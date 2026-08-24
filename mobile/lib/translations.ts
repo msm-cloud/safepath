@@ -82,6 +82,31 @@ export const translations = {
   },
   imSafeNow: { en: "I'm safe now", bn: 'আমি এখন নিরাপদ' },
 
+  // --- SOS: offline fallback ---
+  noContactsNudgeText: {
+    en: 'No emergency contacts saved for offline SOS.',
+    bn: 'অফলাইন SOS-এর জন্য কোনো জরুরি যোগাযোগ সংরক্ষিত নেই।',
+  },
+  addContactsLink: { en: 'Add some', bn: 'যোগ করুন' },
+  offlineNoContactsMessage: {
+    en: 'No internet connection, and no emergency contacts saved to message instead. Connect to the internet or add emergency contacts in Settings.',
+    bn: 'ইন্টারনেট সংযোগ নেই, এবং বার্তা পাঠানোর জন্য কোনো জরুরি যোগাযোগও সংরক্ষিত নেই। ইন্টারনেটে সংযুক্ত হন অথবা সেটিংসে জরুরি যোগাযোগ যোগ করুন।',
+  },
+  insertFailedNoContactsMessage: {
+    en: 'Could not send your alert, and no emergency contacts are saved to message instead. Try again, or add emergency contacts in Settings.',
+    bn: 'আপনার অ্যালার্ট পাঠানো যায়নি, এবং বার্তা পাঠানোর জন্য কোনো জরুরি যোগাযোগও সংরক্ষিত নেই। আবার চেষ্টা করুন, অথবা সেটিংসে জরুরি যোগাযোগ যোগ করুন।',
+  },
+  smsNotAvailableMessage: {
+    en: 'SMS is not available on this device.',
+    bn: 'এই ডিভাইসে এসএমএস উপলব্ধ নেই।',
+  },
+  emergencySmsMessage: {
+    en: 'EMERGENCY: I need help. {name} triggered an SOS via SafePath at {time}. Last known location: {location}',
+    bn: 'জরুরি: আমার সাহায্য দরকার। {name} {time}-এ সেফপাথের মাধ্যমে SOS চালু করেছে। সর্বশেষ জানা অবস্থান: {location}',
+  },
+  emergencySmsLocationUnavailable: { en: 'unavailable', bn: 'অজানা' },
+  emergencySmsNameFallback: { en: 'Someone', bn: 'কেউ একজন' },
+
   // --- Guardians ---
   guardiansTitle: { en: 'Guardians', bn: 'অভিভাবক' },
   inviteGuardianButton: { en: 'Invite a Guardian', bn: 'একজন অভিভাবককে আমন্ত্রণ জানান' },
@@ -111,10 +136,43 @@ export const translations = {
   // --- Settings ---
   settingsTitle: { en: 'Settings', bn: 'সেটিংস' },
   signedInAs: { en: 'Signed in as {email}', bn: '{email} হিসেবে সাইন ইন করা আছে' },
+  emergencyContactsLink: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },
   signOutButton: { en: 'Sign Out', bn: 'সাইন আউট' },
   languageLabel: { en: 'Language', bn: 'ভাষা' },
   languageBn: { en: 'বাংলা', bn: 'বাংলা' },
   languageEn: { en: 'English', bn: 'English' },
+
+  // --- Emergency contacts screen ---
+  emergencyContactsTitle: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },
+  emergencyContactsSubtitle: {
+    en: "Used to send an SMS for help if you're offline when you trigger SOS.",
+    bn: 'আপনি SOS চালু করার সময় অফলাইনে থাকলে সাহায্যের জন্য এসএমএস পাঠাতে ব্যবহৃত হয়।',
+  },
+  addContactButton: { en: 'Add Contact', bn: 'যোগাযোগ যোগ করুন' },
+  namePlaceholder: { en: 'Name', bn: 'নাম' },
+  phonePlaceholder: { en: 'Phone number', bn: 'ফোন নম্বর' },
+  invalidPhone: { en: 'Enter a valid phone number.', bn: 'একটি সঠিক ফোন নম্বর লিখুন।' },
+  saveButton: { en: 'Save', bn: 'সংরক্ষণ করুন' },
+  cancelButton: { en: 'Cancel', bn: 'বাতিল' },
+  editButton: { en: 'Edit', bn: 'সম্পাদনা' },
+  deleteButton: { en: 'Delete', bn: 'মুছুন' },
+  deleteContactConfirmTitle: { en: 'Delete contact?', bn: 'যোগাযোগ মুছবেন?' },
+  deleteContactConfirmMessage: {
+    en: 'This contact will no longer receive offline SOS messages.',
+    bn: 'এই যোগাযোগ আর অফলাইন SOS বার্তা পাবেন না।',
+  },
+  noContactsYet: {
+    en: "No emergency contacts yet. These are used to send an SMS for help if you're offline when you trigger SOS — add at least one.",
+    bn: 'এখনো কোনো জরুরি যোগাযোগ নেই। আপনি অফলাইনে SOS চালু করলে সাহায্যের জন্য এসএমএস পাঠাতে এগুলো ব্যবহৃত হয় — অন্তত একজনকে যোগ করুন।',
+  },
+  contactSaveError: {
+    en: 'Could not save this contact. Try again.',
+    bn: 'এই যোগাযোগ সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  contactDeleteError: {
+    en: 'Could not delete this contact. Try again.',
+    bn: 'এই যোগাযোগ মুছে ফেলা যায়নি। আবার চেষ্টা করুন।',
+  },
 } as const satisfies Record<string, Entry>;
 
 export type TranslationKey = keyof typeof translations;
