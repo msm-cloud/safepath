@@ -110,6 +110,17 @@ export const translations = {
   nearestPoliceButton: { en: 'Nearest Police Station', bn: 'নিকটতম থানা' },
   nearestHospitalButton: { en: 'Nearest Hospital', bn: 'নিকটতম হাসপাতাল' },
 
+  // --- Fake call escape (Home screen) ---
+  fakeCallButton: { en: 'Fake Call', bn: 'ভুয়া কল' },
+  fakeCallDelayPickerTitle: { en: 'When should it ring?', bn: 'কখন কল আসবে?' },
+  fakeCallDelayNow: { en: 'Now', bn: 'এখনই' },
+  fakeCallDelaySeconds: { en: '{n} seconds', bn: '{n} সেকেন্ড' },
+  fakeCallIncomingLabel: { en: 'Incoming call', bn: 'ইনকামিং কল' },
+  fakeCallAcceptButton: { en: 'Accept', bn: 'গ্রহণ করুন' },
+  fakeCallDeclineButton: { en: 'Decline', bn: 'প্রত্যাখ্যান করুন' },
+  fakeCallInCallLabel: { en: 'On call', bn: 'কলে আছেন' },
+  fakeCallEndButton: { en: 'End Call', bn: 'কল শেষ করুন' },
+
   // --- SOS ---
   // "SOS" itself is left as the Latin acronym in both languages — it's an
   // internationally recognized distress signal, and translating/
@@ -166,6 +177,14 @@ export const translations = {
   emergencySmsLocationUnavailable: { en: 'unavailable', bn: 'অজানা' },
   emergencySmsNameFallback: { en: 'Someone', bn: 'কেউ একজন' },
 
+  // --- Shake-to-trigger SOS ---
+  shakeDetectedTitle: { en: 'Shake detected', bn: 'ঝাঁকুনি শনাক্ত হয়েছে' },
+  shakeCountdownMessage: { en: 'Sending SOS in {n}...', bn: '{n}-এ SOS পাঠানো হচ্ছে...' },
+  tapAnywhereToCancelHint: {
+    en: 'Tap anywhere to cancel',
+    bn: 'বাতিল করতে যেকোনো জায়গায় ট্যাপ করুন',
+  },
+
   // --- Guardians ---
   guardiansTitle: { en: 'Guardians', bn: 'অভিভাবক' },
   inviteGuardianButton: { en: 'Invite a Guardian', bn: 'একজন অভিভাবককে আমন্ত্রণ জানান' },
@@ -200,6 +219,14 @@ export const translations = {
   languageLabel: { en: 'Language', bn: 'ভাষা' },
   languageBn: { en: 'বাংলা', bn: 'বাংলা' },
   languageEn: { en: 'English', bn: 'English' },
+  shakeSosToggleLabel: { en: 'Shake to trigger SOS', bn: 'ঝাঁকিয়ে SOS চালু করুন' },
+  shakeSosToggleHint: {
+    en: 'While the app is open, shaking your phone in a distinct pattern triggers the same SOS alert as the hold button.',
+    bn: 'অ্যাপ খোলা অবস্থায়, আপনার ফোন একটি স্বতন্ত্র প্যাটার্নে ঝাঁকালে হোল্ড বাটনের মতোই SOS অ্যালার্ট চালু হবে।',
+  },
+  fakeCallToggleLabel: { en: 'Fake call escape', bn: 'ভুয়া কল এস্কেপ' },
+  fakeCallCallerNameLabel: { en: 'Caller name', bn: 'কলারের নাম' },
+  fakeCallDefaultCallerName: { en: 'Mom', bn: 'আম্মু' },
 
   // --- Emergency contacts screen ---
   emergencyContactsTitle: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },

@@ -3,9 +3,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
+import ShakeSosListener from '@/components/ShakeSosListener';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { LanguageProvider } from '@/lib/language-context';
+import { UserSettingsProvider } from '@/lib/user-settings-context';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -20,9 +22,11 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <LanguageProvider>
-        <RootLayoutNav />
-      </LanguageProvider>
+      <UserSettingsProvider>
+        <LanguageProvider>
+          <RootLayoutNav />
+        </LanguageProvider>
+      </UserSettingsProvider>
     </AuthProvider>
   );
 }
@@ -56,6 +60,13 @@ function RootLayoutNav() {
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         </Stack.Protected>
       </Stack>
+
+      {/* Mounted once, app-wide, alongside the Stack rather than inside any
+          one screen — active on every authenticated screen (any role, any
+          tab), not just the SOS tab. No-ops entirely (no sensor
+          subscription at all) while signed out or while the Settings
+          toggle is off — see its own comments. */}
+      <ShakeSosListener />
     </ThemeProvider>
   );
 }

@@ -1,5 +1,4 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import * as SMS from 'expo-sms';
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,8 +13,8 @@ import {
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { getBestEffortLocation } from '@/lib/location';
-import { isOnline } from '@/lib/network';
 import { supabase } from '@/lib/supabase';
+import { triggerSos as triggerSosShared, type EmergencyContact } from '@/lib/sos-trigger';
 import { useLocationPermission } from '@/lib/use-location-permission';
 
 const HOLD_DURATION_MS = 2000;
@@ -26,12 +25,6 @@ type Phase = 'idle' | 'creating' | 'active';
 type ActiveAlert = {
   id: string;
   createdAt: string;
-};
-
-type EmergencyContact = {
-  id: string;
-  name: string;
-  phone: string;
 };
 
 export default function SosScreen() {
@@ -167,103 +160,31 @@ export default function SosScreen() {
     }, [userId])
   );
 
-  // --- Online path: UNCHANGED behavior from before offline support was
-  // added — same insert, same fields, same success handling. The only
-  // difference is the failure branch now returns false instead of setting
-  // error state directly, so the orchestrator below can fall back to the
-  // offline SMS path instead of just showing an error.
-  const triggerSosOnline = useCallback(async (): Promise<boolean> => {
-    if (!userId) return false;
-
-    const location = await getBestEffortLocation();
-
-    const { data, error } = await supabase
-      .from('alerts')
-      .insert({
-        user_id: userId,
-        status: 'active',
-        trigger_type: 'manual',
-        last_lat: location?.lat ?? null,
-        last_lng: location?.lng ?? null,
-      })
-      .select('id, created_at')
-      .single();
-
-    if (error || !data) {
-      return false;
-    }
-
-    setActiveAlert({ id: data.id, createdAt: data.created_at });
-    setPhase('active');
-    return true;
-  }, [userId]);
-
-  // --- Offline path (new): reached when there's no network, or when the
-  // online insert above failed despite a network being reported present
-  // (e.g. a blip). Never attempts a Supabase call — instead opens the
-  // native SMS composer addressed to every saved emergency contact. Uses
-  // its own independent location lookup (deliberately not shared with
-  // triggerSosOnline above) so that function's internals stay untouched.
-  const triggerSosOffline = useCallback(
-    async (reason: 'offline' | 'insert_failed') => {
-      if (!emergencyContacts || emergencyContacts.length === 0) {
-        setPhase('idle');
-        setErrorMessage(
-          reason === 'offline' ? t('offlineNoContactsMessage') : t('insertFailedNoContactsMessage')
-        );
-        return;
-      }
-
-      const available = await SMS.isAvailableAsync();
-      if (!available) {
-        setPhase('idle');
-        setErrorMessage(t('smsNotAvailableMessage'));
-        return;
-      }
-
-      const location = await getBestEffortLocation();
-      const locationText = location
-        ? `https://www.google.com/maps?q=${location.lat},${location.lng}`
-        : t('emergencySmsLocationUnavailable');
-
-      const message = t('emergencySmsMessage', {
-        name: fullName?.trim() || t('emergencySmsNameFallback'),
-        time: new Date().toLocaleTimeString(),
-        location: locationText,
-      });
-
-      await SMS.sendSMSAsync(
-        emergencyContacts.map((contact) => contact.phone),
-        message
-      );
-
-      // No retry queue, no "was it actually sent" tracking — the native SMS
-      // composer requires the user's own tap on Send (a platform
-      // restriction on both iOS and Android), so once it's been handed off
-      // this is the complete offline action for this pass.
-      setPhase('idle');
-    },
-    [emergencyContacts, fullName, t]
-  );
-
+  // The actual online/offline branching, insert, and SMS-fallback logic
+  // now lives in lib/sos-trigger.ts — shared verbatim with the
+  // shake-to-trigger listener (components/ShakeSosListener.tsx) so shake
+  // calls into the exact same function rather than a second copy of it.
+  // This wrapper's job is purely translating that shared function's
+  // result into this screen's own phase/activeAlert/errorMessage display
+  // state — every field, branch, and message the insert/SMS logic used is
+  // unchanged from before this extraction.
   const triggerSos = useCallback(async () => {
     if (!userId) return;
     setErrorMessage(null);
     setPhase('creating');
 
-    const online = await isOnline();
+    const result = await triggerSosShared({ userId, emergencyContacts, fullName, t });
 
-    if (online) {
-      const succeeded = await triggerSosOnline();
-      if (succeeded) return;
-      // Insert failed despite a network being reported present — fall back
-      // to the offline SMS path rather than just showing an error.
-      await triggerSosOffline('insert_failed');
-      return;
+    if (result.mode === 'created') {
+      setActiveAlert(result.alert);
+      setPhase('active');
+    } else if (result.mode === 'offline_sms_sent') {
+      setPhase('idle');
+    } else {
+      setPhase('idle');
+      setErrorMessage(result.message);
     }
-
-    await triggerSosOffline('offline');
-  }, [userId, triggerSosOnline, triggerSosOffline]);
+  }, [userId, emergencyContacts, fullName, t]);
 
   const handlePressIn = () => {
     if (phase !== 'idle') return;

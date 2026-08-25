@@ -40,7 +40,13 @@
           "locationWhenInUsePermission": "SafePath uses your location to include it in SOS alerts, so your guardians can see where you are."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "SafePath uses motion data to detect a shake gesture while the app is open, so you can trigger an SOS alert quickly."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,8 +1,10 @@
+import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,9 +18,17 @@ import { useLanguage } from '@/lib/language-context';
 import { getBestEffortLocation } from '@/lib/location';
 import { cancelScheduledNotification, scheduleArrivalCheckNotification } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
+import { useUserSettings } from '@/lib/user-settings-context';
 
 const DURATION_OPTIONS_MINUTES = [15, 30, 45, 60];
 const EXTEND_MINUTES = 15;
+
+// Fake call escape — delay options (seconds) shown when "Fake Call" is
+// tapped, plus the repeat interval for the ringing vibration.
+const FAKE_CALL_DELAY_OPTIONS_SECONDS = [0, 10, 30];
+const FAKE_CALL_RING_HAPTIC_INTERVAL_MS = 1200;
+
+type FakeCallState = 'idle' | 'ringing' | 'in_call';
 
 type JourneyStatus = 'active' | 'arrived_safe' | 'alert_triggered' | 'cancelled';
 
@@ -33,6 +43,7 @@ type Journey = {
 export default function HomeScreen() {
   const { session } = useAuth();
   const { t } = useLanguage();
+  const { loaded: settingsLoaded, fakeCallEnabled, fakeCallCallerName } = useUserSettings();
   const userId = session?.user.id;
 
   const [journey, setJourney] = useState<Journey | null>(null);
@@ -61,6 +72,77 @@ export default function HomeScreen() {
   // case, not a safety gap, since the real mechanism is the server-side
   // cron job, which doesn't depend on this at all.
   const [notificationId, setNotificationId] = useState<string | null>(null);
+
+  // --- Fake call escape ---
+  const [showDelayPicker, setShowDelayPicker] = useState(false);
+  const [fakeCallState, setFakeCallState] = useState<FakeCallState>('idle');
+  const [callElapsedSeconds, setCallElapsedSeconds] = useState(0);
+  const ringTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ringHapticIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopRingHaptics = useCallback(() => {
+    if (ringHapticIntervalRef.current) {
+      clearInterval(ringHapticIntervalRef.current);
+      ringHapticIntervalRef.current = null;
+    }
+  }, []);
+
+  // Clears every pending timer/interval on unmount — the delay picker's
+  // setTimeout, the ringing haptic loop, and the in-call elapsed-time
+  // ticker are otherwise all capable of outliving the component.
+  useEffect(() => {
+    return () => {
+      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current);
+      stopRingHaptics();
+      if (callTimerRef.current) clearInterval(callTimerRef.current);
+    };
+  }, [stopRingHaptics]);
+
+  const startRinging = useCallback(() => {
+    setFakeCallState('ringing');
+    // Fires immediately, then repeats — approximates a ringtone's repeated
+    // buzz using only what's already available (no audio library in this
+    // environment; see Settings toggle hint / PR notes for why a
+    // synthesized tone was skipped rather than pulled in as a new dep).
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    ringHapticIntervalRef.current = setInterval(() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }, FAKE_CALL_RING_HAPTIC_INTERVAL_MS);
+  }, []);
+
+  const handleFakeCallDelaySelected = (delaySeconds: number) => {
+    setShowDelayPicker(false);
+    if (delaySeconds === 0) {
+      startRinging();
+      return;
+    }
+    // The delay is the whole point — organic-looking, not an obvious
+    // instant response to the person's own tap.
+    ringTimeoutRef.current = setTimeout(startRinging, delaySeconds * 1000);
+  };
+
+  const handleAcceptFakeCall = () => {
+    stopRingHaptics();
+    setCallElapsedSeconds(0);
+    setFakeCallState('in_call');
+    callTimerRef.current = setInterval(() => {
+      setCallElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+  };
+
+  const handleDeclineFakeCall = () => {
+    stopRingHaptics();
+    setFakeCallState('idle');
+  };
+
+  const handleEndFakeCall = () => {
+    if (callTimerRef.current) {
+      clearInterval(callTimerRef.current);
+      callTimerRef.current = null;
+    }
+    setFakeCallState('idle');
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -311,9 +393,97 @@ export default function HomeScreen() {
         <Pressable style={styles.nearbyButton} onPress={() => openNearbySearch('hospital')}>
           <Text style={styles.nearbyButtonText}>{t('nearestHospitalButton')}</Text>
         </Pressable>
+        {/* Entirely absent from the tree when off, not just disabled —
+            per Settings, someone who doesn't want this feature shouldn't
+            even see the button. */}
+        {settingsLoaded && fakeCallEnabled && (
+          <Pressable style={styles.nearbyButton} onPress={() => setShowDelayPicker(true)}>
+            <Text style={styles.nearbyButtonText}>{t('fakeCallButton')}</Text>
+          </Pressable>
+        )}
       </View>
+
+      {/* Delay picker — a small modal, not a full-screen overlay; the
+          full-screen treatment is reserved for the ringing/in-call states
+          below, which need to look convincing. */}
+      <Modal
+        visible={showDelayPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDelayPicker(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowDelayPicker(false)}>
+          <View style={styles.delayPickerCard}>
+            <Text style={styles.delayPickerTitle}>{t('fakeCallDelayPickerTitle')}</Text>
+            {FAKE_CALL_DELAY_OPTIONS_SECONDS.map((seconds) => (
+              <Pressable
+                key={seconds}
+                style={styles.delayOption}
+                onPress={() => handleFakeCallDelaySelected(seconds)}
+              >
+                <Text style={styles.delayOptionText}>
+                  {seconds === 0
+                    ? t('fakeCallDelayNow')
+                    : t('fakeCallDelaySeconds', { n: seconds })}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Fake incoming call — full-screen, mimics a real call screen. */}
+      <Modal visible={fakeCallState === 'ringing'} animationType="fade">
+        <View style={styles.fakeCallScreen}>
+          <Text style={styles.fakeCallStatusLabel}>{t('fakeCallIncomingLabel')}</Text>
+          <Text style={styles.fakeCallerName}>
+            {fakeCallCallerName || t('fakeCallDefaultCallerName')}
+          </Text>
+          <View style={styles.fakeCallActionsRow}>
+            <Pressable
+              style={[styles.fakeCallActionButton, styles.fakeCallDeclineButton]}
+              onPress={handleDeclineFakeCall}
+            >
+              <Text style={styles.fakeCallActionButtonText}>{t('fakeCallDeclineButton')}</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.fakeCallActionButton, styles.fakeCallAcceptButton]}
+              onPress={handleAcceptFakeCall}
+            >
+              <Text style={styles.fakeCallActionButtonText}>{t('fakeCallAcceptButton')}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Fake in-call screen. */}
+      <Modal visible={fakeCallState === 'in_call'} animationType="fade">
+        <View style={styles.fakeCallScreen}>
+          <Text style={styles.fakeCallStatusLabel}>{t('fakeCallInCallLabel')}</Text>
+          <Text style={styles.fakeCallerName}>
+            {fakeCallCallerName || t('fakeCallDefaultCallerName')}
+          </Text>
+          <Text style={styles.fakeCallTimer}>{formatCallDuration(callElapsedSeconds)}</Text>
+          <Pressable
+            style={[
+              styles.fakeCallActionButton,
+              styles.fakeCallDeclineButton,
+              styles.fakeCallEndButtonWrap,
+            ]}
+            onPress={handleEndFakeCall}
+          >
+            <Text style={styles.fakeCallActionButtonText}>{t('fakeCallEndButton')}</Text>
+          </Pressable>
+        </View>
+      </Modal>
     </ScrollView>
   );
+}
+
+function formatCallDuration(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 const styles = StyleSheet.create({
@@ -440,5 +610,87 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  delayPickerCard: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    gap: 10,
+  },
+  delayPickerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  delayOption: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  delayOptionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  fakeCallScreen: {
+    flex: 1,
+    backgroundColor: '#1c1c1e',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    gap: 12,
+  },
+  fakeCallStatusLabel: {
+    color: '#aaa',
+    fontSize: 14,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  fakeCallerName: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  fakeCallTimer: {
+    color: '#ccc',
+    fontSize: 18,
+    marginTop: 4,
+  },
+  fakeCallActionsRow: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 48,
+  },
+  fakeCallActionButton: {
+    borderRadius: 999,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    minWidth: 130,
+    alignItems: 'center',
+  },
+  fakeCallAcceptButton: {
+    backgroundColor: '#1a7f37',
+  },
+  fakeCallDeclineButton: {
+    backgroundColor: '#d33',
+  },
+  fakeCallEndButtonWrap: {
+    marginTop: 48,
+  },
+  fakeCallActionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
