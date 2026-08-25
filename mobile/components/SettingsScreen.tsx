@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import LanguageToggle from '@/components/LanguageToggle';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 
@@ -13,7 +14,7 @@ import { useLanguage } from '@/lib/language-context';
 // `role` rather than split into two components.
 export default function SettingsScreen() {
   const { session, role, signOut } = useAuth();
-  const { t, language, setLanguage } = useLanguage();
+  const { t } = useLanguage();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -32,36 +33,8 @@ export default function SettingsScreen() {
         <Text style={styles.email}>{t('signedInAs', { email: session.user.email })}</Text>
       )}
 
-      <View style={styles.languageSection}>
-        <Text style={styles.languageLabel}>{t('languageLabel')}</Text>
-        <View style={styles.languageSwitch}>
-          <Pressable
-            style={[styles.languageOption, language === 'bn' && styles.languageOptionActive]}
-            onPress={() => setLanguage('bn')}
-          >
-            <Text
-              style={[
-                styles.languageOptionText,
-                language === 'bn' && styles.languageOptionTextActive,
-              ]}
-            >
-              {t('languageBn')}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.languageOption, language === 'en' && styles.languageOptionActive]}
-            onPress={() => setLanguage('en')}
-          >
-            <Text
-              style={[
-                styles.languageOptionText,
-                language === 'en' && styles.languageOptionTextActive,
-              ]}
-            >
-              {t('languageEn')}
-            </Text>
-          </Pressable>
-        </View>
+      <View style={styles.languageSectionWrap}>
+        <LanguageToggle />
       </View>
 
       {role === 'user' && (
@@ -101,38 +74,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  languageSection: {
-    alignItems: 'center',
+  languageSectionWrap: {
     marginTop: 16,
-    gap: 8,
-  },
-  languageLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-  },
-  languageSwitch: {
-    flexDirection: 'row',
-    backgroundColor: '#eee',
-    borderRadius: 999,
-    padding: 4,
-    gap: 4,
-  },
-  languageOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 999,
-  },
-  languageOptionActive: {
-    backgroundColor: '#2f95dc',
-  },
-  languageOptionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  languageOptionTextActive: {
-    color: '#fff',
   },
   linkButton: {
     marginTop: 24,
