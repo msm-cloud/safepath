@@ -1,3 +1,6 @@
+import { isRunningInExpoGo } from 'expo';
+import { Platform } from 'react-native';
+
 // Local device notifications only (expo-notifications' scheduling API, not
 // a push notification) — a helpful reminder to check in, not the actual
 // safety mechanism. The real safety net is the server-side
@@ -6,42 +9,61 @@
 // alert regardless of whether this notification is ever seen, delivered,
 // or acted on.
 //
-// ANDROID + EXPO GO GOTCHA (traced, not assumed): expo-notifications runs
-// an internal push-token auto-registration side effect the moment its
-// module is evaluated — see
-// node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts,
-// which at import time unconditionally calls addPushTokenListener()
-// (node_modules/expo-notifications/src/TokenEmitter.ts). That function
-// starts with a call to warnOfExpoGoPushUsage()
-// (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts), which on
-// Android throws — not just warns — when running inside Expo Go
-// ("...Push notifications (remote notifications)...was removed from Expo
-// Go..."). We never call any push-specific API ourselves anywhere in this
-// file (only getPermissionsAsync / requestPermissionsAsync /
-// scheduleNotificationAsync / cancelScheduledNotificationAsync — all
-// local-only), but simply having a static `import * as Notifications from
-// 'expo-notifications'` at the top of a module that's loaded on app start
-// (the Home screen imports this file) evaluates that internal side effect
-// eagerly — throwing on app load on Android in Expo Go, before any journey
-// feature is even touched.
+// ANDROID + EXPO GO: fully traced, not assumed. Merely requiring
+// 'expo-notifications' at all — static OR dynamic import, doesn't matter —
+// crashes on Android inside Expo Go, even though we only ever call local
+// scheduling functions (getPermissionsAsync / requestPermissionsAsync /
+// scheduleNotificationAsync / cancelScheduledNotificationAsync). Two
+// things compound to cause this:
 //
-// Fixed by importing the module dynamically, inside each function, instead
-// of statically at the top of this file. That both (a) defers evaluating
-// expo-notifications until a journey is actually started/resolved instead
-// of at app boot, and (b) — critically — makes the throw catchable: a
-// dynamic import()'s module-evaluation failure rejects the returned
-// promise, whereas a static import's failure crashes synchronously and
-// can't be try/caught at all. Combined with the try/catch below, this
-// makes the whole notification path fail safe for ANY reason on ANY
-// platform/environment — logs a warning and continues rather than
-// crashing, since a missing reminder should never be able to take down
-// the app or block starting/resolving a journey.
+// 1. node_modules/expo-notifications/build/index.js re-exports from
+//    ./DevicePushTokenAutoRegistration.fx.js. A re-export like that is NOT
+//    lazy — Metro requires the submodule the instant index.js itself is
+//    required, whether or not the re-exported binding is ever used.
+//    DevicePushTokenAutoRegistration.fx.js's top-level code
+//    unconditionally calls addPushTokenListener()
+//    (.../TokenEmitter.js), which opens with warnOfExpoGoPushUsage()
+//    (.../warnOfExpoGoPushUsage.js) — and that *throws* (not just warns)
+//    on Android specifically when running inside Expo Go.
+//
+// 2. That throw happens inside Metro's own module loader
+//    (node_modules/metro-runtime/src/polyfills/require.js,
+//    guardedLoadModule()), which catches it and calls
+//    global.ErrorUtils.reportFatalError(e) directly — a native-level
+//    fatal-error report, entirely outside normal JS exception/Promise
+//    flow — and then returns `undefined` instead of re-throwing. That
+//    means a dynamic import() of the package doesn't reject; it resolves
+//    with near-empty debris ({ default: undefined }), which is why an
+//    earlier version of this file that switched to a dynamic import still
+//    crashed (via the untouchable native fatal-error report) while ALSO
+//    logging an unrelated "undefined is not a function" from calling a
+//    method that didn't actually exist on that debris object. No amount
+//    of try/catch around the import call can fix this — the fatal error
+//    fires before our Promise-based error handling ever runs.
+//
+// The only real fix is to never import 'expo-notifications' at all in
+// this specific environment. isRunningInExpoGo() is the same guard the
+// package uses internally, imported here from 'expo' directly — confirmed
+// safe to import eagerly: it's literally the first line of
+// expo-notifications' own index.js, evaluated successfully every time
+// (the crash traced above comes from a *later*, unrelated re-export in
+// that same file, not from this import).
+function localNotificationsUnavailable(): boolean {
+  return Platform.OS === 'android' && isRunningInExpoGo();
+}
 
 export async function scheduleArrivalCheckNotification(params: {
   title: string;
   body: string;
   fireAt: Date;
 }): Promise<string | null> {
+  if (localNotificationsUnavailable()) {
+    console.warn(
+      '[notifications] Skipping the "did you arrive safely?" reminder — expo-notifications is not usable in Expo Go on Android (see the comment at the top of mobile/lib/notifications.ts). Use a development build to enable it. This is only a convenience nudge; the server-side cron job remains the actual safety mechanism.'
+    );
+    return null;
+  }
+
   try {
     const Notifications = await import('expo-notifications');
 
@@ -69,6 +91,8 @@ export async function scheduleArrivalCheckNotification(params: {
 
 export async function cancelScheduledNotification(id: string | null): Promise<void> {
   if (!id) return;
+  if (localNotificationsUnavailable()) return; // never successfully scheduled one in the first place
+
   try {
     const Notifications = await import('expo-notifications');
     await Notifications.cancelScheduledNotificationAsync(id);
