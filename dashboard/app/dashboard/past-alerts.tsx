@@ -12,6 +12,7 @@ type PastAlertRow = {
   resolved_at: string | null;
   last_lat: number | null;
   last_lng: number | null;
+  trigger_type: string;
 };
 
 // Resolved alerts for this guardian's linked users. A plain page-load
@@ -39,7 +40,7 @@ export default async function PastAlerts({ language }: { language: Language }) {
   const { data, error } = await supabase
     .from('alerts')
     .select(
-      'id, user_id, created_at, resolved_at, last_lat, last_lng, user:profiles!alerts_user_id_fkey(full_name)'
+      'id, user_id, created_at, resolved_at, last_lat, last_lng, trigger_type, user:profiles!alerts_user_id_fkey(full_name)'
     )
     .eq('status', 'resolved')
     .order('resolved_at', { ascending: false })
@@ -52,6 +53,7 @@ export default async function PastAlerts({ language }: { language: Language }) {
     resolved_at: string | null;
     last_lat: number | null;
     last_lng: number | null;
+    trigger_type: string;
     user: { full_name: string } | null;
   }> | null;
 
@@ -63,6 +65,7 @@ export default async function PastAlerts({ language }: { language: Language }) {
     resolved_at: row.resolved_at,
     last_lat: row.last_lat,
     last_lng: row.last_lng,
+    trigger_type: row.trigger_type,
   }));
 
   return (
@@ -83,6 +86,11 @@ export default async function PastAlerts({ language }: { language: Language }) {
               className="flex flex-col gap-1 rounded-md border border-zinc-200 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
+                {alert.trigger_type === 'journey_overdue' && (
+                  <p className="text-xs font-bold tracking-wide text-amber-700 uppercase">
+                    {t(language, 'missedCheckinLabel')}
+                  </p>
+                )}
                 <p className="font-medium text-zinc-900">{alert.full_name}</p>
                 <p className="text-zinc-500">
                   {new Date(alert.created_at).toLocaleString()}

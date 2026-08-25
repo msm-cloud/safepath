@@ -14,6 +14,7 @@ type ActiveAlert = {
   created_at: string;
   last_lat: number | null;
   last_lng: number | null;
+  trigger_type: string;
 };
 
 type AlertsChangeRow = {
@@ -23,6 +24,7 @@ type AlertsChangeRow = {
   created_at: string;
   last_lat: number | null;
   last_lng: number | null;
+  trigger_type: string;
 };
 
 // Subscribes to Realtime changes on `alerts` (INSERT + UPDATE) for
@@ -61,7 +63,7 @@ export default function ActiveAlerts() {
       const { data } = await supabase
         .from('alerts')
         .select(
-          'id, user_id, created_at, last_lat, last_lng, user:profiles!alerts_user_id_fkey(full_name)'
+          'id, user_id, created_at, last_lat, last_lng, trigger_type, user:profiles!alerts_user_id_fkey(full_name)'
         )
         .eq('status', 'active')
         .order('created_at', { ascending: false });
@@ -74,6 +76,7 @@ export default function ActiveAlerts() {
         created_at: string;
         last_lat: number | null;
         last_lng: number | null;
+        trigger_type: string;
         user: { full_name: string } | null;
       }>;
 
@@ -84,6 +87,7 @@ export default function ActiveAlerts() {
           created_at: row.created_at,
           last_lat: row.last_lat,
           last_lng: row.last_lng,
+          trigger_type: row.trigger_type,
           full_name: row.user?.full_name || tRef.current('unnamedUser'),
         }))
       );
@@ -165,6 +169,7 @@ export default function ActiveAlerts() {
                   created_at: row.created_at,
                   last_lat: row.last_lat,
                   last_lng: row.last_lng,
+                  trigger_type: row.trigger_type,
                   full_name: profile?.full_name || tRef.current('unnamedUser'),
                 },
                 ...prev,
@@ -243,7 +248,9 @@ export default function ActiveAlerts() {
         >
           <div>
             <p className="text-sm font-bold tracking-wide text-red-700 uppercase">
-              {t('activeAlertLabel')}
+              {alert.trigger_type === 'journey_overdue'
+                ? t('missedCheckinLabel')
+                : t('activeAlertLabel')}
             </p>
             <p className="mt-1 text-lg font-semibold text-zinc-900">{alert.full_name}</p>
             <p className="text-sm text-zinc-600">{relativeTime(alert.created_at, t)}</p>

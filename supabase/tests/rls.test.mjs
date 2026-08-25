@@ -422,5 +422,160 @@ check(
   Number(publicationExists.rows[0].n) === 0
 );
 
+console.log('\n--- journeys RLS ---');
+let journeyId;
+await asUser(userA, async () => {
+  const ins = await db.query(
+    `insert into public.journeys (user_id, destination_note, expected_arrival_at) values ('${userA}', 'walking home', now() + interval '30 minutes') returning id`
+  );
+  journeyId = ins.rows[0].id;
+  check('A can create their own journey', !!journeyId);
+});
+
+await asUser(userX, async () => {
+  try {
+    await db.query(
+      `insert into public.journeys (user_id, expected_arrival_at) values ('${userA}', now() + interval '30 minutes')`
+    );
+    check('X cannot create a journey on behalf of A (should have thrown)', false);
+  } catch {
+    check('X cannot create a journey on behalf of A', true);
+  }
+});
+
+await asUser(userG, async () => {
+  const seen = await db.query(`select id from public.journeys where id = '${journeyId}'`);
+  check('accepted guardian G can see A journey', seen.rows.length === 1);
+});
+
+await asUser(userX, async () => {
+  const seen = await db.query(`select id from public.journeys where id = '${journeyId}'`);
+  check('unrelated X cannot see A journey', seen.rows.length === 0);
+});
+
+await asUser(userG, async () => {
+  // journeys_update_own's USING clause (user_id = auth.uid()) simply
+  // excludes this row from G's UPDATE scan — no exception, just zero rows
+  // affected, unlike the alerts table where a guardian is allowed to
+  // update status directly.
+  const result = await db.query(
+    `update public.journeys set status = 'cancelled' where id = '${journeyId}' returning id`
+  );
+  check(
+    'guardian cannot update A journey at all — journeys_update_own is owner-only, unlike alerts',
+    result.rows.length === 0
+  );
+});
+
+await asUser(userA, async () => {
+  const updated = await db.query(
+    `update public.journeys set expected_arrival_at = now() + interval '45 minutes' where id = '${journeyId}' returning expected_arrival_at`
+  );
+  check('A (the owner) can update their own journey (e.g. "add time")', updated.rows.length === 1);
+});
+
+console.log('\n--- check_overdue_journeys() (journey_overdue -> alerts pipeline) ---');
+// What this proves locally: the function correctly identifies overdue,
+// not-yet-notified journeys, raises a real alert reusing the existing
+// alerts table/pipeline with trigger_type = 'journey_overdue' (proving the
+// alert_trigger_type enum extension above actually took effect), carries
+// over the journey's last known location, and atomically flips the journey
+// to alert_triggered + stamps notified_at so it can never fire twice — all
+// exercised via direct invocation, not by waiting on a real schedule.
+//
+// What this does NOT and CANNOT prove locally: that pg_cron actually
+// invokes this function every 2 minutes on a live Supabase project — pglite
+// has no pg_cron (confirmed below, same graceful-degradation shape as
+// pg_net/Realtime above), so cron.schedule() in the migration silently
+// skipped there. Verifying the schedule itself fires needs a real Supabase
+// project with pg_cron enabled and a live wait-and-check.
+let overdueJourneyId;
+let notOverdueJourneyId;
+await asUser(userA, async () => {
+  const overdue = await db.query(
+    `insert into public.journeys (user_id, expected_arrival_at, grace_period_minutes, last_lat, last_lng)
+     values ('${userA}', now() - interval '20 minutes', 10, 23.75, 90.39) returning id`
+  );
+  overdueJourneyId = overdue.rows[0].id;
+
+  const notOverdue = await db.query(
+    `insert into public.journeys (user_id, expected_arrival_at, grace_period_minutes)
+     values ('${userA}', now() + interval '30 minutes', 10) returning id`
+  );
+  notOverdueJourneyId = notOverdue.rows[0].id;
+});
+
+const alertsBefore = await db.query(
+  `select count(*) as n from public.alerts where user_id = '${userA}' and trigger_type = 'journey_overdue'`
+);
+
+await db.query(`select public.check_overdue_journeys();`);
+
+const overdueJourneyAfter = await db.query(
+  `select status, notified_at from public.journeys where id = '${overdueJourneyId}'`
+);
+check(
+  'overdue journey flipped to alert_triggered with notified_at stamped',
+  overdueJourneyAfter.rows[0].status === 'alert_triggered' &&
+    overdueJourneyAfter.rows[0].notified_at !== null
+);
+
+const notOverdueJourneyAfter = await db.query(
+  `select status, notified_at from public.journeys where id = '${notOverdueJourneyId}'`
+);
+check(
+  'not-yet-overdue journey is untouched (still active, notified_at still null)',
+  notOverdueJourneyAfter.rows[0].status === 'active' &&
+    notOverdueJourneyAfter.rows[0].notified_at === null
+);
+
+const journeyAlert = await db.query(
+  `select user_id, status, trigger_type, last_lat, last_lng from public.alerts
+   where user_id = '${userA}' and trigger_type = 'journey_overdue'
+   order by created_at desc limit 1`
+);
+check(
+  "a journey_overdue alert was raised via the existing alerts table, carrying the journey's last known location",
+  journeyAlert.rows.length === 1 &&
+    journeyAlert.rows[0].status === 'active' &&
+    Number(journeyAlert.rows[0].last_lat) === 23.75 &&
+    Number(journeyAlert.rows[0].last_lng) === 90.39
+);
+
+const alertsAfterFirstRun = await db.query(
+  `select count(*) as n from public.alerts where user_id = '${userA}' and trigger_type = 'journey_overdue'`
+);
+check(
+  'exactly one journey_overdue alert exists for the overdue journey after the first run',
+  Number(alertsAfterFirstRun.rows[0].n) === Number(alertsBefore.rows[0].n) + 1
+);
+
+// Re-running immediately must be a no-op for the journey it already
+// claimed — this is the "can never fire twice" guarantee.
+await db.query(`select public.check_overdue_journeys();`);
+
+const alertsAfterSecondRun = await db.query(
+  `select count(*) as n from public.alerts where user_id = '${userA}' and trigger_type = 'journey_overdue'`
+);
+check(
+  're-running check_overdue_journeys() does not raise a duplicate alert for the same journey',
+  Number(alertsAfterSecondRun.rows[0].n) === Number(alertsAfterFirstRun.rows[0].n)
+);
+
+console.log('\n--- pg_cron scheduling (journeys.sql) ---');
+// Same graceful-degradation shape as the pg_net and Realtime checks above:
+// confirms the DO block's exception handler is what actually ran (no
+// pg_cron extension present in pglite) rather than the happy path silently
+// no-op'ing, and that this never blocked the rest of the migration from
+// applying (the journeys table, RLS, and check_overdue_journeys() above all
+// exist and work despite pg_cron being unavailable here).
+const cronExtensionExists = await db.query(`
+  select count(*) as n from pg_extension where extname = 'pg_cron'
+`);
+check(
+  'confirms the graceful-degradation path ran: no pg_cron extension exists in pglite, yet the migration completed and check_overdue_journeys() above works',
+  Number(cronExtensionExists.rows[0].n) === 0
+);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;

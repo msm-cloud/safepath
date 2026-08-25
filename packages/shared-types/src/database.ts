@@ -199,6 +199,56 @@ export type Database = {
           },
         ];
       };
+      journeys: {
+        Row: {
+          id: string;
+          user_id: string;
+          destination_note: string | null;
+          expected_arrival_at: string;
+          grace_period_minutes: number;
+          status: Database['public']['Enums']['journey_status'];
+          last_lat: number | null;
+          last_lng: number | null;
+          notified_at: string | null;
+          created_at: string;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          destination_note?: string | null;
+          expected_arrival_at: string;
+          grace_period_minutes?: number;
+          status?: Database['public']['Enums']['journey_status'];
+          last_lat?: number | null;
+          last_lng?: number | null;
+          notified_at?: string | null;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          destination_note?: string | null;
+          expected_arrival_at?: string;
+          grace_period_minutes?: number;
+          status?: Database['public']['Enums']['journey_status'];
+          last_lat?: number | null;
+          last_lng?: number | null;
+          notified_at?: string | null;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'journeys_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       push_tokens: {
         Row: {
           id: string;
@@ -251,13 +301,18 @@ export type Database = {
         Args: { p_invite_code: string };
         Returns: Json;
       };
+      check_overdue_journeys: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
+      };
     };
     Enums: {
       profile_role: 'user' | 'guardian';
       preferred_language: 'bn' | 'en';
       guardian_link_status: 'pending' | 'accepted' | 'revoked';
       alert_status: 'active' | 'resolved' | 'false_alarm';
-      alert_trigger_type: 'manual';
+      alert_trigger_type: 'manual' | 'journey_overdue';
+      journey_status: 'active' | 'arrived_safe' | 'alert_triggered' | 'cancelled';
     };
     CompositeTypes: Record<string, never>;
   };
@@ -270,3 +325,4 @@ export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Alert = Database['public']['Tables']['alerts']['Row'];
 export type GuardianLink = Database['public']['Tables']['guardian_links']['Row'];
 export type EmergencyContact = Database['public']['Tables']['emergency_contacts']['Row'];
+export type Journey = Database['public']['Tables']['journeys']['Row'];

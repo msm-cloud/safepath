@@ -57,6 +57,7 @@ export const translations = {
 
   // --- Active alerts card ---
   activeAlertLabel: { en: 'Active Alert', bn: 'সক্রিয় অ্যালার্ট' },
+  missedCheckinLabel: { en: 'Missed Check-in', bn: 'চেক-ইন মিস হয়েছে' },
   viewLastKnownLocation: { en: 'View last known location', bn: 'সর্বশেষ জানা অবস্থান দেখুন' },
   noLocationAvailableYet: {
     en: 'No location available yet.',
