@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import LanguageToggle from '@/components/LanguageToggle';
 import { useLanguage } from '@/lib/language-context';
 
 // Shown only when there's no active session (see the `!session` guard in
@@ -34,6 +35,10 @@ export default function WelcomeScreen() {
           </Text>
         </Pressable>
       </View>
+
+      <View style={styles.languageSectionWrap}>
+        <LanguageToggle />
+      </View>
     </View>
   );
 }
@@ -60,6 +65,9 @@ const styles = StyleSheet.create({
   buttonGroup: {
     width: '100%',
     gap: 12,
+  },
+  languageSectionWrap: {
+    marginTop: 32,
   },
   button: {
     backgroundColor: '#2f95dc',
