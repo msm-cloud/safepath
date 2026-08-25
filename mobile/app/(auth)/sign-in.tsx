@@ -11,6 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 
+import PasswordInput from '@/components/PasswordInput';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import { isValidEmail, MIN_PASSWORD_LENGTH } from '@/lib/validation';
@@ -84,11 +85,8 @@ export default function SignInScreen() {
           value={email}
           onChangeText={setEmail}
         />
-        <TextInput
-          style={styles.input}
+        <PasswordInput
           placeholder={t('passwordPlaceholder')}
-          secureTextEntry
-          autoCapitalize="none"
           autoComplete="password"
           value={password}
           onChangeText={setPassword}
