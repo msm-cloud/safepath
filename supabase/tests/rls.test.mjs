@@ -111,6 +111,41 @@ await asUser(userA, async () => {
   check('A cannot select unrelated profile', others.rows.length === 0);
 });
 
+// profiles_update_own had no direct test coverage before the shake-SOS /
+// fake-call settings columns were added — confirming here (not just
+// inferring from reading the migration) that it's a plain row-level
+// policy with no column restrictions, so the three new columns are
+// already covered by the existing "id = auth.uid()" check with no RLS
+// changes needed.
+console.log('\n--- profiles RLS: update (including new safety-feature settings columns) ---');
+await asUser(userA, async () => {
+  const updated = await db.query(
+    `update public.profiles
+       set shake_sos_enabled = true,
+           fake_call_enabled = false,
+           fake_call_caller_name = 'Apu'
+     where id = '${userA}'
+     returning shake_sos_enabled, fake_call_enabled, fake_call_caller_name`
+  );
+  check(
+    'A can update their own shake_sos_enabled/fake_call_enabled/fake_call_caller_name',
+    updated.rows.length === 1 &&
+      updated.rows[0].shake_sos_enabled === true &&
+      updated.rows[0].fake_call_enabled === false &&
+      updated.rows[0].fake_call_caller_name === 'Apu'
+  );
+});
+
+await asUser(userX, async () => {
+  const updated = await db.query(
+    `update public.profiles set shake_sos_enabled = true where id = '${userA}' returning id`
+  );
+  check(
+    "X cannot update A's profile (zero rows affected, not an error)",
+    updated.rows.length === 0
+  );
+});
+
 console.log('\n--- guardian_links: invite creation ---');
 let inviteCode;
 await asUser(userA, async () => {

@@ -21,6 +21,9 @@ export type Database = {
           full_name: string;
           phone: string | null;
           preferred_language: Database['public']['Enums']['preferred_language'];
+          shake_sos_enabled: boolean;
+          fake_call_enabled: boolean;
+          fake_call_caller_name: string | null;
           created_at: string;
         };
         Insert: {
@@ -29,6 +32,9 @@ export type Database = {
           full_name: string;
           phone?: string | null;
           preferred_language?: Database['public']['Enums']['preferred_language'];
+          shake_sos_enabled?: boolean;
+          fake_call_enabled?: boolean;
+          fake_call_caller_name?: string | null;
           created_at?: string;
         };
         Update: {
@@ -37,6 +43,9 @@ export type Database = {
           full_name?: string;
           phone?: string | null;
           preferred_language?: Database['public']['Enums']['preferred_language'];
+          shake_sos_enabled?: boolean;
+          fake_call_enabled?: boolean;
+          fake_call_caller_name?: string | null;
           created_at?: string;
         };
         Relationships: [
