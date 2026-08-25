@@ -29,7 +29,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { session, loading } = useAuth();
+  const { session, role, loading } = useAuth();
 
   useEffect(() => {
     if (!loading) {
@@ -44,8 +44,13 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
-        <Stack.Protected guard={!!session}>
+        {/* Existing student experience — completely unchanged. */}
+        <Stack.Protected guard={!!session && role === 'user'}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack.Protected>
+        {/* New parallel guardian experience — see app/(guardian)/. */}
+        <Stack.Protected guard={!!session && role === 'guardian'}>
+          <Stack.Screen name="(guardian)" options={{ headerShown: false }} />
         </Stack.Protected>
         <Stack.Protected guard={!session}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />

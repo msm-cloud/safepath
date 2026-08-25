@@ -14,6 +14,19 @@ export type Language = 'bn' | 'en';
 type Entry = { en: string; bn: string };
 
 export const translations = {
+  // --- Welcome / role selection ---
+  welcomeTitle: { en: 'Welcome to SafePath', bn: 'সেফপাথে স্বাগতম' },
+  welcomeSubtitle: {
+    en: 'Are you signing in as a guardian, or as a student?',
+    bn: 'আপনি কি একজন অভিভাবক নাকি একজন শিক্ষার্থী হিসেবে সাইন ইন করছেন?',
+  },
+  signInAsGuardianButton: { en: 'Sign in as a Guardian', bn: 'অভিভাবক হিসেবে সাইন ইন করুন' },
+  signInAsStudentButton: { en: 'Sign in as a Student', bn: 'শিক্ষার্থী হিসেবে সাইন ইন করুন' },
+  guardianSignInHeading: { en: 'Guardian Sign In', bn: 'অভিভাবক সাইন ইন' },
+  studentSignInHeading: { en: 'Student Sign In', bn: 'শিক্ষার্থী সাইন ইন' },
+  guardianSignUpHeading: { en: 'Guardian Sign Up', bn: 'অভিভাবক সাইন আপ' },
+  studentSignUpHeading: { en: 'Student Sign Up', bn: 'শিক্ষার্থী সাইন আপ' },
+
   // --- Sign in ---
   signInTitle: { en: 'Sign in to SafePath', bn: 'সেফপাথে সাইন ইন করুন' },
   emailPlaceholder: { en: 'Email', bn: 'ইমেইল' },
@@ -217,6 +230,60 @@ export const translations = {
     en: 'Could not delete this contact. Try again.',
     bn: 'এই যোগাযোগ মুছে ফেলা যায়নি। আবার চেষ্টা করুন।',
   },
+
+  // --- Guardian experience ---
+  unnamedUser: { en: 'Unnamed user', bn: 'নামহীন ব্যবহারকারী' },
+  guardianActiveAlertsTitle: { en: 'Active Alerts', bn: 'সক্রিয় অ্যালার্ট' },
+  guardianPastAlertsTitle: { en: 'Past Alerts', bn: 'পূর্ববর্তী অ্যালার্ট' },
+  guardianLinkTitle: { en: 'Link to Someone', bn: 'কারো সাথে যুক্ত হন' },
+  guardianLinkSubtitle: {
+    en: "Enter the invite code the person you're supporting shared with you.",
+    bn: 'আপনি যাকে সহায়তা করছেন তার দেওয়া আমন্ত্রণ কোডটি লিখুন।',
+  },
+  sosAlertTypeLabel: { en: 'SOS', bn: 'SOS' },
+  missedCheckinTypeLabel: { en: 'Missed Check-in', bn: 'চেক-ইন মিস হয়েছে' },
+  viewLastKnownLocationLink: {
+    en: 'View last known location',
+    bn: 'সর্বশেষ জানা অবস্থান দেখুন',
+  },
+  noLocationAvailableYet: {
+    en: 'No location available yet.',
+    bn: 'এখনো কোনো অবস্থান পাওয়া যায়নি।',
+  },
+  noLocationRecorded: { en: 'No location recorded', bn: 'কোনো অবস্থান রেকর্ড করা হয়নি' },
+  markResolvedButton: { en: 'Mark Resolved', bn: 'সমাধান হয়েছে চিহ্নিত করুন' },
+  noActiveAlertsMessage: {
+    en: 'No active alerts right now.',
+    bn: 'এই মুহূর্তে কোনো সক্রিয় অ্যালার্ট নেই।',
+  },
+  noResolvedAlertsYet: {
+    en: 'No resolved alerts yet.',
+    bn: 'এখনো কোনো সমাধান হওয়া অ্যালার্ট নেই।',
+  },
+  secondsAgo: { en: '{n}s ago', bn: '{n} সেকেন্ড আগে' },
+  minutesAgo: { en: '{n}m ago', bn: '{n} মিনিট আগে' },
+  hoursAgo: { en: '{n}h ago', bn: '{n} ঘণ্টা আগে' },
+  activeForLessThanMinute: {
+    en: 'Active for less than a minute',
+    bn: 'এক মিনিটেরও কম সময় সক্রিয় ছিল',
+  },
+  activeForMinutes: { en: 'Active for {n} minute{s}', bn: '{n} মিনিট সক্রিয় ছিল' },
+  activeForHoursMinutes: { en: 'Active for {h}h {m}m', bn: '{h} ঘণ্টা {m} মিনিট সক্রিয় ছিল' },
+  activeForHours: { en: 'Active for {h} hour{s}', bn: '{h} ঘণ্টা সক্রিয় ছিল' },
+  activeForDays: { en: 'Active for {d} day{s}', bn: '{d} দিন সক্রিয় ছিল' },
+  inviteCodePlaceholder: { en: 'Invite code', bn: 'আমন্ত্রণ কোড' },
+  enterInviteCode: { en: 'Enter an invite code.', bn: 'একটি আমন্ত্রণ কোড লিখুন।' },
+  invalidOrUsedCode: {
+    en: 'That invite code is invalid or has already been used.',
+    bn: 'এই আমন্ত্রণ কোডটি সঠিক নয় অথবা ইতিমধ্যে ব্যবহৃত হয়েছে।',
+  },
+  sessionExpired: {
+    en: 'Your session may have expired. Try signing in again.',
+    bn: 'আপনার সেশনের মেয়াদ শেষ হয়ে থাকতে পারে। আবার সাইন ইন করার চেষ্টা করুন।',
+  },
+  nowLinkedTo: { en: "You're now linked to {name}.", bn: 'আপনি এখন {name}-এর সাথে যুক্ত।' },
+  thisUserFallback: { en: 'this user', bn: 'এই ব্যবহারকারী' },
+  linkButton: { en: 'Link', bn: 'যুক্ত করুন' },
 } as const satisfies Record<string, Entry>;
 
 export type TranslationKey = keyof typeof translations;

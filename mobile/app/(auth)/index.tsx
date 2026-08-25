@@ -1,154 +1,83 @@
-import { Link } from 'expo-router';
-import { useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-} from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useLanguage } from '@/lib/language-context';
-import { supabase } from '@/lib/supabase';
-import { isValidEmail, MIN_PASSWORD_LENGTH } from '@/lib/validation';
 
-export default function SignInScreen() {
+// Shown only when there's no active session (see the `!session` guard in
+// app/_layout.tsx) — the very first thing anyone sees before signing in.
+// Which button is tapped only carries a `role` param forward to sign-in/
+// sign-up as UI framing (which heading to show, what role a *new* account
+// gets created with) — it's never trusted to route an existing account;
+// that's always decided by the real profile.role after auth succeeds.
+export default function WelcomeScreen() {
   const { t } = useLanguage();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSignIn = async () => {
-    setError(null);
-
-    if (!isValidEmail(email)) {
-      setError(t('invalidEmail'));
-      return;
-    }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(t('passwordTooShort', { n: MIN_PASSWORD_LENGTH }));
-      return;
-    }
-
-    setSubmitting(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-    setSubmitting(false);
-
-    if (signInError) {
-      // Surface Supabase's own message (e.g. "Invalid login credentials")
-      // rather than a generic one.
-      setError(signInError.message);
-      return;
-    }
-
-    // No navigation call needed: the session change is picked up by
-    // AuthProvider, and Stack.Protected in the root layout redirects to the
-    // (tabs) group automatically.
-  };
+  const router = useRouter();
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{t('signInTitle')}</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>{t('welcomeTitle')}</Text>
+      <Text style={styles.subtitle}>{t('welcomeSubtitle')}</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder={t('emailPlaceholder')}
-          autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder={t('passwordPlaceholder')}
-          secureTextEntry
-          autoCapitalize="none"
-          autoComplete="password"
-          value={password}
-          onChangeText={setPassword}
-        />
-
-        {error && <Text style={styles.error}>{error}</Text>}
-
+      <View style={styles.buttonGroup}>
         <Pressable
-          style={[styles.button, submitting && styles.buttonDisabled]}
-          onPress={handleSignIn}
-          disabled={submitting}
+          style={styles.button}
+          onPress={() => router.push({ pathname: '/(auth)/sign-in', params: { role: 'guardian' } })}
         >
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>{t('signInButton')}</Text>
-          )}
+          <Text style={styles.buttonText}>{t('signInAsGuardianButton')}</Text>
         </Pressable>
-
-        <Link href="/(auth)/sign-up" style={styles.link}>
-          {t('signUpLink')}
-        </Link>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <Pressable
+          style={[styles.button, styles.buttonSecondary]}
+          onPress={() => router.push({ pathname: '/(auth)/sign-in', params: { role: 'user' } })}
+        >
+          <Text style={[styles.buttonText, styles.buttonSecondaryText]}>
+            {t('signInAsStudentButton')}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
   container: {
-    flexGrow: 1,
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
     gap: 12,
   },
   title: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: 'bold',
-    marginBottom: 12,
     textAlign: 'center',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  buttonGroup: {
+    width: '100%',
+    gap: 12,
   },
   button: {
     backgroundColor: '#2f95dc',
-    borderRadius: 8,
-    paddingVertical: 14,
+    borderRadius: 10,
+    paddingVertical: 18,
     alignItems: 'center',
-    marginTop: 8,
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  buttonSecondary: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#2f95dc',
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
   },
-  error: {
-    color: '#d33',
-    fontSize: 14,
-  },
-  link: {
-    textAlign: 'center',
-    marginTop: 16,
+  buttonSecondaryText: {
     color: '#2f95dc',
-    fontSize: 14,
   },
 });

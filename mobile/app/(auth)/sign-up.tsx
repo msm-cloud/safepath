@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,6 +17,15 @@ import { isValidEmail, MIN_PASSWORD_LENGTH } from '@/lib/validation';
 
 export default function SignUpScreen() {
   const { t } = useLanguage();
+  // Carried from the welcome screen (see app/(auth)/index.tsx), via
+  // sign-in if the person tapped through from there. Defaults to 'user'
+  // (student) if missing — e.g. someone linking directly to /sign-up — to
+  // match this screen's pre-existing behavior before roles existed.
+  const { role: roleParam } = useLocalSearchParams<{ role?: string }>();
+  const role: 'user' | 'guardian' = roleParam === 'guardian' ? 'guardian' : 'user';
+
+  const heading = role === 'guardian' ? t('guardianSignUpHeading') : t('studentSignUpHeading');
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,10 +58,13 @@ export default function SignUpScreen() {
       options: {
         // Defensive fallback for when this project requires email
         // confirmation: there's no session yet below to run the profiles
-        // UPDATE with, so this is the only way full_name reaches the
-        // profiles row (via handle_new_user reading it off signup metadata)
-        // before the user confirms and signs in for the first time.
-        data: { full_name: fullName.trim() },
+        // UPDATE with, so this is the only way full_name/role reach the
+        // profiles row (via handle_new_user reading them off signup
+        // metadata — see supabase/migrations/20260821190552_profiles.sql,
+        // which already reads `role` this way; it was just never passed
+        // until now, always defaulting to 'user') before the user confirms
+        // and signs in for the first time.
+        data: { full_name: fullName.trim(), role },
       },
     });
 
@@ -74,11 +86,10 @@ export default function SignUpScreen() {
       return;
     }
 
-    // Mobile is always the at-risk-user app — role is always 'user' here.
     const { error: profileError } = await supabase
       .from('profiles')
       .update({
-        role: 'user',
+        role,
         full_name: fullName.trim(),
         preferred_language: 'bn',
       })
@@ -102,7 +113,7 @@ export default function SignUpScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{t('signUpTitle')}</Text>
+        <Text style={styles.title}>{heading}</Text>
 
         <TextInput
           style={styles.input}
@@ -146,7 +157,7 @@ export default function SignUpScreen() {
           )}
         </Pressable>
 
-        <Link href="/(auth)" style={styles.link}>
+        <Link href={{ pathname: '/(auth)/sign-in', params: { role } }} style={styles.link}>
           {t('signInLink')}
         </Link>
       </ScrollView>
