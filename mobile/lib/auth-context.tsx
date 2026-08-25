@@ -57,9 +57,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       setSession(newSession);
       if (newSession) {
+        // Bug fixed here: `loading` used to only ever get set back to
+        // false, once, inside the initial getSession() handler above —
+        // never re-armed for a session change that happens *after* mount
+        // (a sign-in or sign-up). That left a real window where
+        // setSession() had already re-rendered the root layout with a
+        // truthy session but `role` still at its old (null) value, which
+        // makes every Stack.Protected guard in app/_layout.tsx false at
+        // once — no matching screen, hence Expo Router's generic
+        // "This screen doesn't exist" fallback. Re-arming loading here
+        // closes that window: the root layout returns null (same as the
+        // initial splash-holding state) until role is freshly known for
+        // this exact session, instead of ever rendering the
+        // session-without-role combination at all.
+        setLoading(true);
         await loadRole(newSession.user.id);
+        if (!cancelled) setLoading(false);
       } else {
         setRole(null);
+        setLoading(false);
       }
     });
 
