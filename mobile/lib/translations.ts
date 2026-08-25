@@ -38,6 +38,8 @@ export const translations = {
     en: 'Password must be at least {n} characters.',
     bn: 'পাসওয়ার্ড কমপক্ষে {n} অক্ষরের হতে হবে।',
   },
+  showPasswordLabel: { en: 'Show password', bn: 'পাসওয়ার্ড দেখান' },
+  hidePasswordLabel: { en: 'Hide password', bn: 'পাসওয়ার্ড লুকান' },
 
   // --- Sign up ---
   signUpTitle: { en: 'Create your SafePath account', bn: 'আপনার সেফপাথ অ্যাকাউন্ট তৈরি করুন' },

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useActionState } from 'react';
 
+import PasswordField from '@/components/PasswordField';
 import { signUpAction, type AuthActionState } from '@/lib/auth-actions';
 import { useLanguage } from '@/lib/language-context';
 
@@ -33,13 +34,10 @@ export default function SignUpPage() {
           required
           className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
         />
-        <input
-          type="password"
+        <PasswordField
           name="password"
           placeholder={t('passwordSignupPlaceholder')}
           autoComplete="new-password"
-          required
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
         />
 
         {/* state.error/info come from the signUpAction Server Action

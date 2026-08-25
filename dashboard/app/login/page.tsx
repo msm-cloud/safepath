@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useActionState } from 'react';
 
+import PasswordField from '@/components/PasswordField';
 import { signInAction, type AuthActionState } from '@/lib/auth-actions';
 import { useLanguage } from '@/lib/language-context';
 
@@ -25,13 +26,10 @@ export default function LoginPage() {
           required
           className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
         />
-        <input
-          type="password"
+        <PasswordField
           name="password"
           placeholder={t('passwordPlaceholder')}
           autoComplete="current-password"
-          required
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
         />
 
         {/* state.error comes from the signInAction Server Action (business

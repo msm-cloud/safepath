@@ -28,6 +28,8 @@ export const translations = {
   passwordPlaceholder: { en: 'Password', bn: 'পাসওয়ার্ড' },
   signInButton: { en: 'Sign In', bn: 'সাইন ইন' },
   signingInButton: { en: 'Signing in…', bn: 'সাইন ইন হচ্ছে…' },
+  showPasswordLabel: { en: 'Show password', bn: 'পাসওয়ার্ড দেখান' },
+  hidePasswordLabel: { en: 'Hide password', bn: 'পাসওয়ার্ড লুকান' },
   noAccountQuestion: { en: "Don't have an account?", bn: 'অ্যাকাউন্ট নেই?' },
   signUpNow: { en: 'Sign up', bn: 'সাইন আপ করুন' },
 
