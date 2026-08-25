@@ -46,10 +46,54 @@ export const translations = {
 
   // --- Home ---
   homeTitle: { en: 'Home', bn: 'হোম' },
-  homePlaceholder: {
-    en: 'Placeholder screen — no content yet.',
-    bn: 'প্লেসহোল্ডার স্ক্রিন — এখনো কোনো কনটেন্ট নেই।',
+
+  // --- Journeys (Home screen) ---
+  startJourneyTitle: { en: 'Start a Journey', bn: 'যাত্রা শুরু করুন' },
+  startJourneySubtitle: {
+    en: "Let SafePath check that you've arrived. If you don't confirm in time, your guardians are alerted automatically.",
+    bn: 'সেফপাথকে আপনার পৌঁছানো নিশ্চিত করতে দিন। আপনি সময়মতো নিশ্চিত না করলে, আপনার অভিভাবকদের স্বয়ংক্রিয়ভাবে জানানো হবে।',
   },
+  journeyDurationLabel: { en: 'Expected in', bn: 'প্রত্যাশিত সময়' },
+  journeyDurationMinutesOption: { en: '{n} min', bn: '{n} মিনিট' },
+  destinationNotePlaceholder: {
+    en: 'Where are you headed? (optional)',
+    bn: 'আপনি কোথায় যাচ্ছেন? (ঐচ্ছিক)',
+  },
+  startJourneyButton: { en: 'Start Journey', bn: 'যাত্রা শুরু করুন' },
+  journeyCreateError: {
+    en: 'Could not start the journey. Try again.',
+    bn: 'যাত্রা শুরু করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  journeyActiveLabel: { en: 'Journey in progress', bn: 'যাত্রা চলছে' },
+  journeyDestinationLabel: { en: 'Going to: {note}', bn: 'গন্তব্য: {note}' },
+  journeyTimeRemaining: { en: 'Expected to arrive in {n} min', bn: '{n} মিনিটে পৌঁছানোর কথা' },
+  journeyOverdueByMinutes: {
+    en: 'Expected arrival was {n} min ago',
+    bn: 'প্রত্যাশিত পৌঁছানোর সময় {n} মিনিট আগে ছিল',
+  },
+  arrivedSafelyButton: { en: "I've Arrived Safely", bn: 'আমি নিরাপদে পৌঁছেছি' },
+  addFifteenMinutesButton: { en: 'Add 15 more minutes', bn: 'আরও ১৫ মিনিট যোগ করুন' },
+  journeyResolveError: {
+    en: 'Could not update the journey. Try again.',
+    bn: 'যাত্রা আপডেট করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  journeyExtendError: {
+    en: 'Could not add more time. Try again.',
+    bn: 'আরও সময় যোগ করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  journeyAlertTriggeredBanner: {
+    en: "You didn't check in in time, so your guardians have been alerted.",
+    bn: 'আপনি সময়মতো নিশ্চিত করেননি, তাই আপনার অভিভাবকদের সতর্ক করা হয়েছে।',
+  },
+  arrivalCheckNotificationTitle: { en: 'Did you arrive safely?', bn: 'আপনি কি নিরাপদে পৌঁছেছেন?' },
+  arrivalCheckNotificationBody: {
+    en: 'Open SafePath to confirm you arrived, or add more time.',
+    bn: 'পৌঁছানো নিশ্চিত করতে, বা আরও সময় যোগ করতে সেফপাথ খুলুন।',
+  },
+
+  // --- Nearby lookup (Home screen) ---
+  nearestPoliceButton: { en: 'Nearest Police Station', bn: 'নিকটতম থানা' },
+  nearestHospitalButton: { en: 'Nearest Hospital', bn: 'নিকটতম হাসপাতাল' },
 
   // --- SOS ---
   // "SOS" itself is left as the Latin acronym in both languages — it's an
