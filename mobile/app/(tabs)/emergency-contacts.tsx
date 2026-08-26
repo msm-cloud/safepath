@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -168,123 +170,131 @@ export default function EmergencyContactsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={contacts}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-        ListHeaderComponent={
-          <View>
-            <Text style={styles.title}>{t('emergencyContactsTitle')}</Text>
-            <Text style={styles.subtitle}>{t('emergencyContactsSubtitle')}</Text>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={styles.container}>
+        <FlatList
+          data={contacts}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+          ListHeaderComponent={
+            <View>
+              <Text style={styles.title}>{t('emergencyContactsTitle')}</Text>
+              <Text style={styles.subtitle}>{t('emergencyContactsSubtitle')}</Text>
 
-            <View style={styles.addForm}>
-              <TextInput
-                style={styles.input}
-                placeholder={t('namePlaceholder')}
-                autoCapitalize="words"
-                value={newName}
-                onChangeText={setNewName}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder={t('phonePlaceholder')}
-                keyboardType="phone-pad"
-                value={newPhone}
-                onChangeText={setNewPhone}
-              />
-              {addError && <Text style={styles.error}>{addError}</Text>}
-              <Pressable
-                style={[styles.button, adding && styles.buttonDisabled]}
-                onPress={handleAdd}
-                disabled={adding}
-              >
-                {adding ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>{t('addContactButton')}</Text>
-                )}
-              </Pressable>
-            </View>
-
-            {listError && <Text style={styles.error}>{listError}</Text>}
-            {loading && <ActivityIndicator style={styles.loadingIndicator} />}
-            {!loading && contacts.length === 0 && (
-              <Text style={styles.emptyState}>{t('noContactsYet')}</Text>
-            )}
-          </View>
-        }
-        renderItem={({ item }) => {
-          if (editingId === item.id) {
-            return (
-              <View style={styles.contactRow}>
+              <View style={styles.addForm}>
                 <TextInput
                   style={styles.input}
                   placeholder={t('namePlaceholder')}
                   autoCapitalize="words"
-                  value={editName}
-                  onChangeText={setEditName}
+                  value={newName}
+                  onChangeText={setNewName}
                 />
                 <TextInput
                   style={styles.input}
                   placeholder={t('phonePlaceholder')}
                   keyboardType="phone-pad"
-                  value={editPhone}
-                  onChangeText={setEditPhone}
+                  value={newPhone}
+                  onChangeText={setNewPhone}
                 />
-                {editError && <Text style={styles.error}>{editError}</Text>}
+                {addError && <Text style={styles.error}>{addError}</Text>}
+                <Pressable
+                  style={[styles.button, adding && styles.buttonDisabled]}
+                  onPress={handleAdd}
+                  disabled={adding}
+                >
+                  {adding ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.buttonText}>{t('addContactButton')}</Text>
+                  )}
+                </Pressable>
+              </View>
+
+              {listError && <Text style={styles.error}>{listError}</Text>}
+              {loading && <ActivityIndicator style={styles.loadingIndicator} />}
+              {!loading && contacts.length === 0 && (
+                <Text style={styles.emptyState}>{t('noContactsYet')}</Text>
+              )}
+            </View>
+          }
+          renderItem={({ item }) => {
+            if (editingId === item.id) {
+              return (
+                <View style={styles.contactRow}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('namePlaceholder')}
+                    autoCapitalize="words"
+                    value={editName}
+                    onChangeText={setEditName}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('phonePlaceholder')}
+                    keyboardType="phone-pad"
+                    value={editPhone}
+                    onChangeText={setEditPhone}
+                  />
+                  {editError && <Text style={styles.error}>{editError}</Text>}
+                  <View style={styles.rowActions}>
+                    <Pressable
+                      style={[styles.smallButton, saving && styles.buttonDisabled]}
+                      onPress={handleSaveEdit}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                        <Text style={styles.smallButtonText}>{t('saveButton')}</Text>
+                      )}
+                    </Pressable>
+                    <Pressable style={styles.smallButtonSecondary} onPress={cancelEditing}>
+                      <Text style={styles.smallButtonSecondaryText}>{t('cancelButton')}</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            }
+
+            return (
+              <View style={styles.contactRow}>
+                <View style={styles.contactRowText}>
+                  <Text style={styles.contactName}>{item.name}</Text>
+                  <Text style={styles.contactPhone}>{item.phone}</Text>
+                </View>
                 <View style={styles.rowActions}>
+                  <Pressable style={styles.smallButtonSecondary} onPress={() => startEditing(item)}>
+                    <Text style={styles.smallButtonSecondaryText}>{t('editButton')}</Text>
+                  </Pressable>
                   <Pressable
-                    style={[styles.smallButton, saving && styles.buttonDisabled]}
-                    onPress={handleSaveEdit}
-                    disabled={saving}
+                    style={styles.smallButtonDanger}
+                    onPress={() => handleDelete(item)}
+                    disabled={deletingId === item.id}
                   >
-                    {saving ? (
+                    {deletingId === item.id ? (
                       <ActivityIndicator color="#fff" size="small" />
                     ) : (
-                      <Text style={styles.smallButtonText}>{t('saveButton')}</Text>
+                      <Text style={styles.smallButtonText}>{t('deleteButton')}</Text>
                     )}
-                  </Pressable>
-                  <Pressable style={styles.smallButtonSecondary} onPress={cancelEditing}>
-                    <Text style={styles.smallButtonSecondaryText}>{t('cancelButton')}</Text>
                   </Pressable>
                 </View>
               </View>
             );
-          }
-
-          return (
-            <View style={styles.contactRow}>
-              <View style={styles.contactRowText}>
-                <Text style={styles.contactName}>{item.name}</Text>
-                <Text style={styles.contactPhone}>{item.phone}</Text>
-              </View>
-              <View style={styles.rowActions}>
-                <Pressable style={styles.smallButtonSecondary} onPress={() => startEditing(item)}>
-                  <Text style={styles.smallButtonSecondaryText}>{t('editButton')}</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.smallButtonDanger}
-                  onPress={() => handleDelete(item)}
-                  disabled={deletingId === item.id}
-                >
-                  {deletingId === item.id ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={styles.smallButtonText}>{t('deleteButton')}</Text>
-                  )}
-                </Pressable>
-              </View>
-            </View>
-          );
-        }}
-      />
-    </View>
+          }}
+        />
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
