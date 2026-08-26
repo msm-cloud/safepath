@@ -72,6 +72,21 @@ export default function SettingsScreen() {
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      // See lib/scroll-to-input.ts's comment and the PR description for
+      // the full investigation: on Android, KeyboardAvoidingView
+      // unconditionally subscribes to keyboard show/hide events and calls
+      // LayoutAnimation.configureNext() on every one, REGARDLESS of the
+      // `behavior` prop — even behavior={undefined}, which renders a
+      // plain View with no style adjustment at all, still pays this cost.
+      // Android's LayoutAnimation is known to interact badly with a
+      // currently-focused TextInput, and disabling it here is what
+      // actually stopped this screen's focus/keyboard show-hide loop.
+      // Setting enabled to false only on Android is safe: it does not
+      // change this component's rendered output on Android at all
+      // (confirmed by reading KeyboardAvoidingView.js — its render()
+      // switches on `behavior`, not `enabled`), so this can never regress
+      // anything Android was already doing here.
+      enabled={Platform.OS === 'ios'}
     >
       <ScrollView
         ref={scrollViewRef}
