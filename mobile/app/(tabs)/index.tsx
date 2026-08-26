@@ -3,8 +3,10 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -290,195 +292,200 @@ export default function HomeScreen() {
     : 0;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <RoleBadge style={styles.roleBadge} />
-      <Text style={styles.title}>{t('homeTitle')}</Text>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView contentContainerStyle={styles.container}>
+        <RoleBadge style={styles.roleBadge} />
+        <Text style={styles.title}>{t('homeTitle')}</Text>
 
-      {loading ? (
-        <ActivityIndicator style={styles.loadingIndicator} />
-      ) : (
-        <View style={styles.journeySection}>
-          {journey?.status === 'alert_triggered' && (
-            <View style={styles.overdueBanner}>
-              <Text style={styles.overdueBannerText}>{t('journeyAlertTriggeredBanner')}</Text>
-            </View>
-          )}
-
-          {journey?.status === 'active' ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t('journeyActiveLabel')}</Text>
-              {journey.destination_note && (
-                <Text style={styles.cardSubtitle}>
-                  {t('journeyDestinationLabel', { note: journey.destination_note })}
-                </Text>
-              )}
-              <Text style={styles.cardSubtitle}>
-                {minutesUntil >= 0
-                  ? t('journeyTimeRemaining', { n: minutesUntil })
-                  : t('journeyOverdueByMinutes', { n: Math.abs(minutesUntil) })}
-              </Text>
-
-              {actionError && <Text style={styles.error}>{actionError}</Text>}
-
-              <Pressable
-                style={[styles.button, actionPending && styles.buttonDisabled]}
-                onPress={handleArrivedSafely}
-                disabled={actionPending}
-              >
-                <Text style={styles.buttonText}>{t('arrivedSafelyButton')}</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.buttonSecondary, actionPending && styles.buttonDisabled]}
-                onPress={handleAddTime}
-                disabled={actionPending}
-              >
-                <Text style={styles.buttonSecondaryText}>{t('addFifteenMinutesButton')}</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t('startJourneyTitle')}</Text>
-              <Text style={styles.cardSubtitle}>{t('startJourneySubtitle')}</Text>
-
-              <Text style={styles.fieldLabel}>{t('journeyDurationLabel')}</Text>
-              <View style={styles.durationRow}>
-                {DURATION_OPTIONS_MINUTES.map((minutes) => (
-                  <Pressable
-                    key={minutes}
-                    style={[
-                      styles.durationOption,
-                      selectedDuration === minutes && styles.durationOptionActive,
-                    ]}
-                    onPress={() => setSelectedDuration(minutes)}
-                  >
-                    <Text
-                      style={[
-                        styles.durationOptionText,
-                        selectedDuration === minutes && styles.durationOptionTextActive,
-                      ]}
-                    >
-                      {t('journeyDurationMinutesOption', { n: minutes })}
-                    </Text>
-                  </Pressable>
-                ))}
+        {loading ? (
+          <ActivityIndicator style={styles.loadingIndicator} />
+        ) : (
+          <View style={styles.journeySection}>
+            {journey?.status === 'alert_triggered' && (
+              <View style={styles.overdueBanner}>
+                <Text style={styles.overdueBannerText}>{t('journeyAlertTriggeredBanner')}</Text>
               </View>
+            )}
 
-              <TextInput
-                style={styles.input}
-                placeholder={t('destinationNotePlaceholder')}
-                value={destinationNote}
-                onChangeText={setDestinationNote}
-              />
-
-              {createError && <Text style={styles.error}>{createError}</Text>}
-
-              <Pressable
-                style={[styles.button, starting && styles.buttonDisabled]}
-                onPress={handleStart}
-                disabled={starting}
-              >
-                {starting ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>{t('startJourneyButton')}</Text>
+            {journey?.status === 'active' ? (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>{t('journeyActiveLabel')}</Text>
+                {journey.destination_note && (
+                  <Text style={styles.cardSubtitle}>
+                    {t('journeyDestinationLabel', { note: journey.destination_note })}
+                  </Text>
                 )}
-              </Pressable>
-            </View>
-          )}
-        </View>
-      )}
+                <Text style={styles.cardSubtitle}>
+                  {minutesUntil >= 0
+                    ? t('journeyTimeRemaining', { n: minutesUntil })
+                    : t('journeyOverdueByMinutes', { n: Math.abs(minutesUntil) })}
+                </Text>
 
-      <View style={styles.nearbySection}>
-        <Pressable style={styles.nearbyButton} onPress={() => openNearbySearch('police station')}>
-          <Text style={styles.nearbyButtonText}>{t('nearestPoliceButton')}</Text>
-        </Pressable>
-        <Pressable style={styles.nearbyButton} onPress={() => openNearbySearch('hospital')}>
-          <Text style={styles.nearbyButtonText}>{t('nearestHospitalButton')}</Text>
-        </Pressable>
-        {/* Entirely absent from the tree when off, not just disabled —
+                {actionError && <Text style={styles.error}>{actionError}</Text>}
+
+                <Pressable
+                  style={[styles.button, actionPending && styles.buttonDisabled]}
+                  onPress={handleArrivedSafely}
+                  disabled={actionPending}
+                >
+                  <Text style={styles.buttonText}>{t('arrivedSafelyButton')}</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.buttonSecondary, actionPending && styles.buttonDisabled]}
+                  onPress={handleAddTime}
+                  disabled={actionPending}
+                >
+                  <Text style={styles.buttonSecondaryText}>{t('addFifteenMinutesButton')}</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>{t('startJourneyTitle')}</Text>
+                <Text style={styles.cardSubtitle}>{t('startJourneySubtitle')}</Text>
+
+                <Text style={styles.fieldLabel}>{t('journeyDurationLabel')}</Text>
+                <View style={styles.durationRow}>
+                  {DURATION_OPTIONS_MINUTES.map((minutes) => (
+                    <Pressable
+                      key={minutes}
+                      style={[
+                        styles.durationOption,
+                        selectedDuration === minutes && styles.durationOptionActive,
+                      ]}
+                      onPress={() => setSelectedDuration(minutes)}
+                    >
+                      <Text
+                        style={[
+                          styles.durationOptionText,
+                          selectedDuration === minutes && styles.durationOptionTextActive,
+                        ]}
+                      >
+                        {t('journeyDurationMinutesOption', { n: minutes })}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <TextInput
+                  style={styles.input}
+                  placeholder={t('destinationNotePlaceholder')}
+                  value={destinationNote}
+                  onChangeText={setDestinationNote}
+                />
+
+                {createError && <Text style={styles.error}>{createError}</Text>}
+
+                <Pressable
+                  style={[styles.button, starting && styles.buttonDisabled]}
+                  onPress={handleStart}
+                  disabled={starting}
+                >
+                  {starting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.buttonText}>{t('startJourneyButton')}</Text>
+                  )}
+                </Pressable>
+              </View>
+            )}
+          </View>
+        )}
+
+        <View style={styles.nearbySection}>
+          <Pressable style={styles.nearbyButton} onPress={() => openNearbySearch('police station')}>
+            <Text style={styles.nearbyButtonText}>{t('nearestPoliceButton')}</Text>
+          </Pressable>
+          <Pressable style={styles.nearbyButton} onPress={() => openNearbySearch('hospital')}>
+            <Text style={styles.nearbyButtonText}>{t('nearestHospitalButton')}</Text>
+          </Pressable>
+          {/* Entirely absent from the tree when off, not just disabled —
             per Settings, someone who doesn't want this feature shouldn't
             even see the button. */}
-        {settingsLoaded && fakeCallEnabled && (
-          <Pressable style={styles.nearbyButton} onPress={() => setShowDelayPicker(true)}>
-            <Text style={styles.nearbyButtonText}>{t('fakeCallButton')}</Text>
-          </Pressable>
-        )}
-      </View>
+          {settingsLoaded && fakeCallEnabled && (
+            <Pressable style={styles.nearbyButton} onPress={() => setShowDelayPicker(true)}>
+              <Text style={styles.nearbyButtonText}>{t('fakeCallButton')}</Text>
+            </Pressable>
+          )}
+        </View>
 
-      {/* Delay picker — a small modal, not a full-screen overlay; the
+        {/* Delay picker — a small modal, not a full-screen overlay; the
           full-screen treatment is reserved for the ringing/in-call states
           below, which need to look convincing. */}
-      <Modal
-        visible={showDelayPicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowDelayPicker(false)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setShowDelayPicker(false)}>
-          <View style={styles.delayPickerCard}>
-            <Text style={styles.delayPickerTitle}>{t('fakeCallDelayPickerTitle')}</Text>
-            {FAKE_CALL_DELAY_OPTIONS_SECONDS.map((seconds) => (
-              <Pressable
-                key={seconds}
-                style={styles.delayOption}
-                onPress={() => handleFakeCallDelaySelected(seconds)}
-              >
-                <Text style={styles.delayOptionText}>
-                  {seconds === 0
-                    ? t('fakeCallDelayNow')
-                    : t('fakeCallDelaySeconds', { n: seconds })}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
-
-      {/* Fake incoming call — full-screen, mimics a real call screen. */}
-      <Modal visible={fakeCallState === 'ringing'} animationType="fade">
-        <View style={styles.fakeCallScreen}>
-          <Text style={styles.fakeCallStatusLabel}>{t('fakeCallIncomingLabel')}</Text>
-          <Text style={styles.fakeCallerName}>
-            {fakeCallCallerName || t('fakeCallDefaultCallerName')}
-          </Text>
-          <View style={styles.fakeCallActionsRow}>
-            <Pressable
-              style={[styles.fakeCallActionButton, styles.fakeCallDeclineButton]}
-              onPress={handleDeclineFakeCall}
-            >
-              <Text style={styles.fakeCallActionButtonText}>{t('fakeCallDeclineButton')}</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.fakeCallActionButton, styles.fakeCallAcceptButton]}
-              onPress={handleAcceptFakeCall}
-            >
-              <Text style={styles.fakeCallActionButtonText}>{t('fakeCallAcceptButton')}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Fake in-call screen. */}
-      <Modal visible={fakeCallState === 'in_call'} animationType="fade">
-        <View style={styles.fakeCallScreen}>
-          <Text style={styles.fakeCallStatusLabel}>{t('fakeCallInCallLabel')}</Text>
-          <Text style={styles.fakeCallerName}>
-            {fakeCallCallerName || t('fakeCallDefaultCallerName')}
-          </Text>
-          <Text style={styles.fakeCallTimer}>{formatCallDuration(callElapsedSeconds)}</Text>
-          <Pressable
-            style={[
-              styles.fakeCallActionButton,
-              styles.fakeCallDeclineButton,
-              styles.fakeCallEndButtonWrap,
-            ]}
-            onPress={handleEndFakeCall}
-          >
-            <Text style={styles.fakeCallActionButtonText}>{t('fakeCallEndButton')}</Text>
+        <Modal
+          visible={showDelayPicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDelayPicker(false)}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowDelayPicker(false)}>
+            <View style={styles.delayPickerCard}>
+              <Text style={styles.delayPickerTitle}>{t('fakeCallDelayPickerTitle')}</Text>
+              {FAKE_CALL_DELAY_OPTIONS_SECONDS.map((seconds) => (
+                <Pressable
+                  key={seconds}
+                  style={styles.delayOption}
+                  onPress={() => handleFakeCallDelaySelected(seconds)}
+                >
+                  <Text style={styles.delayOptionText}>
+                    {seconds === 0
+                      ? t('fakeCallDelayNow')
+                      : t('fakeCallDelaySeconds', { n: seconds })}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </Pressable>
-        </View>
-      </Modal>
-    </ScrollView>
+        </Modal>
+
+        {/* Fake incoming call — full-screen, mimics a real call screen. */}
+        <Modal visible={fakeCallState === 'ringing'} animationType="fade">
+          <View style={styles.fakeCallScreen}>
+            <Text style={styles.fakeCallStatusLabel}>{t('fakeCallIncomingLabel')}</Text>
+            <Text style={styles.fakeCallerName}>
+              {fakeCallCallerName || t('fakeCallDefaultCallerName')}
+            </Text>
+            <View style={styles.fakeCallActionsRow}>
+              <Pressable
+                style={[styles.fakeCallActionButton, styles.fakeCallDeclineButton]}
+                onPress={handleDeclineFakeCall}
+              >
+                <Text style={styles.fakeCallActionButtonText}>{t('fakeCallDeclineButton')}</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.fakeCallActionButton, styles.fakeCallAcceptButton]}
+                onPress={handleAcceptFakeCall}
+              >
+                <Text style={styles.fakeCallActionButtonText}>{t('fakeCallAcceptButton')}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Fake in-call screen. */}
+        <Modal visible={fakeCallState === 'in_call'} animationType="fade">
+          <View style={styles.fakeCallScreen}>
+            <Text style={styles.fakeCallStatusLabel}>{t('fakeCallInCallLabel')}</Text>
+            <Text style={styles.fakeCallerName}>
+              {fakeCallCallerName || t('fakeCallDefaultCallerName')}
+            </Text>
+            <Text style={styles.fakeCallTimer}>{formatCallDuration(callElapsedSeconds)}</Text>
+            <Pressable
+              style={[
+                styles.fakeCallActionButton,
+                styles.fakeCallDeclineButton,
+                styles.fakeCallEndButtonWrap,
+              ]}
+              onPress={handleEndFakeCall}
+            >
+              <Text style={styles.fakeCallActionButtonText}>{t('fakeCallEndButton')}</Text>
+            </Pressable>
+          </View>
+        </Modal>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -489,6 +496,9 @@ function formatCallDuration(totalSeconds: number): string {
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   container: {
     flexGrow: 1,
     padding: 20,

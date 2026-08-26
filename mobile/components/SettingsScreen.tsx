@@ -2,7 +2,10 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -62,65 +65,73 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t('settingsTitle')}</Text>
-      {session?.user.email && (
-        <Text style={styles.email}>{t('signedInAs', { email: session.user.email })}</Text>
-      )}
-      <RoleBadge style={styles.roleBadge} />
-
-      <View style={styles.languageSectionWrap}>
-        <LanguageToggle />
-      </View>
-
-      {role === 'user' && (
-        <Pressable style={styles.linkButton} onPress={() => router.push('/emergency-contacts')}>
-          <Text style={styles.linkButtonText}>{t('emergencyContactsLink')}</Text>
-        </Pressable>
-      )}
-
-      <View style={styles.toggleRow}>
-        <Text style={styles.toggleLabel}>{t('shakeSosToggleLabel')}</Text>
-        <Switch value={shakeSosEnabled} onValueChange={setShakeSosEnabled} />
-      </View>
-      <Text style={styles.toggleHint}>{t('shakeSosToggleHint')}</Text>
-
-      <View style={styles.toggleRow}>
-        <Text style={styles.toggleLabel}>{t('fakeCallToggleLabel')}</Text>
-        <Switch value={fakeCallEnabled} onValueChange={setFakeCallEnabled} />
-      </View>
-
-      {fakeCallEnabled && (
-        <View style={styles.callerNameWrap}>
-          <Text style={styles.fieldLabel}>{t('fakeCallCallerNameLabel')}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={t('fakeCallDefaultCallerName')}
-            value={callerNameDraft}
-            onChangeText={setCallerNameDraft}
-            onBlur={() => setFakeCallCallerName(callerNameDraft.trim() || null)}
-          />
-        </View>
-      )}
-
-      <Pressable
-        style={[styles.button, signingOut && styles.buttonDisabled]}
-        onPress={handleSignOut}
-        disabled={signingOut}
-      >
-        {signingOut ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>{t('signOutButton')}</Text>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>{t('settingsTitle')}</Text>
+        {session?.user.email && (
+          <Text style={styles.email}>{t('signedInAs', { email: session.user.email })}</Text>
         )}
-      </Pressable>
-    </View>
+        <RoleBadge style={styles.roleBadge} />
+
+        <View style={styles.languageSectionWrap}>
+          <LanguageToggle />
+        </View>
+
+        {role === 'user' && (
+          <Pressable style={styles.linkButton} onPress={() => router.push('/emergency-contacts')}>
+            <Text style={styles.linkButtonText}>{t('emergencyContactsLink')}</Text>
+          </Pressable>
+        )}
+
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>{t('shakeSosToggleLabel')}</Text>
+          <Switch value={shakeSosEnabled} onValueChange={setShakeSosEnabled} />
+        </View>
+        <Text style={styles.toggleHint}>{t('shakeSosToggleHint')}</Text>
+
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>{t('fakeCallToggleLabel')}</Text>
+          <Switch value={fakeCallEnabled} onValueChange={setFakeCallEnabled} />
+        </View>
+
+        {fakeCallEnabled && (
+          <View style={styles.callerNameWrap}>
+            <Text style={styles.fieldLabel}>{t('fakeCallCallerNameLabel')}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t('fakeCallDefaultCallerName')}
+              value={callerNameDraft}
+              onChangeText={setCallerNameDraft}
+              onBlur={() => setFakeCallCallerName(callerNameDraft.trim() || null)}
+            />
+          </View>
+        )}
+
+        <Pressable
+          style={[styles.button, signingOut && styles.buttonDisabled]}
+          onPress={handleSignOut}
+          disabled={signingOut}
+        >
+          {signingOut ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>{t('signOutButton')}</Text>
+          )}
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
+  },
+  container: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
