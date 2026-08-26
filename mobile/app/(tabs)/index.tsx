@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { getBestEffortLocation } from '@/lib/location';
@@ -290,6 +291,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <RoleBadge style={styles.roleBadge} />
       <Text style={styles.title}>{t('homeTitle')}</Text>
 
       {loading ? (
@@ -491,6 +493,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 20,
     gap: 16,
+  },
+  roleBadge: {
+    alignSelf: 'flex-start',
   },
   title: {
     fontSize: 22,

@@ -214,6 +214,13 @@ export const translations = {
   // --- Settings ---
   settingsTitle: { en: 'Settings', bn: 'সেটিংস' },
   signedInAs: { en: 'Signed in as {email}', bn: '{email} হিসেবে সাইন ইন করা আছে' },
+  // Role badge (components/RoleBadge.tsx) — shown at the top of the first
+  // post-sign-in screen (Home for students, Active Alerts for guardians)
+  // and again in Settings next to signedInAs above. Distinct from
+  // guardianSignInHeading/studentSignInHeading, which are pre-auth
+  // framing text on the sign-in form, not a persistent indicator.
+  signedInAsGuardianBadge: { en: 'Signed in as Guardian', bn: 'অভিভাবক হিসেবে সাইন ইন করা আছে' },
+  signedInAsStudentBadge: { en: 'Signed in as Student', bn: 'শিক্ষার্থী হিসেবে সাইন ইন করা আছে' },
   emergencyContactsLink: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },
   signOutButton: { en: 'Sign Out', bn: 'সাইন আউট' },
   languageLabel: { en: 'Language', bn: 'ভাষা' },

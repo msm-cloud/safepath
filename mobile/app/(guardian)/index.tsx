@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import RoleBadge from '@/components/RoleBadge';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import type { TranslationKey } from '@/lib/translations';
@@ -222,6 +223,7 @@ export default function GuardianActiveAlertsScreen() {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View>
+            <RoleBadge style={styles.roleBadge} />
             <Text style={styles.title}>{t('guardianActiveAlertsTitle')}</Text>
             {loading && <ActivityIndicator style={styles.loadingIndicator} />}
             {!loading && alerts.length === 0 && (
@@ -289,6 +291,9 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 20,
     gap: 12,
+  },
+  roleBadge: {
+    alignSelf: 'flex-start',
   },
   title: {
     fontSize: 22,
