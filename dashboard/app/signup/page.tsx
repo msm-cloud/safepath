@@ -62,6 +62,18 @@ export default function SignUpPage() {
           {t('signInNow')}
         </Link>
       </p>
+
+      <p className="max-w-sm text-center text-xs text-zinc-400">
+        {t('agreeToTermsPrefix')}{' '}
+        <Link href="/terms" className="underline">
+          {t('termsOfServiceLink')}
+        </Link>{' '}
+        {t('agreeToTermsAnd')}{' '}
+        <Link href="/privacy" className="underline">
+          {t('privacyPolicyLink')}
+        </Link>
+        .
+      </p>
     </main>
   );
 }
