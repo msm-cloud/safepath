@@ -67,7 +67,7 @@ export default function SettingsScreen() {
       {session?.user.email && (
         <Text style={styles.email}>{t('signedInAs', { email: session.user.email })}</Text>
       )}
-      <RoleBadge />
+      <RoleBadge style={styles.roleBadge} />
 
       <View style={styles.languageSectionWrap}>
         <LanguageToggle />
@@ -133,6 +133,14 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 14,
     color: '#666',
+  },
+  // Explicit, not omitted: relying on inherited/'auto' alignSelf to
+  // shrink-wrap a Text with backgroundColor+padding turned out to render
+  // correctly on web but stretch full-width on native (confirmed via
+  // screenshot) — the exact bug this fixes. Never leave this to
+  // inheritance for RoleBadge; every placement sets it explicitly.
+  roleBadge: {
+    alignSelf: 'center',
   },
   languageSectionWrap: {
     marginTop: 16,
