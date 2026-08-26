@@ -45,6 +45,15 @@ export const translations = {
   hasAccountQuestion: { en: 'Already have an account?', bn: 'ইতিমধ্যে অ্যাকাউন্ট আছে?' },
   signInNow: { en: 'Sign in', bn: 'সাইন ইন করুন' },
 
+  // --- Legal links (login + signup forms) ---
+  agreeToTermsPrefix: {
+    en: 'By continuing, you agree to our',
+    bn: 'চালিয়ে যাওয়ার মাধ্যমে, আপনি আমাদের',
+  },
+  termsOfServiceLink: { en: 'Terms of Service', bn: 'সেবার শর্তাবলী' },
+  agreeToTermsAnd: { en: 'and', bn: 'এবং' },
+  privacyPolicyLink: { en: 'Privacy Policy', bn: 'গোপনীয়তা নীতি' },
+
   // --- Dashboard home ---
   dashboardTitle: { en: 'Dashboard', bn: 'ড্যাশবোর্ড' },
   dashboardSubtitle: {
