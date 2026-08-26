@@ -11,13 +11,16 @@ import { useLanguage } from '@/lib/language-context';
 // (matches the root layout's own "don't show anything until it's known"
 // approach, rather than flashing a possibly-wrong label).
 //
-// `style` lets each placement control its own alignment: the base style
-// deliberately has no alignSelf, so it sizes to its content and centers
-// fine in an alignItems:'center' parent (Settings) with no override
-// needed; screens with a default 'stretch' parent (Home, the guardian
-// Active Alerts header) pass alignSelf: 'flex-start' so the pill doesn't
-// stretch full-width.
-export default function RoleBadge({ style }: { style?: TextStyle }) {
+// `style` is REQUIRED, not optional, and must include an explicit
+// alignSelf — deliberately, after a real bug: relying on inherited/'auto'
+// alignSelf to shrink-wrap this Text (which carries backgroundColor +
+// padding for the pill shape) rendered correctly on web but stretched
+// full-width on native (confirmed via screenshot on the Settings screen).
+// Making the caller supply alignSelf explicitly, every time, turns
+// "forgot to think about alignment in this layout" into a compile error
+// instead of a silent stretch bug the next time this component lands in
+// a new screen with different surrounding layout.
+export default function RoleBadge({ style }: { style: Pick<TextStyle, 'alignSelf'> }) {
   const { role } = useAuth();
   const { t } = useLanguage();
 

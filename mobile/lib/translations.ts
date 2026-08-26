@@ -320,6 +320,11 @@ export const translations = {
   nowLinkedTo: { en: "You're now linked to {name}.", bn: 'আপনি এখন {name}-এর সাথে যুক্ত।' },
   thisUserFallback: { en: 'this user', bn: 'এই ব্যবহারকারী' },
   linkButton: { en: 'Link', bn: 'যুক্ত করুন' },
+
+  // --- Not found (app/+not-found.tsx) ---
+  notFoundTitle: { en: 'Oops!', bn: 'ওহো!' },
+  notFoundMessage: { en: "This screen doesn't exist.", bn: 'এই স্ক্রিনটি নেই।' },
+  goToHomeLink: { en: 'Go to home screen!', bn: 'হোম স্ক্রিনে যান!' },
 } as const satisfies Record<string, Entry>;
 
 export type TranslationKey = keyof typeof translations;
