@@ -1,5 +1,5 @@
 import { SymbolView } from 'expo-symbols';
-import { useState } from 'react';
+import { type RefObject, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { useLanguage } from '@/lib/language-context';
@@ -10,16 +10,25 @@ import { useLanguage } from '@/lib/language-context';
 // secureTextEntry visual behavior). Reused by both sign-in.tsx and
 // sign-up.tsx, whose password TextInput styling was already
 // byte-identical, so it's baked in here rather than passed as a prop.
+//
+// inputRef/onFocus are optional passthroughs to the internal TextInput —
+// added so a screen that scrolls the focused field above the keyboard
+// (see lib/scroll-to-input.ts) can do that for the password field too,
+// without this component needing to know anything about scrolling itself.
 type PasswordInputProps = Pick<
   TextInputProps,
-  'placeholder' | 'value' | 'onChangeText' | 'autoComplete'
->;
+  'placeholder' | 'value' | 'onChangeText' | 'autoComplete' | 'onFocus'
+> & {
+  inputRef?: RefObject<TextInput | null>;
+};
 
 export default function PasswordInput({
   placeholder,
   value,
   onChangeText,
   autoComplete,
+  onFocus,
+  inputRef,
 }: PasswordInputProps) {
   const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
@@ -27,6 +36,7 @@ export default function PasswordInput({
   return (
     <View style={styles.wrap}>
       <TextInput
+        ref={inputRef}
         style={styles.input}
         placeholder={placeholder}
         secureTextEntry={!visible}
@@ -34,6 +44,7 @@ export default function PasswordInput({
         autoComplete={autoComplete}
         value={value}
         onChangeText={onChangeText}
+        onFocus={onFocus}
       />
       <Pressable
         style={styles.toggle}
