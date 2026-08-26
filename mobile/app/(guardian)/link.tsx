@@ -14,6 +14,7 @@ import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import type { TranslationKey } from '@/lib/translations';
+import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 
 // redeem_guardian_invite returns jsonb, which the generated Supabase types
 // can't know the shape of — this is the shape it actually returns, per
@@ -40,6 +41,7 @@ export default function LinkToSomeoneScreen() {
 
   const scrollViewRef = useRef<ScrollView>(null);
   const codeInputRef = useRef<TextInput>(null);
+  const keyboardHeight = useKeyboardHeight();
 
   const handleSubmit = async () => {
     setError(null);
@@ -81,7 +83,7 @@ export default function LinkToSomeoneScreen() {
     >
       <ScrollView
         ref={scrollViewRef}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingBottom: keyboardHeight }]}
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.title}>{t('guardianLinkTitle')}</Text>
