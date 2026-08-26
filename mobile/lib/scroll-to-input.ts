@@ -59,9 +59,9 @@ export function scrollInputIntoView(
     );
   } catch {
     // Best-effort — this is a convenience scroll, not something that
-    // should ever be able to break a form. Confirmed present and callable
-    // on this project's RN/react-native-web build without throwing (see
-    // PR description for how that was verified); the guard above and this
-    // catch are defensive for any platform this wasn't tested on.
+    // should ever be able to break a form. Confirmed present, callable,
+    // and non-throwing on this project's actual build (both web and a
+    // real Android device, across two separate investigations); this
+    // catch is defensive for any platform/scenario that wasn't tested.
   }
 }

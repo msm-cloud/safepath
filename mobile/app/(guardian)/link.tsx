@@ -80,6 +80,14 @@ export default function LinkToSomeoneScreen() {
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      // See components/SettingsScreen.tsx's comment for the full
+      // investigation: on Android, KeyboardAvoidingView unconditionally
+      // triggers LayoutAnimation on every keyboard show/hide event
+      // regardless of `behavior`, which can knock a focused TextInput out
+      // of focus and cause a show/hide loop. enabled={false} on Android
+      // doesn't change this component's rendered output there at all, so
+      // this is safe everywhere it's used.
+      enabled={Platform.OS === 'ios'}
     >
       <ScrollView
         ref={scrollViewRef}

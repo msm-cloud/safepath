@@ -79,6 +79,15 @@ export default function SignInScreen() {
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      // On Android, KeyboardAvoidingView unconditionally triggers
+      // LayoutAnimation on every keyboard show/hide event regardless of
+      // `behavior` (confirmed by reading its source), which can knock a
+      // focused TextInput out of focus and cause a show/hide loop — see
+      // components/SettingsScreen.tsx's comment for the full
+      // investigation. enabled={false} on Android doesn't change this
+      // component's rendered output there at all (render() switches on
+      // `behavior`, not `enabled`), so this is safe everywhere it's used.
+      enabled={Platform.OS === 'ios'}
     >
       <ScrollView
         ref={scrollViewRef}
