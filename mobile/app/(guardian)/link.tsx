@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { useLanguage } from '@/lib/language-context';
+import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import type { TranslationKey } from '@/lib/translations';
 
@@ -36,6 +37,9 @@ export default function LinkToSomeoneScreen() {
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const codeInputRef = useRef<TextInput>(null);
 
   const handleSubmit = async () => {
     setError(null);
@@ -73,19 +77,25 @@ export default function LinkToSomeoneScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>{t('guardianLinkTitle')}</Text>
         <Text style={styles.subtitle}>{t('guardianLinkSubtitle')}</Text>
 
         <TextInput
+          ref={codeInputRef}
           style={styles.input}
           placeholder={t('inviteCodePlaceholder')}
           autoCapitalize="characters"
           autoCorrect={false}
           value={code}
           onChangeText={(text) => setCode(text.toUpperCase())}
+          onFocus={() => scrollInputIntoView(scrollViewRef.current, codeInputRef)}
         />
 
         {error && <Text style={styles.error}>{error}</Text>}

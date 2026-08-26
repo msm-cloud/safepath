@@ -20,6 +20,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { getBestEffortLocation } from '@/lib/location';
 import { cancelScheduledNotification, scheduleArrivalCheckNotification } from '@/lib/notifications';
+import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useUserSettings } from '@/lib/user-settings-context';
 
@@ -64,6 +65,9 @@ export default function HomeScreen() {
   const [destinationNote, setDestinationNote] = useState('');
   const [starting, setStarting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const destinationNoteInputRef = useRef<TextInput>(null);
 
   const [actionPending, setActionPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -294,9 +298,9 @@ export default function HomeScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.container}>
         <RoleBadge style={styles.roleBadge} />
         <Text style={styles.title}>{t('homeTitle')}</Text>
 
@@ -370,10 +374,14 @@ export default function HomeScreen() {
                 </View>
 
                 <TextInput
+                  ref={destinationNoteInputRef}
                   style={styles.input}
                   placeholder={t('destinationNotePlaceholder')}
                   value={destinationNote}
                   onChangeText={setDestinationNote}
+                  onFocus={() =>
+                    scrollInputIntoView(scrollViewRef.current, destinationNoteInputRef)
+                  }
                 />
 
                 {createError && <Text style={styles.error}>{createError}</Text>}

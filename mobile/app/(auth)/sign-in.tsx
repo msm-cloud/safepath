@@ -1,5 +1,5 @@
 import { Link, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -13,6 +13,7 @@ import {
 
 import PasswordInput from '@/components/PasswordInput';
 import { useLanguage } from '@/lib/language-context';
+import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { isValidEmail, MIN_PASSWORD_LENGTH } from '@/lib/validation';
 
@@ -29,6 +30,10 @@ export default function SignInScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
 
   const heading =
     role === 'guardian'
@@ -71,12 +76,17 @@ export default function SignInScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>{heading}</Text>
 
         <TextInput
+          ref={emailInputRef}
           style={styles.input}
           placeholder={t('emailPlaceholder')}
           autoCapitalize="none"
@@ -84,12 +94,15 @@ export default function SignInScreen() {
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
+          onFocus={() => scrollInputIntoView(scrollViewRef.current, emailInputRef)}
         />
         <PasswordInput
+          inputRef={passwordInputRef}
           placeholder={t('passwordPlaceholder')}
           autoComplete="password"
           value={password}
           onChangeText={setPassword}
+          onFocus={() => scrollInputIntoView(scrollViewRef.current, passwordInputRef)}
         />
 
         {error && <Text style={styles.error}>{error}</Text>}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import {
 
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
+import { scrollInputIntoView, type ScrollResponderHandle } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { isValidPhone } from '@/lib/validation';
 
@@ -47,6 +48,26 @@ export default function EmergencyContactsScreen() {
   const [editError, setEditError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // FlatList's own ref type doesn't expose scrollResponderScrollNative-
+  // HandleToKeyboard directly — only getScrollResponder(), which the .d.ts
+  // types as a bare JSX.Element (a known lag behind the actual Flow types;
+  // see node_modules/react-native/Libraries/Lists/FlatList.js, which
+  // returns the real underlying ScrollView's imperative handle at
+  // runtime) — hence the cast in scrollFormInputIntoView below.
+  const flatListRef = useRef<FlatList>(null);
+  const newNameInputRef = useRef<TextInput>(null);
+  const newPhoneInputRef = useRef<TextInput>(null);
+  // Shared by every row's inline edit form — safe because at most one row
+  // is ever in edit mode at a time (see editingId above).
+  const editNameInputRef = useRef<TextInput>(null);
+  const editPhoneInputRef = useRef<TextInput>(null);
+
+  const scrollFormInputIntoView = useCallback((inputRef: RefObject<TextInput | null>) => {
+    const scrollResponder = flatListRef.current?.getScrollResponder() as
+      ScrollResponderHandle | null | undefined;
+    scrollInputIntoView(scrollResponder, inputRef);
+  }, []);
 
   const fetchContacts = useCallback(async () => {
     if (!userId) return;
@@ -172,10 +193,11 @@ export default function EmergencyContactsScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.container}>
         <FlatList
+          ref={flatListRef}
           data={contacts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
@@ -187,18 +209,22 @@ export default function EmergencyContactsScreen() {
 
               <View style={styles.addForm}>
                 <TextInput
+                  ref={newNameInputRef}
                   style={styles.input}
                   placeholder={t('namePlaceholder')}
                   autoCapitalize="words"
                   value={newName}
                   onChangeText={setNewName}
+                  onFocus={() => scrollFormInputIntoView(newNameInputRef)}
                 />
                 <TextInput
+                  ref={newPhoneInputRef}
                   style={styles.input}
                   placeholder={t('phonePlaceholder')}
                   keyboardType="phone-pad"
                   value={newPhone}
                   onChangeText={setNewPhone}
+                  onFocus={() => scrollFormInputIntoView(newPhoneInputRef)}
                 />
                 {addError && <Text style={styles.error}>{addError}</Text>}
                 <Pressable
@@ -226,18 +252,22 @@ export default function EmergencyContactsScreen() {
               return (
                 <View style={styles.contactRow}>
                   <TextInput
+                    ref={editNameInputRef}
                     style={styles.input}
                     placeholder={t('namePlaceholder')}
                     autoCapitalize="words"
                     value={editName}
                     onChangeText={setEditName}
+                    onFocus={() => scrollFormInputIntoView(editNameInputRef)}
                   />
                   <TextInput
+                    ref={editPhoneInputRef}
                     style={styles.input}
                     placeholder={t('phonePlaceholder')}
                     keyboardType="phone-pad"
                     value={editPhone}
                     onChangeText={setEditPhone}
+                    onFocus={() => scrollFormInputIntoView(editPhoneInputRef)}
                   />
                   {editError && <Text style={styles.error}>{editError}</Text>}
                   <View style={styles.rowActions}>

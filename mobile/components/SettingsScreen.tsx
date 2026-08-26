@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -17,6 +17,7 @@ import LanguageToggle from '@/components/LanguageToggle';
 import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
+import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { useUserSettings } from '@/lib/user-settings-context';
 
 // Shared between the student ((tabs)/settings.tsx) and guardian
@@ -41,6 +42,9 @@ export default function SettingsScreen() {
   } = useUserSettings();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const callerNameInputRef = useRef<TextInput>(null);
 
   // Local draft so every keystroke doesn't hit the network — persisted via
   // setFakeCallCallerName (which itself updates context immediately, same
@@ -67,9 +71,13 @@ export default function SettingsScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>{t('settingsTitle')}</Text>
         {session?.user.email && (
           <Text style={styles.email}>{t('signedInAs', { email: session.user.email })}</Text>
@@ -101,10 +109,12 @@ export default function SettingsScreen() {
           <View style={styles.callerNameWrap}>
             <Text style={styles.fieldLabel}>{t('fakeCallCallerNameLabel')}</Text>
             <TextInput
+              ref={callerNameInputRef}
               style={styles.input}
               placeholder={t('fakeCallDefaultCallerName')}
               value={callerNameDraft}
               onChangeText={setCallerNameDraft}
+              onFocus={() => scrollInputIntoView(scrollViewRef.current, callerNameInputRef)}
               onBlur={() => setFakeCallCallerName(callerNameDraft.trim() || null)}
             />
           </View>
