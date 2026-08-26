@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import LanguageToggle from '@/components/LanguageToggle';
+import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { useUserSettings } from '@/lib/user-settings-context';
@@ -66,6 +67,7 @@ export default function SettingsScreen() {
       {session?.user.email && (
         <Text style={styles.email}>{t('signedInAs', { email: session.user.email })}</Text>
       )}
+      <RoleBadge />
 
       <View style={styles.languageSectionWrap}>
         <LanguageToggle />
