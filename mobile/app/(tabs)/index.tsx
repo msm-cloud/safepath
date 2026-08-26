@@ -22,6 +22,7 @@ import { getBestEffortLocation } from '@/lib/location';
 import { cancelScheduledNotification, scheduleArrivalCheckNotification } from '@/lib/notifications';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
+import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { useUserSettings } from '@/lib/user-settings-context';
 
 const DURATION_OPTIONS_MINUTES = [15, 30, 45, 60];
@@ -68,6 +69,7 @@ export default function HomeScreen() {
 
   const scrollViewRef = useRef<ScrollView>(null);
   const destinationNoteInputRef = useRef<TextInput>(null);
+  const keyboardHeight = useKeyboardHeight();
 
   const [actionPending, setActionPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -300,7 +302,10 @@ export default function HomeScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.container}>
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={[styles.container, { paddingBottom: keyboardHeight }]}
+      >
         <RoleBadge style={styles.roleBadge} />
         <Text style={styles.title}>{t('homeTitle')}</Text>
 

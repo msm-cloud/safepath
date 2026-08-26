@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView, type ScrollResponderHandle } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
+import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { isValidPhone } from '@/lib/validation';
 
 type EmergencyContact = {
@@ -62,6 +63,7 @@ export default function EmergencyContactsScreen() {
   // is ever in edit mode at a time (see editingId above).
   const editNameInputRef = useRef<TextInput>(null);
   const editPhoneInputRef = useRef<TextInput>(null);
+  const keyboardHeight = useKeyboardHeight();
 
   const scrollFormInputIntoView = useCallback((inputRef: RefObject<TextInput | null>) => {
     const scrollResponder = flatListRef.current?.getScrollResponder() as
@@ -200,7 +202,7 @@ export default function EmergencyContactsScreen() {
           ref={flatListRef}
           data={contacts}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: keyboardHeight }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
           ListHeaderComponent={
             <View>

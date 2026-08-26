@@ -18,6 +18,7 @@ import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
+import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { useUserSettings } from '@/lib/user-settings-context';
 
 // Shared between the student ((tabs)/settings.tsx) and guardian
@@ -45,6 +46,7 @@ export default function SettingsScreen() {
 
   const scrollViewRef = useRef<ScrollView>(null);
   const callerNameInputRef = useRef<TextInput>(null);
+  const keyboardHeight = useKeyboardHeight();
 
   // Local draft so every keystroke doesn't hit the network — persisted via
   // setFakeCallCallerName (which itself updates context immediately, same
@@ -75,7 +77,7 @@ export default function SettingsScreen() {
     >
       <ScrollView
         ref={scrollViewRef}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingBottom: keyboardHeight }]}
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.title}>{t('settingsTitle')}</Text>

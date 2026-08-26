@@ -15,6 +15,7 @@ import PasswordInput from '@/components/PasswordInput';
 import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
+import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { isValidEmail, MIN_PASSWORD_LENGTH } from '@/lib/validation';
 
 export default function SignInScreen() {
@@ -34,6 +35,7 @@ export default function SignInScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
+  const keyboardHeight = useKeyboardHeight();
 
   const heading =
     role === 'guardian'
@@ -80,7 +82,7 @@ export default function SignInScreen() {
     >
       <ScrollView
         ref={scrollViewRef}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingBottom: keyboardHeight }]}
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.title}>{heading}</Text>
