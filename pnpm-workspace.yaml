@@ -21,3 +21,5 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-x64-msvc@16.3.2'
   - eslint-config-next@16.3.2
   - next@16.3.2
+  - expo-eas-client@57.0.2
+  - expo-updates@57.0.18
