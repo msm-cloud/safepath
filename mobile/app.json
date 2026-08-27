@@ -19,6 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
+      "package": "com.msmcloud.safepath",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
@@ -64,7 +65,7 @@
     },
     "owner": "msm-cloud",
     "runtimeVersion": {
-      "policy": "fingerprint"
+      "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/fe949130-2f93-4ffc-90a2-cd322841f708"
