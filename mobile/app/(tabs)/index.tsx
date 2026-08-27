@@ -217,6 +217,7 @@ export default function HomeScreen() {
     setStarting(false);
 
     if (error || !data) {
+      console.error('[Journey] Failed to start journey:', error);
       setCreateError(t('journeyCreateError'));
       return;
     }
@@ -245,6 +246,7 @@ export default function HomeScreen() {
     setActionPending(false);
 
     if (error) {
+      console.error('[Journey] Failed to mark journey arrived safely:', error);
       setActionError(t('journeyResolveError'));
       return;
     }
@@ -271,6 +273,7 @@ export default function HomeScreen() {
     setActionPending(false);
 
     if (error) {
+      console.error('[Journey] Failed to extend journey:', error);
       setActionError(t('journeyExtendError'));
       return;
     }
