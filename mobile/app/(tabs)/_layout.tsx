@@ -93,6 +93,27 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="language"
+        options={{
+          title: t('languageLabel'),
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="phone-number"
+        options={{
+          title: t('phonePlaceholder'),
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="safety-features"
+        options={{
+          title: t('safetyFeaturesLink'),
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

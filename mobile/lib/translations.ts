@@ -294,6 +294,11 @@ export const translations = {
   languageLabel: { en: 'Language', bn: 'ভাষা' },
   languageBn: { en: 'বাংলা', bn: 'বাংলা' },
   languageEn: { en: 'English', bn: 'English' },
+  // Row label on the main Settings list + the grouping screen's own
+  // title — groups the shake-to-trigger and fake-call toggles below
+  // together, since they're conceptually related (both optional in-app
+  // safety/escape features).
+  safetyFeaturesLink: { en: 'Safety Features', bn: 'নিরাপত্তা বৈশিষ্ট্য' },
   shakeSosToggleLabel: { en: 'Shake to trigger SOS', bn: 'ঝাঁকিয়ে SOS চালু করুন' },
   shakeSosToggleHint: {
     en: 'While the app is open, shaking your phone in a distinct pattern triggers the same SOS alert as the hold button.',
