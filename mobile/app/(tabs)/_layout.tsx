@@ -85,6 +85,14 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="change-password"
+        options={{
+          title: t('changePasswordLink'),
+          // Same href: null reasoning as emergency-contacts above.
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

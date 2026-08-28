@@ -106,6 +106,26 @@ export const translations = {
   },
   requestNewResetLinkLink: { en: 'Request a new link', bn: 'নতুন একটি লিংক অনুরোধ করুন' },
 
+  // --- Change password (already signed in — distinct from forgot/reset
+  // above, which is for someone who ISN'T signed in and doesn't know
+  // their password at all). Reused for the Settings link, the screen's
+  // header title, and the submit button — same short-string-reuse
+  // convention as signInButton/signUpButton already documented in
+  // app/(auth)/_layout.tsx. ---
+  changePasswordLink: { en: 'Change Password', bn: 'পাসওয়ার্ড পরিবর্তন করুন' },
+  currentPasswordPlaceholder: { en: 'Current password', bn: 'বর্তমান পাসওয়ার্ড' },
+  confirmNewPasswordPlaceholder: { en: 'Confirm new password', bn: 'নতুন পাসওয়ার্ড নিশ্চিত করুন' },
+  currentPasswordIncorrect: {
+    en: 'Current password is incorrect.',
+    bn: 'বর্তমান পাসওয়ার্ড সঠিক নয়।',
+  },
+  passwordsDoNotMatch: {
+    en: "New passwords don't match.",
+    bn: 'নতুন পাসওয়ার্ড দুটি মিলছে না।',
+  },
+  changingPasswordButton: { en: 'Changing…', bn: 'পরিবর্তন করা হচ্ছে…' },
+  passwordChangedMessage: { en: 'Password changed.', bn: 'পাসওয়ার্ড পরিবর্তন করা হয়েছে।' },
+
   // --- Home ---
   homeTitle: { en: 'Home', bn: 'হোম' },
 

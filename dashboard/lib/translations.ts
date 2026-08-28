@@ -168,6 +168,24 @@ export const translations = {
     en: 'That phone number is already registered to another account.',
     bn: 'এই ফোন নম্বরটি ইতিমধ্যে অন্য একটি অ্যাকাউন্টে নিবন্ধিত।',
   },
+
+  // --- Change password (already signed in — distinct from forgot/reset
+  // above, which is for someone who ISN'T signed in and doesn't know
+  // their password at all). Reused for both the section heading and the
+  // submit button, same reuse convention as signInButton/signUpButton. ---
+  changePasswordLink: { en: 'Change Password', bn: 'পাসওয়ার্ড পরিবর্তন করুন' },
+  currentPasswordPlaceholder: { en: 'Current password', bn: 'বর্তমান পাসওয়ার্ড' },
+  confirmNewPasswordPlaceholder: { en: 'Confirm new password', bn: 'নতুন পাসওয়ার্ড নিশ্চিত করুন' },
+  currentPasswordIncorrect: {
+    en: 'Current password is incorrect.',
+    bn: 'বর্তমান পাসওয়ার্ড সঠিক নয়।',
+  },
+  passwordsDoNotMatch: {
+    en: "New passwords don't match.",
+    bn: 'নতুন পাসওয়ার্ড দুটি মিলছে না।',
+  },
+  changingPasswordButton: { en: 'Changing…', bn: 'পরিবর্তন করা হচ্ছে…' },
+  passwordChangedMessage: { en: 'Password changed.', bn: 'পাসওয়ার্ড পরিবর্তন করা হয়েছে।' },
 } as const satisfies Record<string, Entry>;
 
 export type TranslationKey = keyof typeof translations;

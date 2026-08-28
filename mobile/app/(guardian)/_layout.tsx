@@ -74,6 +74,16 @@ export default function GuardianTabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="change-password"
+        options={{
+          title: t('changePasswordLink'),
+          // Reachable from Settings via router.push(), not its own tab —
+          // same href: null reasoning as (tabs)/_layout.tsx's
+          // emergency-contacts screen.
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
