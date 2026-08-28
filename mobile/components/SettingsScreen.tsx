@@ -217,6 +217,10 @@ export default function SettingsScreen() {
           </View>
         )}
 
+        <Pressable style={styles.linkButton} onPress={() => router.push('/change-password')}>
+          <Text style={styles.linkButtonText}>{t('changePasswordLink')}</Text>
+        </Pressable>
+
         <Pressable
           style={[styles.button, signingOut && styles.buttonDisabled]}
           onPress={handleSignOut}
