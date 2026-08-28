@@ -1,116 +1,32 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
-import LanguageToggle from '@/components/LanguageToggle';
 import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
-import { scrollInputIntoView } from '@/lib/scroll-to-input';
-import { supabase } from '@/lib/supabase';
-import { useUserSettings } from '@/lib/user-settings-context';
-import { isValidPhone } from '@/lib/validation';
-
-// profiles.phone's unique index violation — see
-// supabase/migrations/20260828063528_phone_login_and_password_reset.sql.
-const PHONE_UNIQUE_VIOLATION = '23505';
 
 // Shared between the student ((tabs)/settings.tsx) and guardian
-// ((guardian)/settings.tsx) tab groups — language toggle and sign-out don't
+// ((guardian)/settings.tsx) tab groups — this list and sign-out don't
 // differ by role, so this one component backs both routes rather than
-// duplicating it. The one role-specific bit (the Emergency Contacts link,
+// duplicating it. The one role-specific row (Emergency Contacts,
 // relevant only to the at-risk-user/student role) is conditional on
-// `role` rather than split into two components. Shake-to-trigger SOS and
-// the fake-call escape are both available regardless of role — the
-// underlying triggerSos() works identically for any signed-in account,
-// and the fake-call button is likewise not student-specific.
+// `role`.
+//
+// A simple navigation list — every actual toggleable/editable setting
+// lives in its own screen now (LanguageSettingsScreen,
+// PhoneNumberSettingsScreen, SafetyFeaturesScreen, ChangePasswordScreen,
+// the existing Emergency Contacts screen), reachable by tapping a row
+// here, matching the pattern Change Password and Emergency Contacts
+// already used before this restructuring. This screen itself doesn't
+// own any of that underlying logic — it only navigates to it. Sign Out
+// stays a direct action here rather than its own screen, since it
+// doesn't need one.
 export default function SettingsScreen() {
   const { session, role, signOut } = useAuth();
   const { t } = useLanguage();
-  const {
-    shakeSosEnabled,
-    fakeCallEnabled,
-    fakeCallCallerName,
-    phone,
-    setShakeSosEnabled,
-    setFakeCallEnabled,
-    setFakeCallCallerName,
-    setPhoneLocal,
-  } = useUserSettings();
-  const userId = session?.user.id;
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
-
-  const scrollViewRef = useRef<ScrollView>(null);
-  const callerNameInputRef = useRef<TextInput>(null);
-  const phoneInputRef = useRef<TextInput>(null);
-
-  // Unlike the toggles/caller-name field above, phone doesn't use the
-  // context's own optimistic-write setters — a duplicate phone number is
-  // a real, user-facing failure this screen has to surface, not
-  // something to fire-and-forget. Own local draft/error/saving state,
-  // same re-sync-on-load reasoning as callerNameDraft below.
-  const [phoneDraft, setPhoneDraft] = useState(phone ?? '');
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [phoneSaved, setPhoneSaved] = useState(false);
-  const [savingPhone, setSavingPhone] = useState(false);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the local draft once the real value arrives asynchronously from useUserSettings; without this the field would be stuck empty for anyone who'd previously saved a phone number.
-    setPhoneDraft(phone ?? '');
-  }, [phone]);
-
-  const handleSavePhone = async () => {
-    setPhoneError(null);
-    setPhoneSaved(false);
-
-    const trimmed = phoneDraft.trim();
-    if (!isValidPhone(trimmed)) {
-      setPhoneError(t('invalidPhone'));
-      return;
-    }
-    if (!userId) return;
-
-    setSavingPhone(true);
-    const { error } = await supabase.from('profiles').update({ phone: trimmed }).eq('id', userId);
-    setSavingPhone(false);
-
-    if (error) {
-      // profiles_phone_normalized_key — same duplicate-phone check as
-      // sign-up, surfaced the same way.
-      setPhoneError(
-        error.code === PHONE_UNIQUE_VIOLATION ? t('duplicatePhoneError') : error.message
-      );
-      return;
-    }
-
-    setPhoneLocal(trimmed);
-    setPhoneSaved(true);
-  };
-
-  // Local draft so every keystroke doesn't hit the network — persisted via
-  // setFakeCallCallerName (which itself updates context immediately, same
-  // "optimistic update" pattern as setLanguage) only on blur. useState's
-  // initializer alone isn't enough here: fakeCallCallerName arrives
-  // asynchronously (fetched from the database after mount), so this
-  // effect re-syncs the draft once that real value actually loads —
-  // without it, the field would be stuck showing empty even for someone
-  // who'd previously saved a name.
-  const [callerNameDraft, setCallerNameDraft] = useState(fakeCallCallerName ?? '');
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the local draft once the real value arrives asynchronously from useUserSettings; without this the field would be stuck empty for anyone who'd previously saved a name.
-    setCallerNameDraft(fakeCallCallerName ?? '');
-  }, [fakeCallCallerName]);
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -121,126 +37,51 @@ export default function SettingsScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      // See lib/scroll-to-input.ts's comment and the PR description for
-      // the full investigation: on Android, KeyboardAvoidingView
-      // unconditionally subscribes to keyboard show/hide events and calls
-      // LayoutAnimation.configureNext() on every one, REGARDLESS of the
-      // `behavior` prop — even behavior={undefined}, which renders a
-      // plain View with no style adjustment at all, still pays this cost.
-      // Android's LayoutAnimation is known to interact badly with a
-      // currently-focused TextInput, and disabling it here is what
-      // actually stopped this screen's focus/keyboard show-hide loop.
-      // Setting enabled to false only on Android is safe: it does not
-      // change this component's rendered output on Android at all
-      // (confirmed by reading KeyboardAvoidingView.js — its render()
-      // switches on `behavior`, not `enabled`), so this can never regress
-      // anything Android was already doing here.
-      enabled={Platform.OS === 'ios'}
-    >
-      <ScrollView
-        ref={scrollViewRef}
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>{t('settingsTitle')}</Text>
+      {session?.user.email && (
+        <Text style={styles.email}>{t('signedInAs', { email: session.user.email })}</Text>
+      )}
+      <RoleBadge style={styles.roleBadge} />
+
+      <Pressable style={styles.linkButton} onPress={() => router.push('/language')}>
+        <Text style={styles.linkButtonText}>{t('languageLabel')}</Text>
+      </Pressable>
+
+      <Pressable style={styles.linkButton} onPress={() => router.push('/phone-number')}>
+        <Text style={styles.linkButtonText}>{t('phonePlaceholder')}</Text>
+      </Pressable>
+
+      <Pressable style={styles.linkButton} onPress={() => router.push('/change-password')}>
+        <Text style={styles.linkButtonText}>{t('changePasswordLink')}</Text>
+      </Pressable>
+
+      {role === 'user' && (
+        <Pressable style={styles.linkButton} onPress={() => router.push('/emergency-contacts')}>
+          <Text style={styles.linkButtonText}>{t('emergencyContactsLink')}</Text>
+        </Pressable>
+      )}
+
+      <Pressable style={styles.linkButton} onPress={() => router.push('/safety-features')}>
+        <Text style={styles.linkButtonText}>{t('safetyFeaturesLink')}</Text>
+      </Pressable>
+
+      <Pressable
+        style={[styles.button, signingOut && styles.buttonDisabled]}
+        onPress={handleSignOut}
+        disabled={signingOut}
       >
-        <Text style={styles.title}>{t('settingsTitle')}</Text>
-        {session?.user.email && (
-          <Text style={styles.email}>{t('signedInAs', { email: session.user.email })}</Text>
+        {signingOut ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>{t('signOutButton')}</Text>
         )}
-        <RoleBadge style={styles.roleBadge} />
-
-        <View style={styles.languageSectionWrap}>
-          <LanguageToggle />
-        </View>
-
-        <View style={styles.phoneWrap}>
-          <Text style={styles.fieldLabel}>{t('phonePlaceholder')}</Text>
-          <TextInput
-            ref={phoneInputRef}
-            style={styles.input}
-            placeholder={t('phonePlaceholder')}
-            autoComplete="tel"
-            keyboardType="phone-pad"
-            value={phoneDraft}
-            onChangeText={(value) => {
-              setPhoneDraft(value);
-              setPhoneSaved(false);
-            }}
-            onFocus={() => scrollInputIntoView(scrollViewRef.current, phoneInputRef)}
-          />
-          {phoneError && <Text style={styles.fieldError}>{phoneError}</Text>}
-          {phoneSaved && <Text style={styles.fieldSaved}>{t('phoneSavedMessage')}</Text>}
-          <Pressable
-            style={[styles.savePhoneButton, savingPhone && styles.buttonDisabled]}
-            onPress={handleSavePhone}
-            disabled={savingPhone || phoneDraft.trim() === (phone ?? '')}
-          >
-            {savingPhone ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.savePhoneButtonText}>{t('saveButton')}</Text>
-            )}
-          </Pressable>
-        </View>
-
-        {role === 'user' && (
-          <Pressable style={styles.linkButton} onPress={() => router.push('/emergency-contacts')}>
-            <Text style={styles.linkButtonText}>{t('emergencyContactsLink')}</Text>
-          </Pressable>
-        )}
-
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>{t('shakeSosToggleLabel')}</Text>
-          <Switch value={shakeSosEnabled} onValueChange={setShakeSosEnabled} />
-        </View>
-        <Text style={styles.toggleHint}>{t('shakeSosToggleHint')}</Text>
-
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>{t('fakeCallToggleLabel')}</Text>
-          <Switch value={fakeCallEnabled} onValueChange={setFakeCallEnabled} />
-        </View>
-
-        {fakeCallEnabled && (
-          <View style={styles.callerNameWrap}>
-            <Text style={styles.fieldLabel}>{t('fakeCallCallerNameLabel')}</Text>
-            <TextInput
-              ref={callerNameInputRef}
-              style={styles.input}
-              placeholder={t('fakeCallDefaultCallerName')}
-              value={callerNameDraft}
-              onChangeText={setCallerNameDraft}
-              onFocus={() => scrollInputIntoView(scrollViewRef.current, callerNameInputRef)}
-              onBlur={() => setFakeCallCallerName(callerNameDraft.trim() || null)}
-            />
-          </View>
-        )}
-
-        <Pressable style={styles.linkButton} onPress={() => router.push('/change-password')}>
-          <Text style={styles.linkButtonText}>{t('changePasswordLink')}</Text>
-        </Pressable>
-
-        <Pressable
-          style={[styles.button, signingOut && styles.buttonDisabled]}
-          onPress={handleSignOut}
-          disabled={signingOut}
-        >
-          {signingOut ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>{t('signOutButton')}</Text>
-          )}
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </Pressable>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
   container: {
     flexGrow: 1,
     alignItems: 'center',
@@ -264,79 +105,14 @@ const styles = StyleSheet.create({
   roleBadge: {
     alignSelf: 'center',
   },
-  languageSectionWrap: {
-    marginTop: 16,
-  },
   linkButton: {
-    marginTop: 24,
+    marginTop: 12,
     paddingVertical: 10,
   },
   linkButtonText: {
     color: '#2f95dc',
     fontSize: 15,
     fontWeight: '600',
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 20,
-  },
-  toggleLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-  },
-  toggleHint: {
-    alignSelf: 'flex-start',
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-  },
-  callerNameWrap: {
-    width: '100%',
-    marginTop: 8,
-    gap: 6,
-  },
-  phoneWrap: {
-    width: '100%',
-    marginTop: 16,
-    gap: 6,
-  },
-  fieldError: {
-    color: '#d33',
-    fontSize: 13,
-  },
-  fieldSaved: {
-    color: '#1a7f37',
-    fontSize: 13,
-  },
-  savePhoneButton: {
-    backgroundColor: '#2f95dc',
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 20,
-  },
-  savePhoneButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#444',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
   },
   button: {
     backgroundColor: '#d33',
