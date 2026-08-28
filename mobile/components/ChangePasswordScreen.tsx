@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,6 +10,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native';
 
 import PasswordInput from '@/components/PasswordInput';
@@ -116,12 +118,19 @@ export default function ChangePasswordScreen() {
         contentContainerStyle={[styles.container, { paddingBottom: keyboardHeight }]}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.headerIconBadge}>
+          <SymbolView
+            name={{ ios: 'lock.fill', android: 'lock', web: 'lock' }}
+            tintColor="#8e8e93"
+            size={26}
+          />
+        </View>
         <Text style={styles.title}>{t('changePasswordLink')}</Text>
 
         {success ? (
           <Text style={styles.success}>{t('passwordChangedMessage')}</Text>
         ) : (
-          <>
+          <View style={styles.card}>
             <PasswordInput
               inputRef={currentPasswordInputRef}
               placeholder={t('currentPasswordPlaceholder')}
@@ -160,7 +169,7 @@ export default function ChangePasswordScreen() {
                 <Text style={styles.buttonText}>{t('changePasswordLink')}</Text>
               )}
             </Pressable>
-          </>
+          </View>
         )}
       </ScrollView>
     </KeyboardAvoidingView>
@@ -182,6 +191,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 12,
     textAlign: 'center',
+  },
+  headerIconBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#f0f0f1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  card: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
   button: {
     backgroundColor: '#2f95dc',
