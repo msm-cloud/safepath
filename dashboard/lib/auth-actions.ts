@@ -122,11 +122,23 @@ export async function signUpAction(
       // Defensive fallback for when this project requires email
       // confirmation (which it now always does): there's no session yet
       // below to run the profiles UPDATE with, so this is the only way
-      // full_name/phone reach the profiles row (via handle_new_user
-      // reading them off signup metadata — see
+      // full_name/phone/role/preferred_language reach the profiles row
+      // (via handle_new_user reading them off signup metadata — see
       // 20260828091441_phone_survives_email_confirmation.sql) before the
       // guardian confirms and signs in for the first time.
-      data: { full_name: fullName, phone },
+      //
+      // role was a real, confirmed bug here (found auditing a report of
+      // a guardian account stuck as role='user'): this object used to
+      // omit role entirely, so handle_new_user()'s
+      // `coalesce(raw_user_meta_data->>'role', 'user')` silently
+      // defaulted every dashboard signup to 'user' — and since the
+      // post-signup UPDATE below never runs without a session, nothing
+      // ever corrected it. preferred_language is included too even
+      // though its trigger default ('bn') already matches what this
+      // dashboard's own post-signup UPDATE sets — no behavior change
+      // today, just closing the same class of gap before a future
+      // default change could reopen it.
+      data: { full_name: fullName, phone, role: 'guardian', preferred_language: 'bn' },
     },
   });
 
