@@ -25,6 +25,15 @@ export const translations = {
   // --- Sign in ---
   signInTitle: { en: 'Sign in to SafePath', bn: 'সেফপাথে সাইন ইন করুন' },
   emailPlaceholder: { en: 'Email', bn: 'ইমেইল' },
+  // Sign-in accepts either an email or a phone number (resolved server-
+  // side via resolve_login_identifier — see lib/auth-actions.ts);
+  // sign-up still asks for email and phone as two separate required
+  // fields, so emailPlaceholder above is still used there unchanged.
+  emailOrPhonePlaceholder: { en: 'Email or Phone Number', bn: 'ইমেইল অথবা ফোন নম্বর' },
+  invalidEmailOrPhone: {
+    en: 'Enter a valid email address or phone number.',
+    bn: 'একটি সঠিক ইমেইল ঠিকানা অথবা ফোন নম্বর লিখুন।',
+  },
   passwordPlaceholder: { en: 'Password', bn: 'পাসওয়ার্ড' },
   signInButton: { en: 'Sign In', bn: 'সাইন ইন' },
   signingInButton: { en: 'Signing in…', bn: 'সাইন ইন হচ্ছে…' },
@@ -32,10 +41,12 @@ export const translations = {
   hidePasswordLabel: { en: 'Hide password', bn: 'পাসওয়ার্ড লুকান' },
   noAccountQuestion: { en: "Don't have an account?", bn: 'অ্যাকাউন্ট নেই?' },
   signUpNow: { en: 'Sign up', bn: 'সাইন আপ করুন' },
+  forgotPasswordLink: { en: 'Forgot Password?', bn: 'পাসওয়ার্ড ভুলে গেছেন?' },
 
   // --- Sign up ---
   signUpTitle: { en: 'Create your guardian account', bn: 'আপনার অভিভাবক অ্যাকাউন্ট তৈরি করুন' },
   fullNamePlaceholder: { en: 'Full name', bn: 'পূর্ণ নাম' },
+  phonePlaceholder: { en: 'Phone number', bn: 'ফোন নম্বর' },
   passwordSignupPlaceholder: {
     en: 'Password (min 6 characters)',
     bn: 'পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)',
@@ -44,6 +55,33 @@ export const translations = {
   creatingAccountButton: { en: 'Creating account…', bn: 'অ্যাকাউন্ট তৈরি হচ্ছে…' },
   hasAccountQuestion: { en: 'Already have an account?', bn: 'ইতিমধ্যে অ্যাকাউন্ট আছে?' },
   signInNow: { en: 'Sign in', bn: 'সাইন ইন করুন' },
+
+  // --- Forgot / reset password ---
+  forgotPasswordTitle: { en: 'Reset your password', bn: 'আপনার পাসওয়ার্ড পুনরায় সেট করুন' },
+  forgotPasswordSubtitle: {
+    en: "Enter the email or phone number on your account, and we'll send you a link to reset your password.",
+    bn: 'আপনার অ্যাকাউন্টের ইমেইল অথবা ফোন নম্বর লিখুন, আমরা আপনাকে পাসওয়ার্ড পুনরায় সেট করার একটি লিংক পাঠাবো।',
+  },
+  sendResetLinkButton: { en: 'Send Reset Link', bn: 'রিসেট লিংক পাঠান' },
+  sendingResetLinkButton: { en: 'Sending…', bn: 'পাঠানো হচ্ছে…' },
+  // Shown identically whether or not the identifier actually resolved to
+  // an account — see app/forgot-password/page.tsx. Never reveal which is
+  // true.
+  resetLinkSentMessage: {
+    en: "If an account exists for that email or phone number, we've sent a link to reset your password.",
+    bn: 'যদি সেই ইমেইল অথবা ফোন নম্বরের জন্য কোনো অ্যাকাউন্ট থাকে, আমরা পাসওয়ার্ড পুনরায় সেট করার একটি লিংক পাঠিয়েছি।',
+  },
+  backToSignInLink: { en: 'Back to Sign In', bn: 'সাইন ইনে ফিরে যান' },
+  resetPasswordTitle: { en: 'Set a new password', bn: 'একটি নতুন পাসওয়ার্ড সেট করুন' },
+  newPasswordPlaceholder: { en: 'New password', bn: 'নতুন পাসওয়ার্ড' },
+  resetPasswordButton: { en: 'Reset Password', bn: 'পাসওয়ার্ড রিসেট করুন' },
+  resettingPasswordButton: { en: 'Resetting…', bn: 'রিসেট করা হচ্ছে…' },
+  resetLinkVerifying: { en: 'Verifying your reset link…', bn: 'আপনার রিসেট লিংক যাচাই করা হচ্ছে…' },
+  invalidOrExpiredResetLink: {
+    en: 'This password reset link is invalid or has expired. Request a new one.',
+    bn: 'এই পাসওয়ার্ড রিসেট লিংকটি সঠিক নয় অথবা মেয়াদ শেষ হয়ে গেছে। নতুন একটি অনুরোধ করুন।',
+  },
+  requestNewResetLinkLink: { en: 'Request a new link', bn: 'নতুন একটি লিংক অনুরোধ করুন' },
 
   // --- Legal links (login + signup forms) ---
   agreeToTermsPrefix: {

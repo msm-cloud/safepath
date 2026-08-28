@@ -314,6 +314,14 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: undefined;
       };
+      normalize_phone: {
+        Args: { p_phone: string };
+        Returns: string;
+      };
+      resolve_login_identifier: {
+        Args: { identifier: string };
+        Returns: string | null;
+      };
     };
     Enums: {
       profile_role: 'user' | 'guardian';

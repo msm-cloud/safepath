@@ -28,11 +28,15 @@ begin
   if not exists (select 1 from pg_roles where rolname = 'authenticated') then
     create role authenticated;
   end if;
+  if not exists (select 1 from pg_roles where rolname = 'anon') then
+    create role anon;
+  end if;
 end
 $$;
 
 create table auth.users (
   id uuid primary key default gen_random_uuid(),
+  email text,
   raw_user_meta_data jsonb not null default '{}'::jsonb
 );
 
@@ -50,10 +54,13 @@ for (const file of files) {
 }
 console.log(`applied ${files.length} migrations.\n`);
 
-// Let the `authenticated` role actually use the tables/functions (mirrors
-// the grants in the migrations, which is what makes RLS meaningful instead
-// of erroring out on privilege checks first).
+// Let the `authenticated`/`anon` roles actually use the tables/functions
+// (mirrors the grants in the migrations, which is what makes RLS
+// meaningful instead of erroring out on privilege checks first). A real
+// Supabase project grants schema usage to both roles by default; pglite
+// starts from a blank slate, so this test harness has to do it itself.
 await db.exec(`grant usage on schema public to authenticated;`);
+await db.exec(`grant usage on schema public to anon;`);
 
 let passed = 0;
 let failed = 0;
@@ -82,6 +89,20 @@ async function asUser(userId, fn) {
   }
 }
 
+// Runs `fn` as the actual `anon` Postgres role (not just `authenticated`
+// with no jwt.sub) — needed to confirm resolve_login_identifier's grant
+// really does let a pre-auth caller invoke it, not just that the function
+// behaves correctly when called some other way.
+async function asAnon(fn) {
+  await db.exec('begin;');
+  await db.exec(`set local role anon;`);
+  try {
+    return await fn();
+  } finally {
+    await db.exec('commit;');
+  }
+}
+
 async function redeem(db_, inviteCode) {
   const r = await db_.query(`select public.redeem_guardian_invite($1) as result`, [inviteCode]);
   const raw = r.rows[0].result;
@@ -89,10 +110,14 @@ async function redeem(db_, inviteCode) {
 }
 
 // --- Set up users: A (at-risk user), G/G2 (guardians), X (unrelated) ---
+// email is deterministic (name lowercased) so resolve_login_identifier
+// tests below can assert on the exact expected value, not just "some
+// string".
 const mkUser = async (name, role) => {
+  const email = `${name.toLowerCase()}@example.com`;
   const r = await db.query(
-    `insert into auth.users (raw_user_meta_data) values ($1::jsonb) returning id`,
-    [JSON.stringify({ role, full_name: name })]
+    `insert into auth.users (email, raw_user_meta_data) values ($1, $2::jsonb) returning id`,
+    [email, JSON.stringify({ role, full_name: name })]
   );
   return r.rows[0].id;
 };
@@ -611,6 +636,89 @@ check(
   'confirms the graceful-degradation path ran: no pg_cron extension exists in pglite, yet the migration completed and check_overdue_journeys() above works',
   Number(cronExtensionExists.rows[0].n) === 0
 );
+
+console.log('\n--- profiles.phone: normalized unique constraint ---');
+await asUser(userA, async () => {
+  const set = await db.query(
+    `update public.profiles set phone = '+1 555-123-4567' where id = '${userA}' returning phone`
+  );
+  check('A can set their own phone number', set.rows[0].phone === '+1 555-123-4567');
+});
+await asUser(userG, async () => {
+  try {
+    // Same digits as A's "+1 555-123-4567", different formatting (a space
+    // instead of the dashes) — normalize_phone only strips whitespace and
+    // dashes, not the leading "+", so this has to keep the "+" to
+    // actually normalize to the same string as what A has stored. Must
+    // still collide with A's, proving the unique index is on the
+    // normalized value, not the raw column (see the migration's own
+    // comment on why a raw-value constraint wouldn't actually prevent
+    // this).
+    await db.query(`update public.profiles set phone = '+1 5551234567' where id = '${userG}'`);
+    check("G cannot reuse A's phone number even with different formatting", false);
+  } catch (err) {
+    check(
+      "G cannot reuse A's phone number even with different formatting",
+      /duplicate key|unique constraint/i.test(String(err.message ?? err))
+    );
+  }
+});
+
+console.log('\n--- resolve_login_identifier() ---');
+await asAnon(async () => {
+  const email = await db.query(`select public.resolve_login_identifier('A@EXAMPLE.COM') as v`);
+  // Deliberately mixed-case in the input above: an identifier containing
+  // "@" is returned completely unchanged (no normalization at all) — this
+  // also confirms the anon grant actually works, not just that the
+  // function behaves correctly when called some other way.
+  check(
+    'resolving an email passes through unchanged (no lookup, no case-folding)',
+    email.rows[0].v === 'A@EXAMPLE.COM'
+  );
+
+  // A's stored number is '+1 555-123-4567'; this uses a space instead of
+  // the dashes — normalize_phone strips both whitespace and dashes (not
+  // the leading "+"), so this still has to normalize to the same string
+  // as what's stored to prove the lookup actually normalizes rather than
+  // requiring an exact match.
+  const byPhone = await db.query(`select public.resolve_login_identifier('+1 555 123 4567') as v`);
+  check(
+    "resolving a real phone (different formatting than what's stored) returns the right email",
+    byPhone.rows[0].v === 'a@example.com'
+  );
+
+  const missing = await db.query(`select public.resolve_login_identifier('+19998887777') as v`);
+  check('resolving a non-existent phone returns NULL', missing.rows[0].v === null);
+});
+
+// Confirm the function reveals nothing else about the profile: the only
+// thing a caller can ever learn is the single email string (or NULL) it
+// returns — never full_name, role, or any other column, regardless of
+// how many columns the underlying SELECT inside the function touches.
+await asAnon(async () => {
+  const result = await db.query(
+    `select public.resolve_login_identifier('+1 555 123 4567') as resolve_login_identifier`
+  );
+  check(
+    'resolve_login_identifier returns exactly one column (the email) and nothing else',
+    Object.keys(result.rows[0]).length === 1 &&
+      Object.keys(result.rows[0])[0] === 'resolve_login_identifier'
+  );
+
+  // anon has no direct SELECT grant on profiles/auth.users at all — the
+  // only reason the lookup above works is resolve_login_identifier's own
+  // SECURITY DEFINER privilege. Confirms there's no separate, broader
+  // grant sitting underneath it that anon could exploit directly.
+  try {
+    await db.query(`select phone from public.profiles where id = '${userA}'`);
+    check('anon has no direct SELECT access to profiles (only via the function)', false);
+  } catch (err) {
+    check(
+      'anon has no direct SELECT access to profiles (only via the function)',
+      /permission denied/i.test(String(err.message ?? err))
+    );
+  }
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;
