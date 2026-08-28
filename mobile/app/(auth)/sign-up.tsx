@@ -13,6 +13,7 @@ import {
 
 import PasswordInput from '@/components/PasswordInput';
 import { useLanguage } from '@/lib/language-context';
+import { markOnboardingPending } from '@/lib/onboarding-storage';
 import { resolveLoginIdentifier } from '@/lib/resolve-login-identifier';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
@@ -123,6 +124,17 @@ export default function SignUpScreen() {
       // rather than a generic one.
       setError(signUpError.message);
       return;
+    }
+
+    // Shows the onboarding carousel once, the first time this account
+    // actually lands in the app — see lib/onboarding-storage.ts for why
+    // that's keyed by user id and persisted rather than an in-memory
+    // flag (this project requires email confirmation, so "immediately
+    // after sign-up" is almost always a separate later sign-in, not this
+    // same request). Marked regardless of whether data.session exists
+    // below, since either way this is a genuinely new account.
+    if (data.user) {
+      markOnboardingPending(data.user.id);
     }
 
     if (!data.session) {

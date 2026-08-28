@@ -114,6 +114,13 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="tutorial"
+        options={{
+          title: t('helpAndTutorialLink'),
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

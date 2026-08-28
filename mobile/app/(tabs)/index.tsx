@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 
+import OnboardingScreen from '@/components/OnboardingScreen';
 import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
@@ -23,6 +24,7 @@ import { cancelScheduledNotification, scheduleArrivalCheckNotification } from '@
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
+import { usePendingOnboarding } from '@/lib/use-pending-onboarding';
 import { useUserSettings } from '@/lib/user-settings-context';
 
 const DURATION_OPTIONS_MINUTES = [15, 30, 45, 60];
@@ -50,6 +52,11 @@ export default function HomeScreen() {
   const { t } = useLanguage();
   const { loaded: settingsLoaded, fakeCallEnabled, fakeCallCallerName } = useUserSettings();
   const userId = session?.user.id;
+  const {
+    checking: checkingOnboarding,
+    show: showOnboarding,
+    dismiss: dismissOnboarding,
+  } = usePendingOnboarding(userId);
 
   const [journey, setJourney] = useState<Journey | null>(null);
   const [loading, setLoading] = useState(true);
@@ -299,6 +306,17 @@ export default function HomeScreen() {
   const minutesUntil = journey
     ? Math.round((new Date(journey.expected_arrival_at).getTime() - now) / 60000)
     : 0;
+
+  // Shown once, immediately after a first-time sign-up — see
+  // lib/use-pending-onboarding.ts. checkingOnboarding is only true for
+  // the brief AsyncStorage read; rendering nothing then (rather than the
+  // normal Home content) avoids flashing Home before onboarding takes
+  // over. Doesn't affect sign-in at all: the flag is only ever set by a
+  // successful sign-up, never present for a returning account.
+  if (checkingOnboarding) return null;
+  if (showOnboarding) {
+    return <OnboardingScreen role="user" onFinish={dismissOnboarding} />;
+  }
 
   return (
     <KeyboardAvoidingView

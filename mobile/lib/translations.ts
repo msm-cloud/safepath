@@ -307,6 +307,60 @@ export const translations = {
   fakeCallToggleLabel: { en: 'Fake call escape', bn: 'ভুয়া কল এস্কেপ' },
   fakeCallCallerNameLabel: { en: 'Caller name', bn: 'কলারের নাম' },
   fakeCallDefaultCallerName: { en: 'Mom', bn: 'আম্মু' },
+  // Row label on the main Settings list + the replay screen's own title
+  // (components/HelpTutorialScreen.tsx) — replays the same onboarding
+  // carousel shown once automatically right after sign-up.
+  helpAndTutorialLink: { en: 'Help & Tutorial', bn: 'সাহায্য ও টিউটোরিয়াল' },
+
+  // --- Onboarding carousel (components/OnboardingCarousel.tsx +
+  // OnboardingScreen.tsx) — shown once automatically right after a
+  // first-time sign-up (see lib/onboarding-storage.ts), and replayable
+  // on demand from Settings via helpAndTutorialLink above. ---
+  onboardingSkipButton: { en: 'Skip', bn: 'এড়িয়ে যান' },
+  onboardingNextButton: { en: 'Next', bn: 'পরবর্তী' },
+  onboardingGetStartedButton: { en: 'Get Started', bn: 'শুরু করুন' },
+  // Student
+  onboardingStudentWelcomeTitle: { en: 'Welcome to SafePath', bn: 'সেফপাথে স্বাগতম' },
+  onboardingStudentWelcomeBody: {
+    en: 'SafePath helps you stay safe and keeps the people you trust close by — with one tap in an emergency.',
+    bn: 'সেফপাথ আপনাকে নিরাপদ রাখতে সাহায্য করে এবং আপনার বিশ্বাসের মানুষদের কাছাকাছি রাখে — জরুরি অবস্থায় একটি ট্যাপেই।',
+  },
+  onboardingStudentSosTitle: { en: 'Hold for SOS', bn: 'SOS-এর জন্য ধরে রাখুন' },
+  onboardingStudentSosBody: {
+    en: 'Hold the SOS button for 2 seconds to instantly alert your guardian with your location.',
+    bn: 'আপনার অবস্থানসহ তাৎক্ষণিকভাবে আপনার অভিভাবককে সতর্ক করতে SOS বাটনটি ২ সেকেন্ড ধরে রাখুন।',
+  },
+  onboardingStudentGuardianTitle: { en: 'Add a Guardian', bn: 'একজন অভিভাবক যোগ করুন' },
+  onboardingStudentGuardianBody: {
+    en: "Invite someone you trust as a guardian, so they're notified the moment you need help.",
+    bn: 'আপনার বিশ্বাসের কাউকে অভিভাবক হিসেবে আমন্ত্রণ জানান, যাতে আপনার সাহায্য দরকার হলে তারা সাথে সাথে জানতে পারেন।',
+  },
+  onboardingStudentContactsTitle: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },
+  onboardingStudentContactsBody: {
+    en: 'Add emergency contacts so an offline SOS can still reach someone by text, even with no internet.',
+    bn: 'জরুরি যোগাযোগ যোগ করুন, যাতে ইন্টারনেট না থাকলেও অফলাইন SOS এসএমএসের মাধ্যমে কারো কাছে পৌঁছাতে পারে।',
+  },
+  onboardingStudentJourneyTitle: { en: 'Journey Check-ins', bn: 'যাত্রা চেক-ইন' },
+  onboardingStudentJourneyBody: {
+    en: "Optional: start a journey before heading out, and your guardian is notified automatically if you don't check in safely.",
+    bn: 'ঐচ্ছিক: বের হওয়ার আগে একটি যাত্রা শুরু করুন, আপনি নিরাপদে চেক-ইন না করলে আপনার অভিভাবক স্বয়ংক্রিয়ভাবে জানতে পারবেন।',
+  },
+  // Guardian
+  onboardingGuardianWelcomeTitle: { en: 'Welcome, Guardian', bn: 'স্বাগতম, অভিভাবক' },
+  onboardingGuardianWelcomeBody: {
+    en: "As a guardian, you'll be the first to know if someone you care about needs help.",
+    bn: 'একজন অভিভাবক হিসেবে, আপনি যাকে নিয়ে চিন্তিত তার সাহায্য দরকার হলে আপনিই প্রথম জানবেন।',
+  },
+  onboardingGuardianLinkTitle: { en: 'Link to Someone', bn: 'কারো সাথে যুক্ত হন' },
+  onboardingGuardianLinkBody: {
+    en: 'Ask the person you support for their invite code, then enter it here to connect your accounts.',
+    bn: 'যাকে আপনি সহায়তা করছেন তার কাছ থেকে আমন্ত্রণ কোড চান, তারপর আপনার অ্যাকাউন্ট যুক্ত করতে এখানে সেটি লিখুন।',
+  },
+  onboardingGuardianAlertsTitle: { en: 'Active Alerts', bn: 'সক্রিয় অ্যালার্ট' },
+  onboardingGuardianAlertsBody: {
+    en: "You'll see alerts live here and get an email too, so you don't need to keep the app open all the time.",
+    bn: 'আপনি এখানে সরাসরি অ্যালার্ট দেখতে পাবেন এবং একটি ইমেইলও পাবেন, তাই সবসময় অ্যাপ খোলা রাখার দরকার নেই।',
+  },
 
   // --- Emergency contacts screen ---
   emergencyContactsTitle: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },

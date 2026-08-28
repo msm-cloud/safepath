@@ -10,10 +10,13 @@ import {
   View,
 } from 'react-native';
 
+import OnboardingScreen from '@/components/OnboardingScreen';
 import RoleBadge from '@/components/RoleBadge';
+import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import type { TranslationKey } from '@/lib/translations';
+import { usePendingOnboarding } from '@/lib/use-pending-onboarding';
 
 type ActiveAlert = {
   id: string;
@@ -47,7 +50,13 @@ type AlertsChangeRow = {
 // status callback that logs any non-SUBSCRIBED state clearly instead of
 // failing silently.
 export default function GuardianActiveAlertsScreen() {
+  const { session } = useAuth();
   const { t } = useLanguage();
+  const {
+    checking: checkingOnboarding,
+    show: showOnboarding,
+    dismiss: dismissOnboarding,
+  } = usePendingOnboarding(session?.user.id);
   const tRef = useRef(t);
   useEffect(() => {
     tRef.current = t;
@@ -214,6 +223,17 @@ export default function GuardianActiveAlertsScreen() {
       setAlerts((prev) => prev.filter((a) => a.id !== alertId));
     }
   };
+
+  // Shown once, immediately after a first-time sign-up — see
+  // lib/use-pending-onboarding.ts. checkingOnboarding is only true for
+  // the brief AsyncStorage read; rendering nothing then (rather than the
+  // normal Active Alerts content) avoids flashing it before onboarding
+  // takes over. Doesn't affect sign-in at all: the flag is only ever set
+  // by a successful sign-up, never present for a returning account.
+  if (checkingOnboarding) return null;
+  if (showOnboarding) {
+    return <OnboardingScreen role="guardian" onFinish={dismissOnboarding} />;
+  }
 
   return (
     <View style={styles.container}>

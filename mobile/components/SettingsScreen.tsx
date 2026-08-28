@@ -118,6 +118,13 @@ export default function SettingsScreen() {
           label={t('safetyFeaturesLink')}
           onPress={() => router.push('/safety-features')}
         />
+        <SettingsRow
+          icon={{ ios: 'questionmark.circle.fill', android: 'help', web: 'help' }}
+          iconColor="#30b0c7"
+          iconBackgroundColor="#e5f6fa"
+          label={t('helpAndTutorialLink')}
+          onPress={() => router.push('/tutorial')}
+        />
       </View>
 
       <View style={styles.signOutWrap}>
