@@ -105,6 +105,13 @@ export default function GuardianTabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="tutorial"
+        options={{
+          title: t('helpAndTutorialLink'),
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
