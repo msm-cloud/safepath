@@ -153,8 +153,21 @@ export const translations = {
 
   // --- Header ---
   signOutLink: { en: 'Sign out', bn: 'সাইন আউট' },
+  settingsLink: { en: 'Settings', bn: 'সেটিংস' },
   languageBn: { en: 'বাংলা', bn: 'বাংলা' },
   languageEn: { en: 'English', bn: 'English' },
+
+  // --- Settings page ---
+  settingsTitle: { en: 'Settings', bn: 'সেটিংস' },
+  phoneSavedMessage: { en: 'Phone number saved.', bn: 'ফোন নম্বর সংরক্ষণ করা হয়েছে।' },
+  nameSavedMessage: { en: 'Name saved.', bn: 'নাম সংরক্ষণ করা হয়েছে।' },
+  saveButton: { en: 'Save', bn: 'সংরক্ষণ করুন' },
+  savingButton: { en: 'Saving…', bn: 'সংরক্ষণ করা হচ্ছে…' },
+  invalidPhone: { en: 'Enter a valid phone number.', bn: 'একটি সঠিক ফোন নম্বর লিখুন।' },
+  duplicatePhoneError: {
+    en: 'That phone number is already registered to another account.',
+    bn: 'এই ফোন নম্বরটি ইতিমধ্যে অন্য একটি অ্যাকাউন্টে নিবন্ধিত।',
+  },
 } as const satisfies Record<string, Entry>;
 
 export type TranslationKey = keyof typeof translations;

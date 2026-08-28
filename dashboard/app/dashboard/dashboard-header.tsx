@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useLanguage } from '@/lib/language-context';
 
 import LanguageToggle from './language-toggle';
@@ -17,6 +19,9 @@ export default function DashboardHeader({
     <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
       <span className="text-sm text-zinc-500">{email}</span>
       <div className="flex items-center gap-4">
+        <Link href="/dashboard/settings" className="text-sm font-medium text-blue-600 underline">
+          {t('settingsLink')}
+        </Link>
         <LanguageToggle />
         <form action={signOutAction}>
           <button type="submit" className="text-sm font-medium text-red-600 underline">

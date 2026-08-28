@@ -96,16 +96,37 @@ export async function signUpAction(
   }
 
   const supabase = await createClient();
+
+  // Pre-check phone availability before ever creating an account. This
+  // project requires email confirmation, so by the time the DB-level
+  // unique constraint could otherwise reject a duplicate phone, the
+  // account would already exist and the guardian would see "check your
+  // email" with no idea their phone silently wasn't saved (see
+  // handle_new_user()'s own comment on why a conflict there doesn't fail
+  // signup). This has its own small race — someone else could register
+  // the same phone between this check and the signUp() call below —
+  // which is exactly what that trigger-level handling is the real safety
+  // net for, not this; this is purely a same-request UX improvement for
+  // the common (non-racing) case.
+  const { data: existingEmailForPhone } = await supabase.rpc('resolve_login_identifier', {
+    identifier: phone,
+  });
+  if (existingEmailForPhone) {
+    return { error: 'That phone number is already registered to another account.', info: null };
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       // Defensive fallback for when this project requires email
-      // confirmation: there's no session yet below to run the profiles
-      // UPDATE with, so this is the only way full_name reaches the
-      // profiles row (via handle_new_user reading it off signup metadata)
-      // before the guardian confirms and signs in for the first time.
-      data: { full_name: fullName },
+      // confirmation (which it now always does): there's no session yet
+      // below to run the profiles UPDATE with, so this is the only way
+      // full_name/phone reach the profiles row (via handle_new_user
+      // reading them off signup metadata — see
+      // 20260828091441_phone_survives_email_confirmation.sql) before the
+      // guardian confirms and signs in for the first time.
+      data: { full_name: fullName, phone },
     },
   });
 
@@ -119,7 +140,7 @@ export async function signUpAction(
     // Email confirmation is required by this Supabase project — there's no
     // authenticated session yet, so the profiles UPDATE below would be
     // rejected by RLS (profiles_update_own requires auth.uid() = id).
-    // full_name was still captured via signup metadata above.
+    // full_name/phone were both still captured via signup metadata above.
     return { error: null, info: 'Check your email to confirm your account, then sign in.' };
   }
 

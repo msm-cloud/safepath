@@ -13,6 +13,7 @@ import {
 
 import PasswordInput from '@/components/PasswordInput';
 import { useLanguage } from '@/lib/language-context';
+import { resolveLoginIdentifier } from '@/lib/resolve-login-identifier';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
@@ -60,7 +61,8 @@ export default function SignUpScreen() {
       setError(t('invalidEmail'));
       return;
     }
-    if (!isValidPhone(phone)) {
+    const trimmedPhone = phone.trim();
+    if (!isValidPhone(trimmedPhone)) {
       setError(t('invalidPhone'));
       return;
     }
@@ -71,23 +73,47 @@ export default function SignUpScreen() {
 
     setSubmitting(true);
 
+    // Pre-check phone availability before ever creating an account. This
+    // project requires email confirmation, so by the time the DB-level
+    // unique constraint could otherwise reject a duplicate phone, the
+    // account would already exist and the person would be looking at a
+    // "check your email" message with no idea their phone silently
+    // wasn't saved (see handle_new_user()'s own comment on why a
+    // conflict there doesn't fail signup). This has its own small race —
+    // someone else could register the same phone between this check and
+    // the signUp() call below — which is exactly what that trigger-level
+    // handling is the real safety net for, not this; this is purely a
+    // same-request UX improvement for the common (non-racing) case.
+    const existingEmailForPhone = await resolveLoginIdentifier(trimmedPhone);
+    if (existingEmailForPhone) {
+      setSubmitting(false);
+      setError(t('duplicatePhoneError'));
+      return;
+    }
+
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
         // Defensive fallback for when this project requires email
-        // confirmation: there's no session yet below to run the profiles
-        // UPDATE with, so this is the only way full_name/role/
-        // preferred_language reach the profiles row (via handle_new_user
-        // reading them off signup metadata — see
-        // supabase/migrations/20260821190552_profiles.sql, which already
-        // reads all three this way) before the user confirms and signs in
-        // for the first time. `language` here is whatever's currently
-        // selected in LanguageContext — including a pre-auth toggle on the
-        // welcome screen (app/(auth)/index.tsx) — not a hardcoded default,
-        // so that choice actually persists instead of silently reverting
-        // to 'bn' once the account exists.
-        data: { full_name: fullName.trim(), role, preferred_language: language },
+        // confirmation (which it now always does — see the phone-login
+        // migration's follow-up notes): there's no session yet below to
+        // run the profiles UPDATE with, so this is the only way full_name/
+        // role/preferred_language/phone reach the profiles row (via
+        // handle_new_user reading them off signup metadata — see
+        // supabase/migrations/20260821190552_profiles.sql and
+        // 20260828091441_phone_survives_email_confirmation.sql) before the
+        // user confirms and signs in for the first time. `language` here
+        // is whatever's currently selected in LanguageContext — including
+        // a pre-auth toggle on the welcome screen (app/(auth)/index.tsx)
+        // — not a hardcoded default, so that choice actually persists
+        // instead of silently reverting to 'bn' once the account exists.
+        data: {
+          full_name: fullName.trim(),
+          role,
+          preferred_language: language,
+          phone: trimmedPhone,
+        },
       },
     });
 
@@ -103,7 +129,8 @@ export default function SignUpScreen() {
       // Email confirmation is required by this Supabase project — there's
       // no authenticated session yet, so the profiles UPDATE below would be
       // rejected by RLS (profiles_update_own requires auth.uid() = id).
-      // full_name was still captured via signup metadata above.
+      // full_name/role/preferred_language/phone were all still captured
+      // via signup metadata above (handle_new_user).
       setSubmitting(false);
       setInfo(t('checkEmailConfirm'));
       return;
@@ -114,7 +141,7 @@ export default function SignUpScreen() {
       .update({
         role,
         full_name: fullName.trim(),
-        phone: phone.trim(),
+        phone: trimmedPhone,
         preferred_language: language,
       })
       .eq('id', data.session.user.id);

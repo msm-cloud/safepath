@@ -269,6 +269,7 @@ export const translations = {
   signedInAsGuardianBadge: { en: 'Signed in as Guardian', bn: 'অভিভাবক হিসেবে সাইন ইন করা আছে' },
   signedInAsStudentBadge: { en: 'Signed in as Student', bn: 'শিক্ষার্থী হিসেবে সাইন ইন করা আছে' },
   emergencyContactsLink: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },
+  phoneSavedMessage: { en: 'Phone number saved.', bn: 'ফোন নম্বর সংরক্ষণ করা হয়েছে।' },
   signOutButton: { en: 'Sign Out', bn: 'সাইন আউট' },
   languageLabel: { en: 'Language', bn: 'ভাষা' },
   languageBn: { en: 'বাংলা', bn: 'বাংলা' },

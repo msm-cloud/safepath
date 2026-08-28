@@ -18,7 +18,13 @@ import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
+import { supabase } from '@/lib/supabase';
 import { useUserSettings } from '@/lib/user-settings-context';
+import { isValidPhone } from '@/lib/validation';
+
+// profiles.phone's unique index violation — see
+// supabase/migrations/20260828063528_phone_login_and_password_reset.sql.
+const PHONE_UNIQUE_VIOLATION = '23505';
 
 // Shared between the student ((tabs)/settings.tsx) and guardian
 // ((guardian)/settings.tsx) tab groups — language toggle and sign-out don't
@@ -36,15 +42,61 @@ export default function SettingsScreen() {
     shakeSosEnabled,
     fakeCallEnabled,
     fakeCallCallerName,
+    phone,
     setShakeSosEnabled,
     setFakeCallEnabled,
     setFakeCallCallerName,
+    setPhoneLocal,
   } = useUserSettings();
+  const userId = session?.user.id;
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const callerNameInputRef = useRef<TextInput>(null);
+  const phoneInputRef = useRef<TextInput>(null);
+
+  // Unlike the toggles/caller-name field above, phone doesn't use the
+  // context's own optimistic-write setters — a duplicate phone number is
+  // a real, user-facing failure this screen has to surface, not
+  // something to fire-and-forget. Own local draft/error/saving state,
+  // same re-sync-on-load reasoning as callerNameDraft below.
+  const [phoneDraft, setPhoneDraft] = useState(phone ?? '');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [phoneSaved, setPhoneSaved] = useState(false);
+  const [savingPhone, setSavingPhone] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the local draft once the real value arrives asynchronously from useUserSettings; without this the field would be stuck empty for anyone who'd previously saved a phone number.
+    setPhoneDraft(phone ?? '');
+  }, [phone]);
+
+  const handleSavePhone = async () => {
+    setPhoneError(null);
+    setPhoneSaved(false);
+
+    const trimmed = phoneDraft.trim();
+    if (!isValidPhone(trimmed)) {
+      setPhoneError(t('invalidPhone'));
+      return;
+    }
+    if (!userId) return;
+
+    setSavingPhone(true);
+    const { error } = await supabase.from('profiles').update({ phone: trimmed }).eq('id', userId);
+    setSavingPhone(false);
+
+    if (error) {
+      // profiles_phone_normalized_key — same duplicate-phone check as
+      // sign-up, surfaced the same way.
+      setPhoneError(
+        error.code === PHONE_UNIQUE_VIOLATION ? t('duplicatePhoneError') : error.message
+      );
+      return;
+    }
+
+    setPhoneLocal(trimmed);
+    setPhoneSaved(true);
+  };
 
   // Local draft so every keystroke doesn't hit the network — persisted via
   // setFakeCallCallerName (which itself updates context immediately, same
@@ -101,6 +153,36 @@ export default function SettingsScreen() {
 
         <View style={styles.languageSectionWrap}>
           <LanguageToggle />
+        </View>
+
+        <View style={styles.phoneWrap}>
+          <Text style={styles.fieldLabel}>{t('phonePlaceholder')}</Text>
+          <TextInput
+            ref={phoneInputRef}
+            style={styles.input}
+            placeholder={t('phonePlaceholder')}
+            autoComplete="tel"
+            keyboardType="phone-pad"
+            value={phoneDraft}
+            onChangeText={(value) => {
+              setPhoneDraft(value);
+              setPhoneSaved(false);
+            }}
+            onFocus={() => scrollInputIntoView(scrollViewRef.current, phoneInputRef)}
+          />
+          {phoneError && <Text style={styles.fieldError}>{phoneError}</Text>}
+          {phoneSaved && <Text style={styles.fieldSaved}>{t('phoneSavedMessage')}</Text>}
+          <Pressable
+            style={[styles.savePhoneButton, savingPhone && styles.buttonDisabled]}
+            onPress={handleSavePhone}
+            disabled={savingPhone || phoneDraft.trim() === (phone ?? '')}
+          >
+            {savingPhone ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.savePhoneButtonText}>{t('saveButton')}</Text>
+            )}
+          </Pressable>
         </View>
 
         {role === 'user' && (
@@ -212,6 +294,32 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 8,
     gap: 6,
+  },
+  phoneWrap: {
+    width: '100%',
+    marginTop: 16,
+    gap: 6,
+  },
+  fieldError: {
+    color: '#d33',
+    fontSize: 13,
+  },
+  fieldSaved: {
+    color: '#1a7f37',
+    fontSize: 13,
+  },
+  savePhoneButton: {
+    backgroundColor: '#2f95dc',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 20,
+  },
+  savePhoneButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   fieldLabel: {
     fontSize: 13,
