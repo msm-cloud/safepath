@@ -14,6 +14,7 @@ export default function AuthLayout() {
           keys just for the header bar. */}
       <Stack.Screen name="sign-in" options={{ title: t('signInButton') }} />
       <Stack.Screen name="sign-up" options={{ title: t('signUpButton') }} />
+      <Stack.Screen name="forgot-password" options={{ title: t('forgotPasswordTitle') }} />
     </Stack>
   );
 }

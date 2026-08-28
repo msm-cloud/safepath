@@ -16,7 +16,11 @@ import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
-import { isValidEmail, MIN_PASSWORD_LENGTH } from '@/lib/validation';
+import { isValidEmail, isValidPhone, MIN_PASSWORD_LENGTH } from '@/lib/validation';
+
+// profiles.phone's unique index violation — see
+// supabase/migrations/20260828063528_phone_login_and_password_reset.sql.
+const PHONE_UNIQUE_VIOLATION = '23505';
 
 export default function SignUpScreen() {
   const { t, language } = useLanguage();
@@ -31,6 +35,7 @@ export default function SignUpScreen() {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -39,6 +44,7 @@ export default function SignUpScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const fullNameInputRef = useRef<TextInput>(null);
   const emailInputRef = useRef<TextInput>(null);
+  const phoneInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
   const keyboardHeight = useKeyboardHeight();
 
@@ -52,6 +58,10 @@ export default function SignUpScreen() {
     }
     if (!isValidEmail(email)) {
       setError(t('invalidEmail'));
+      return;
+    }
+    if (!isValidPhone(phone)) {
+      setError(t('invalidPhone'));
       return;
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
@@ -104,6 +114,7 @@ export default function SignUpScreen() {
       .update({
         role,
         full_name: fullName.trim(),
+        phone: phone.trim(),
         preferred_language: language,
       })
       .eq('id', data.session.user.id);
@@ -111,7 +122,15 @@ export default function SignUpScreen() {
     setSubmitting(false);
 
     if (profileError) {
-      setError(profileError.message);
+      // profiles_phone_normalized_key (see the phone-login migration)
+      // rejects a phone number already used by another account — give a
+      // specific, actionable message instead of Supabase's raw
+      // constraint-violation text.
+      setError(
+        profileError.code === PHONE_UNIQUE_VIOLATION
+          ? t('duplicatePhoneError')
+          : profileError.message
+      );
       return;
     }
 
@@ -160,6 +179,16 @@ export default function SignUpScreen() {
           value={email}
           onChangeText={setEmail}
           onFocus={() => scrollInputIntoView(scrollViewRef.current, emailInputRef)}
+        />
+        <TextInput
+          ref={phoneInputRef}
+          style={styles.input}
+          placeholder={t('phonePlaceholder')}
+          autoComplete="tel"
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
+          onFocus={() => scrollInputIntoView(scrollViewRef.current, phoneInputRef)}
         />
         <PasswordInput
           inputRef={passwordInputRef}

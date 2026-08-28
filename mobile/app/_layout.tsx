@@ -59,6 +59,12 @@ function RootLayoutNav() {
         <Stack.Protected guard={!session}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         </Stack.Protected>
+        {/* Deliberately NOT inside any Stack.Protected block — see
+            reset-password.tsx's own top-of-file comment for why: the
+            recovery link's tokens get exchanged for a real session while
+            this screen is showing, and a guard here would immediately
+            navigate away before the person can set a new password. */}
+        <Stack.Screen name="reset-password" options={{ headerShown: false }} />
       </Stack>
 
       {/* Mounted once, app-wide, alongside the Stack rather than inside any

@@ -19,10 +19,10 @@ export default function LoginPage() {
 
       <form action={formAction} className="flex w-full max-w-sm flex-col gap-3">
         <input
-          type="email"
+          type="text"
           name="email"
-          placeholder={t('emailPlaceholder')}
-          autoComplete="email"
+          placeholder={t('emailOrPhonePlaceholder')}
+          autoComplete="username"
           required
           className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
         />
@@ -31,6 +31,10 @@ export default function LoginPage() {
           placeholder={t('passwordPlaceholder')}
           autoComplete="current-password"
         />
+
+        <Link href="/forgot-password" className="text-right text-sm text-blue-600 underline">
+          {t('forgotPasswordLink')}
+        </Link>
 
         {/* state.error comes from the signInAction Server Action (business
             logic, out of scope for this UI-text-only pass) — Supabase's

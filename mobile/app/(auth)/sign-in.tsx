@@ -13,10 +13,11 @@ import {
 
 import PasswordInput from '@/components/PasswordInput';
 import { useLanguage } from '@/lib/language-context';
+import { resolveLoginIdentifier } from '@/lib/resolve-login-identifier';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
-import { isValidEmail, MIN_PASSWORD_LENGTH } from '@/lib/validation';
+import { isValidEmail, isValidPhone, MIN_PASSWORD_LENGTH } from '@/lib/validation';
 
 export default function SignInScreen() {
   const { t } = useLanguage();
@@ -47,8 +48,9 @@ export default function SignInScreen() {
   const handleSignIn = async () => {
     setError(null);
 
-    if (!isValidEmail(email)) {
-      setError(t('invalidEmail'));
+    const identifier = email.trim();
+    if (!isValidEmail(identifier) && !isValidPhone(identifier)) {
+      setError(t('invalidEmailOrPhone'));
       return;
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
@@ -57,16 +59,41 @@ export default function SignInScreen() {
     }
 
     setSubmitting(true);
+
+    // Turns a phone number into the account's real email first (a no-op,
+    // no-lookup pass-through if `identifier` is already an email — see
+    // resolve-login-identifier.ts) — signInWithPassword itself only
+    // understands email.
+    const resolvedEmail = await resolveLoginIdentifier(identifier);
+    if (!resolvedEmail) {
+      // Deliberately the exact same message as a wrong password below,
+      // not a distinct "that identifier isn't registered" message — and
+      // deliberately not even attempting signInWithPassword with the raw
+      // (unresolved) identifier, since Supabase's own email-format
+      // validation would reject a phone-shaped string differently than
+      // it rejects a wrong password for a real email. Either giveaway
+      // would let someone probe which emails/phones have accounts.
+      setSubmitting(false);
+      setError(t('invalidCredentials'));
+      return;
+    }
+
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
+      email: resolvedEmail,
       password,
     });
     setSubmitting(false);
 
     if (signInError) {
-      // Surface Supabase's own message (e.g. "Invalid login credentials")
-      // rather than a generic one.
-      setError(signInError.message);
+      // 'invalid_credentials' (wrong password against a real email) gets
+      // our own translated copy — same string as the unresolved-identifier
+      // case above, not Supabase's raw message — so the two are
+      // guaranteed byte-identical rather than just coincidentally the
+      // same today. Any other error (e.g. email not confirmed, a network
+      // failure) still surfaces Supabase's own message unchanged.
+      setError(
+        signInError.code === 'invalid_credentials' ? t('invalidCredentials') : signInError.message
+      );
       return;
     }
 
@@ -99,10 +126,14 @@ export default function SignInScreen() {
         <TextInput
           ref={emailInputRef}
           style={styles.input}
-          placeholder={t('emailPlaceholder')}
+          placeholder={t('emailOrPhonePlaceholder')}
           autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
+          autoComplete="username"
+          // Neither "email-address" nor "phone-pad" alone works well for
+          // both — the former hides useful digit keys, the latter hides
+          // letters entirely. "default" is the only layout that types
+          // both reasonably.
+          keyboardType="default"
           value={email}
           onChangeText={setEmail}
           onFocus={() => scrollInputIntoView(scrollViewRef.current, emailInputRef)}
@@ -115,6 +146,10 @@ export default function SignInScreen() {
           onChangeText={setPassword}
           onFocus={() => scrollInputIntoView(scrollViewRef.current, passwordInputRef)}
         />
+
+        <Link href="/(auth)/forgot-password" style={styles.forgotPasswordLink}>
+          {t('forgotPasswordLink')}
+        </Link>
 
         {error && <Text style={styles.error}>{error}</Text>}
 
@@ -187,6 +222,11 @@ const styles = StyleSheet.create({
   link: {
     textAlign: 'center',
     marginTop: 16,
+    color: '#2f95dc',
+    fontSize: 14,
+  },
+  forgotPasswordLink: {
+    textAlign: 'right',
     color: '#2f95dc',
     fontSize: 14,
   },

@@ -30,6 +30,15 @@ export const translations = {
   // --- Sign in ---
   signInTitle: { en: 'Sign in to SafePath', bn: 'সেফপাথে সাইন ইন করুন' },
   emailPlaceholder: { en: 'Email', bn: 'ইমেইল' },
+  // Sign-in accepts either an email or a phone number (see
+  // lib/resolve-login-identifier.ts) — sign-up still asks for email and
+  // phone as two separate required fields, so emailPlaceholder above is
+  // still used there unchanged.
+  emailOrPhonePlaceholder: { en: 'Email or Phone Number', bn: 'ইমেইল অথবা ফোন নম্বর' },
+  invalidEmailOrPhone: {
+    en: 'Enter a valid email address or phone number.',
+    bn: 'একটি সঠিক ইমেইল ঠিকানা অথবা ফোন নম্বর লিখুন।',
+  },
   passwordPlaceholder: { en: 'Password', bn: 'পাসওয়ার্ড' },
   signInButton: { en: 'Sign In', bn: 'সাইন ইন' },
   signUpLink: { en: "Don't have an account? Sign up", bn: 'অ্যাকাউন্ট নেই? সাইন আপ করুন' },
@@ -40,6 +49,14 @@ export const translations = {
   },
   showPasswordLabel: { en: 'Show password', bn: 'পাসওয়ার্ড দেখান' },
   hidePasswordLabel: { en: 'Hide password', bn: 'পাসওয়ার্ড লুকান' },
+  // Same fixed string Supabase's own API returns for a wrong password
+  // (error.code === 'invalid_credentials') — used verbatim (not passed
+  // through from the API) for BOTH that case and an unresolved email/
+  // phone identifier, so the two are guaranteed byte-identical rather
+  // than just coincidentally the same today. That's what actually makes
+  // this un-enumerable — see sign-in.tsx.
+  invalidCredentials: { en: 'Invalid login credentials', bn: 'সাইন ইন তথ্য সঠিক নয়।' },
+  forgotPasswordLink: { en: 'Forgot Password?', bn: 'পাসওয়ার্ড ভুলে গেছেন?' },
 
   // --- Sign up ---
   signUpTitle: { en: 'Create your SafePath account', bn: 'আপনার সেফপাথ অ্যাকাউন্ট তৈরি করুন' },
@@ -58,6 +75,36 @@ export const translations = {
     en: 'Check your email to confirm your account, then sign in.',
     bn: 'আপনার অ্যাকাউন্ট নিশ্চিত করতে ইমেইল চেক করুন, তারপর সাইন ইন করুন।',
   },
+  duplicatePhoneError: {
+    en: 'That phone number is already registered to another account.',
+    bn: 'এই ফোন নম্বরটি ইতিমধ্যে অন্য একটি অ্যাকাউন্টে নিবন্ধিত।',
+  },
+
+  // --- Forgot / reset password ---
+  forgotPasswordTitle: { en: 'Reset your password', bn: 'আপনার পাসওয়ার্ড পুনরায় সেট করুন' },
+  forgotPasswordSubtitle: {
+    en: "Enter the email or phone number on your account, and we'll send you a link to reset your password.",
+    bn: 'আপনার অ্যাকাউন্টের ইমেইল অথবা ফোন নম্বর লিখুন, আমরা আপনাকে পাসওয়ার্ড পুনরায় সেট করার একটি লিংক পাঠাবো।',
+  },
+  sendResetLinkButton: { en: 'Send Reset Link', bn: 'রিসেট লিংক পাঠান' },
+  sendingResetLinkButton: { en: 'Sending…', bn: 'পাঠানো হচ্ছে…' },
+  // Shown identically whether or not the identifier actually resolved to
+  // an account — see forgot-password.tsx. Never reveal which is true.
+  resetLinkSentMessage: {
+    en: "If an account exists for that email or phone number, we've sent a link to reset your password.",
+    bn: 'যদি সেই ইমেইল অথবা ফোন নম্বরের জন্য কোনো অ্যাকাউন্ট থাকে, আমরা পাসওয়ার্ড পুনরায় সেট করার একটি লিংক পাঠিয়েছি।',
+  },
+  backToSignInLink: { en: 'Back to Sign In', bn: 'সাইন ইনে ফিরে যান' },
+  resetPasswordTitle: { en: 'Set a new password', bn: 'একটি নতুন পাসওয়ার্ড সেট করুন' },
+  newPasswordPlaceholder: { en: 'New password', bn: 'নতুন পাসওয়ার্ড' },
+  resetPasswordButton: { en: 'Reset Password', bn: 'পাসওয়ার্ড রিসেট করুন' },
+  resettingPasswordButton: { en: 'Resetting…', bn: 'রিসেট করা হচ্ছে…' },
+  resetLinkVerifying: { en: 'Verifying your reset link…', bn: 'আপনার রিসেট লিংক যাচাই করা হচ্ছে…' },
+  invalidOrExpiredResetLink: {
+    en: 'This password reset link is invalid or has expired. Request a new one.',
+    bn: 'এই পাসওয়ার্ড রিসেট লিংকটি সঠিক নয় অথবা মেয়াদ শেষ হয়ে গেছে। নতুন একটি অনুরোধ করুন।',
+  },
+  requestNewResetLinkLink: { en: 'Request a new link', bn: 'নতুন একটি লিংক অনুরোধ করুন' },
 
   // --- Home ---
   homeTitle: { en: 'Home', bn: 'হোম' },

@@ -34,6 +34,14 @@ export default function SignUpPage() {
           required
           className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
         />
+        <input
+          type="tel"
+          name="phone"
+          placeholder={t('phonePlaceholder')}
+          autoComplete="tel"
+          required
+          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+        />
         <PasswordField
           name="password"
           placeholder={t('passwordSignupPlaceholder')}
