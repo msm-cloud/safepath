@@ -186,6 +186,17 @@ export const translations = {
   },
   changingPasswordButton: { en: 'Changing…', bn: 'পরিবর্তন করা হচ্ছে…' },
   passwordChangedMessage: { en: 'Password changed.', bn: 'পাসওয়ার্ড পরিবর্তন করা হয়েছে।' },
+
+  // --- Guardian-only gate (app/guardian-only/page.tsx) ---
+  guardianOnlyTitle: { en: 'This dashboard is for guardians', bn: 'এই ড্যাশবোর্ড অভিভাবকদের জন্য' },
+  guardianOnlyMessage: {
+    en: "This account isn't set up as a guardian, so it can't access the dashboard. Sign in with a guardian account instead, or use the SafePath mobile app.",
+    bn: 'এই অ্যাকাউন্টটি অভিভাবক হিসেবে সেট আপ করা নেই, তাই এটি ড্যাশবোর্ড ব্যবহার করতে পারে না। পরিবর্তে একটি অভিভাবক অ্যাকাউন্ট দিয়ে সাইন ইন করুন, অথবা সেফপাথ মোবাইল অ্যাপ ব্যবহার করুন।',
+  },
+  signInWithGuardianAccountLink: {
+    en: 'Sign in with a guardian account',
+    bn: 'একটি অভিভাবক অ্যাকাউন্ট দিয়ে সাইন ইন করুন',
+  },
 } as const satisfies Record<string, Entry>;
 
 export type TranslationKey = keyof typeof translations;
