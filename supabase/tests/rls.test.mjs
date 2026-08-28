@@ -664,6 +664,50 @@ await asUser(userG, async () => {
   }
 });
 
+console.log('\n--- handle_new_user(): phone survives email-confirmation-required signups ---');
+// Raw insert into auth.users (same pattern as mkUser above) — this is
+// exactly what supabase.auth.signUp() does server-side, firing
+// on_auth_user_created for real rather than calling handle_new_user()
+// directly.
+const phoneMetaOk = await db.query(
+  `insert into auth.users (email, raw_user_meta_data) values ($1, $2::jsonb) returning id`,
+  [
+    'phonemeta1@example.com',
+    JSON.stringify({ role: 'user', full_name: 'PhoneMeta1', phone: '+1 222-333-4444' }),
+  ]
+);
+const phoneMetaOkProfile = await db.query(`select phone from public.profiles where id = $1`, [
+  phoneMetaOk.rows[0].id,
+]);
+check(
+  'handle_new_user() sets phone from signup metadata (no session needed, unlike the app-side profiles UPDATE)',
+  phoneMetaOkProfile.rows[0].phone === '+1 222-333-4444'
+);
+
+// userA already has '+1 555-123-4567' set above (a different formatting
+// of the same number) — proves the trigger's own UPDATE normalizes the
+// same way the direct-UPDATE path already does.
+const phoneMetaConflict = await db.query(
+  `insert into auth.users (email, raw_user_meta_data) values ($1, $2::jsonb) returning id`,
+  [
+    'phonemeta2@example.com',
+    JSON.stringify({ role: 'user', full_name: 'PhoneMeta2', phone: '+1 5551234567' }),
+  ]
+);
+const phoneMetaConflictProfile = await db.query(
+  `select full_name, phone from public.profiles where id = $1`,
+  [phoneMetaConflict.rows[0].id]
+);
+check(
+  'a duplicate phone in signup metadata does NOT fail account creation — the profile row still exists',
+  phoneMetaConflictProfile.rows.length === 1 &&
+    phoneMetaConflictProfile.rows[0].full_name === 'PhoneMeta2'
+);
+check(
+  '...but phone itself is left NULL rather than silently colliding with the existing owner',
+  phoneMetaConflictProfile.rows[0].phone === null
+);
+
 console.log('\n--- resolve_login_identifier() ---');
 await asAnon(async () => {
   const email = await db.query(`select public.resolve_login_identifier('A@EXAMPLE.COM') as v`);

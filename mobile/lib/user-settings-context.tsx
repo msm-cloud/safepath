@@ -13,9 +13,22 @@ type UserSettingsContextValue = {
   // null means "use the app's translated default" — see the
   // fake_call_caller_name column comment in the migration.
   fakeCallCallerName: string | null;
+  // Read-only here — null for any account created while "Confirm email"
+  // was on before phone got wired into handle_new_user() (see the
+  // phone-login migration's own comment), or for a signup that happened
+  // to race a duplicate. SettingsScreen.tsx is where this actually gets
+  // set/fixed, not this context: unlike the three setters below, saving
+  // a phone number is a real, user-facing failure mode (already taken)
+  // that needs synchronous error handling — a fire-and-forget optimistic
+  // write would either silently drop the error or, worse, show a phone
+  // number as "saved" that wasn't.
+  phone: string | null;
   setShakeSosEnabled: (value: boolean) => void;
   setFakeCallEnabled: (value: boolean) => void;
   setFakeCallCallerName: (value: string | null) => void;
+  // Updates only the in-memory value, once SettingsScreen has confirmed
+  // its own write actually succeeded.
+  setPhoneLocal: (value: string | null) => void;
 };
 
 const UserSettingsContext = createContext<UserSettingsContextValue | undefined>(undefined);
@@ -33,6 +46,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
   const [shakeSosEnabled, setShakeSosEnabledState] = useState(false);
   const [fakeCallEnabled, setFakeCallEnabledState] = useState(true);
   const [fakeCallCallerName, setFakeCallCallerNameState] = useState<string | null>(null);
+  const [phone, setPhoneState] = useState<string | null>(null);
   const [loadedForUserId, setLoadedForUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,7 +55,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     supabase
       .from('profiles')
-      .select('shake_sos_enabled, fake_call_enabled, fake_call_caller_name')
+      .select('shake_sos_enabled, fake_call_enabled, fake_call_caller_name, phone')
       .eq('id', userId)
       .single()
       .then(({ data }) => {
@@ -50,6 +64,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
           setShakeSosEnabledState(data.shake_sos_enabled);
           setFakeCallEnabledState(data.fake_call_enabled);
           setFakeCallCallerNameState(data.fake_call_caller_name);
+          setPhoneState(data.phone);
         }
         setLoadedForUserId(userId);
       });
@@ -96,9 +111,11 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
         shakeSosEnabled,
         fakeCallEnabled,
         fakeCallCallerName,
+        phone,
         setShakeSosEnabled,
         setFakeCallEnabled,
         setFakeCallCallerName,
+        setPhoneLocal: setPhoneState,
       }}
     >
       {children}
