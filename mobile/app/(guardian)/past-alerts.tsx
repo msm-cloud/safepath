@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import Avatar from '@/components/Avatar';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import type { TranslationKey } from '@/lib/translations';
@@ -19,6 +20,7 @@ const PAST_ALERTS_LIMIT = 20;
 type PastAlert = {
   id: string;
   full_name: string;
+  avatar_url: string | null;
   created_at: string;
   resolved_at: string | null;
   last_lat: number | null;
@@ -44,7 +46,7 @@ export default function GuardianPastAlertsScreen() {
     const { data, error } = await supabase
       .from('alerts')
       .select(
-        'id, created_at, resolved_at, last_lat, last_lng, trigger_type, user:profiles!alerts_user_id_fkey(full_name)'
+        'id, created_at, resolved_at, last_lat, last_lng, trigger_type, user:profiles!alerts_user_id_fkey(full_name, avatar_url)'
       )
       .eq('status', 'resolved')
       .order('resolved_at', { ascending: false })
@@ -63,7 +65,7 @@ export default function GuardianPastAlertsScreen() {
       last_lat: number | null;
       last_lng: number | null;
       trigger_type: string;
-      user: { full_name: string } | null;
+      user: { full_name: string; avatar_url: string | null } | null;
     }[];
 
     setAlerts(
@@ -75,6 +77,7 @@ export default function GuardianPastAlertsScreen() {
         last_lng: row.last_lng,
         trigger_type: row.trigger_type,
         full_name: row.user?.full_name || t('unnamedUser'),
+        avatar_url: row.user?.avatar_url ?? null,
       }))
     );
   }, [t]);
@@ -112,11 +115,18 @@ export default function GuardianPastAlertsScreen() {
             {item.trigger_type === 'journey_overdue' && (
               <Text style={styles.rowLabel}>{t('missedCheckinTypeLabel')}</Text>
             )}
-            <Text style={styles.rowName}>{item.full_name}</Text>
-            <Text style={styles.rowMeta}>
-              {new Date(item.created_at).toLocaleString()}
-              {item.resolved_at ? ` — ${formatDuration(item.created_at, item.resolved_at, t)}` : ''}
-            </Text>
+            <View style={styles.rowNameRow}>
+              <Avatar name={item.full_name} url={item.avatar_url} size={36} />
+              <View style={styles.rowNameText}>
+                <Text style={styles.rowName}>{item.full_name}</Text>
+                <Text style={styles.rowMeta}>
+                  {new Date(item.created_at).toLocaleString()}
+                  {item.resolved_at
+                    ? ` — ${formatDuration(item.created_at, item.resolved_at, t)}`
+                    : ''}
+                </Text>
+              </View>
+            </View>
             {item.last_lat != null && item.last_lng != null ? (
               <Pressable
                 onPress={() =>
@@ -193,6 +203,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#f5f5f5',
     gap: 2,
+  },
+  rowNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  rowNameText: {
+    flex: 1,
   },
   rowLabel: {
     fontSize: 11,

@@ -52,6 +52,13 @@
         {
           "motionPermission": "SafePath uses motion data to detect a shake gesture while the app is open, so you can trigger an SOS alert quickly."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SafePath uses your photo library so you can choose a profile photo.",
+          "cameraPermission": "SafePath uses your camera so you can take a profile photo."
+        }
       ]
     ],
     "experiments": {

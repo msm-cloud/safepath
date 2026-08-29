@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 
+import Avatar from '@/components/Avatar';
 import OnboardingScreen from '@/components/OnboardingScreen';
 import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
@@ -50,7 +51,13 @@ type Journey = {
 export default function HomeScreen() {
   const { session } = useAuth();
   const { t } = useLanguage();
-  const { loaded: settingsLoaded, fakeCallEnabled, fakeCallCallerName } = useUserSettings();
+  const {
+    loaded: settingsLoaded,
+    fakeCallEnabled,
+    fakeCallCallerName,
+    fullName,
+    avatarPath,
+  } = useUserSettings();
   const userId = session?.user.id;
   const {
     checking: checkingOnboarding,
@@ -336,7 +343,10 @@ export default function HomeScreen() {
         contentContainerStyle={[styles.container, { paddingBottom: keyboardHeight }]}
       >
         <RoleBadge style={styles.roleBadge} />
-        <Text style={styles.title}>{t('homeTitle')}</Text>
+        <View style={styles.headerRow}>
+          <Avatar name={fullName} url={avatarPath} size={36} />
+          <Text style={styles.title}>{t('homeTitle')}</Text>
+        </View>
 
         {loading ? (
           <ActivityIndicator style={styles.loadingIndicator} />
@@ -548,6 +558,11 @@ const styles = StyleSheet.create({
   },
   roleBadge: {
     alignSelf: 'flex-start',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   title: {
     fontSize: 22,

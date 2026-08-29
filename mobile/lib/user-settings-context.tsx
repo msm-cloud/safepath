@@ -23,12 +23,23 @@ type UserSettingsContextValue = {
   // write would either silently drop the error or, worse, show a phone
   // number as "saved" that wasn't.
   phone: string | null;
+  // The signed-in user's own display name and profile-photo path — read
+  // here for the avatar shown on their own screens (Settings header, Home
+  // header, guardian header). full_name is edited on the dashboard, not
+  // in the mobile app; avatar_url is set via SettingsScreen (see
+  // setAvatarPathLocal). Both null until `loaded`.
+  fullName: string | null;
+  avatarPath: string | null;
   setShakeSosEnabled: (value: boolean) => void;
   setFakeCallEnabled: (value: boolean) => void;
   setFakeCallCallerName: (value: string | null) => void;
   // Updates only the in-memory value, once SettingsScreen has confirmed
   // its own write actually succeeded.
   setPhoneLocal: (value: string | null) => void;
+  // Same idea as setPhoneLocal: SettingsScreen owns the storage upload +
+  // profiles.avatar_url write (real, user-facing failure modes), then
+  // syncs the confirmed value back into context for the app-wide avatar.
+  setAvatarPathLocal: (value: string | null) => void;
 };
 
 const UserSettingsContext = createContext<UserSettingsContextValue | undefined>(undefined);
@@ -47,6 +58,8 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
   const [fakeCallEnabled, setFakeCallEnabledState] = useState(true);
   const [fakeCallCallerName, setFakeCallCallerNameState] = useState<string | null>(null);
   const [phone, setPhoneState] = useState<string | null>(null);
+  const [fullName, setFullNameState] = useState<string | null>(null);
+  const [avatarPath, setAvatarPathState] = useState<string | null>(null);
   const [loadedForUserId, setLoadedForUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,7 +68,9 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     supabase
       .from('profiles')
-      .select('shake_sos_enabled, fake_call_enabled, fake_call_caller_name, phone')
+      .select(
+        'shake_sos_enabled, fake_call_enabled, fake_call_caller_name, phone, full_name, avatar_url'
+      )
       .eq('id', userId)
       .single()
       .then(({ data }) => {
@@ -65,6 +80,8 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
           setFakeCallEnabledState(data.fake_call_enabled);
           setFakeCallCallerNameState(data.fake_call_caller_name);
           setPhoneState(data.phone);
+          setFullNameState(data.full_name);
+          setAvatarPathState(data.avatar_url);
         }
         setLoadedForUserId(userId);
       });
@@ -112,10 +129,13 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
         fakeCallEnabled,
         fakeCallCallerName,
         phone,
+        fullName,
+        avatarPath,
         setShakeSosEnabled,
         setFakeCallEnabled,
         setFakeCallCallerName,
         setPhoneLocal: setPhoneState,
+        setAvatarPathLocal: setAvatarPathState,
       }}
     >
       {children}

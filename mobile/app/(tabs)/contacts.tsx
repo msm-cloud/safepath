@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import Avatar from '@/components/Avatar';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
@@ -25,7 +26,7 @@ type GuardianLinkRow = {
   invite_code: string;
   created_at: string;
   accepted_at: string | null;
-  guardian: { full_name: string } | null;
+  guardian: { full_name: string; avatar_url: string | null } | null;
 };
 
 export default function GuardiansScreen() {
@@ -48,7 +49,7 @@ export default function GuardiansScreen() {
     const { data, error } = await supabase
       .from('guardian_links')
       .select(
-        'id, status, invite_code, created_at, accepted_at, guardian:profiles!guardian_links_guardian_id_fkey(full_name)'
+        'id, status, invite_code, created_at, accepted_at, guardian:profiles!guardian_links_guardian_id_fkey(full_name, avatar_url)'
       )
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -172,6 +173,13 @@ export default function GuardiansScreen() {
         }
         renderItem={({ item }) => (
           <View style={styles.linkRow}>
+            {item.status === 'accepted' && (
+              <Avatar
+                name={item.guardian?.full_name ?? null}
+                url={item.guardian?.avatar_url ?? null}
+                size={40}
+              />
+            )}
             <View style={styles.linkRowText}>
               <Text style={styles.linkName}>
                 {item.status === 'accepted' && item.guardian
@@ -300,6 +308,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 10,

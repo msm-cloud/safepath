@@ -1,11 +1,24 @@
 import { useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  type AlertButton,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
+import Avatar from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
+import { type AvatarSource, pickAndUploadAvatar, removeAvatar } from '@/lib/avatar-upload';
 import { useLanguage } from '@/lib/language-context';
+import { supabase } from '@/lib/supabase';
+import { useUserSettings } from '@/lib/user-settings-context';
 
 const CHEVRON_COLOR = '#c7c7cc';
 
@@ -61,8 +74,85 @@ function SettingsRow({
 export default function SettingsScreen() {
   const { session, role, signOut } = useAuth();
   const { t } = useLanguage();
+  const { fullName, avatarPath, setAvatarPathLocal } = useUserSettings();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+
+  const userId = session?.user.id;
+
+  const uploadAvatar = async (source: AvatarSource) => {
+    if (!userId) return;
+    setAvatarBusy(true);
+    const result = await pickAndUploadAvatar({ userId, source, previousPath: avatarPath });
+
+    if (!result.ok) {
+      setAvatarBusy(false);
+      if (result.reason === 'permission_denied') {
+        Alert.alert(t('photoPermissionDeniedTitle'), t('photoPermissionDeniedMessage'));
+      } else if (result.reason === 'failed') {
+        Alert.alert(t('photoUploadFailedMessage'));
+      }
+      // 'cancelled' — the person backed out of the picker, say nothing.
+      return;
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ avatar_url: result.path })
+      .eq('id', userId);
+    setAvatarBusy(false);
+
+    if (error) {
+      Alert.alert(t('photoUploadFailedMessage'));
+      return;
+    }
+    setAvatarPathLocal(result.path);
+  };
+
+  const confirmRemoveAvatar = () => {
+    Alert.alert(t('removePhotoConfirmTitle'), t('removePhotoConfirmMessage'), [
+      { text: t('cancelButton'), style: 'cancel' },
+      {
+        text: t('removePhotoButton'),
+        style: 'destructive',
+        onPress: async () => {
+          if (!userId || !avatarPath) return;
+          setAvatarBusy(true);
+          await removeAvatar(avatarPath);
+          const { error } = await supabase
+            .from('profiles')
+            .update({ avatar_url: null })
+            .eq('id', userId);
+          setAvatarBusy(false);
+          if (error) {
+            Alert.alert(t('photoUploadFailedMessage'));
+            return;
+          }
+          setAvatarPathLocal(null);
+        },
+      },
+    ]);
+  };
+
+  const handleAvatarPress = () => {
+    if (avatarBusy) return;
+    const options: AlertButton[] = [
+      { text: t('takePhotoButton'), onPress: () => uploadAvatar('camera') },
+      { text: t('chooseFromLibraryButton'), onPress: () => uploadAvatar('library') },
+      ...(avatarPath
+        ? [
+            {
+              text: t('removePhotoButton'),
+              style: 'destructive' as const,
+              onPress: confirmRemoveAvatar,
+            },
+          ]
+        : []),
+      { text: t('cancelButton'), style: 'cancel' },
+    ];
+    Alert.alert(t('profilePhotoActionTitle'), undefined, options);
+  };
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -74,6 +164,21 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <Pressable style={styles.avatarWrap} onPress={handleAvatarPress} disabled={avatarBusy}>
+        <Avatar name={fullName} url={avatarPath} size={96} />
+        <View style={styles.avatarEditBadge}>
+          {avatarBusy ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <SymbolView
+              name={{ ios: 'camera.fill', android: 'photo_camera', web: 'photo_camera' }}
+              tintColor="#fff"
+              size={14}
+            />
+          )}
+        </View>
+      </Pressable>
+
       <Text style={styles.title}>{t('settingsTitle')}</Text>
       {session?.user.email && (
         <Text style={styles.email}>{t('signedInAs', { email: session.user.email })}</Text>
@@ -151,6 +256,24 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 32,
     gap: 12,
+  },
+  avatarWrap: {
+    width: 96,
+    height: 96,
+    marginBottom: 4,
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#2f95dc',
+    borderWidth: 2,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 22,

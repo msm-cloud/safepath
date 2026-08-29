@@ -290,6 +290,27 @@ export const translations = {
   signedInAsStudentBadge: { en: 'Signed in as Student', bn: 'শিক্ষার্থী হিসেবে সাইন ইন করা আছে' },
   emergencyContactsLink: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },
   phoneSavedMessage: { en: 'Phone number saved.', bn: 'ফোন নম্বর সংরক্ষণ করা হয়েছে।' },
+  // Profile photo — the tappable avatar in the Settings header. Buttons
+  // are surfaced in an Alert-style chooser (same pattern as the delete-
+  // contact confirm), so they read as short actions.
+  profilePhotoActionTitle: { en: 'Profile photo', bn: 'প্রোফাইল ছবি' },
+  takePhotoButton: { en: 'Take Photo', bn: 'ছবি তুলুন' },
+  chooseFromLibraryButton: { en: 'Choose from Library', bn: 'লাইব্রেরি থেকে বেছে নিন' },
+  removePhotoButton: { en: 'Remove Photo', bn: 'ছবি সরান' },
+  removePhotoConfirmTitle: { en: 'Remove profile photo?', bn: 'প্রোফাইল ছবি সরাবেন?' },
+  removePhotoConfirmMessage: {
+    en: 'Your photo will be deleted. You can add a new one any time.',
+    bn: 'আপনার ছবি মুছে ফেলা হবে। আপনি যেকোনো সময় নতুন ছবি যোগ করতে পারেন।',
+  },
+  photoPermissionDeniedTitle: { en: 'Permission needed', bn: 'অনুমতি প্রয়োজন' },
+  photoPermissionDeniedMessage: {
+    en: 'Allow SafePath to use your camera and photos in Settings to set a profile photo.',
+    bn: 'প্রোফাইল ছবি সেট করতে সেটিংসে গিয়ে SafePath-কে আপনার ক্যামেরা ও ছবি ব্যবহারের অনুমতি দিন।',
+  },
+  photoUploadFailedMessage: {
+    en: "Couldn't update your photo. Please try again.",
+    bn: 'আপনার ছবি হালনাগাদ করা যায়নি। আবার চেষ্টা করুন।',
+  },
   signOutButton: { en: 'Sign Out', bn: 'সাইন আউট' },
   languageLabel: { en: 'Language', bn: 'ভাষা' },
   languageBn: { en: 'বাংলা', bn: 'বাংলা' },

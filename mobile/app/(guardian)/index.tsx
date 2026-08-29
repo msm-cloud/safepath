@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import Avatar from '@/components/Avatar';
 import OnboardingScreen from '@/components/OnboardingScreen';
 import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
@@ -17,11 +18,13 @@ import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import type { TranslationKey } from '@/lib/translations';
 import { usePendingOnboarding } from '@/lib/use-pending-onboarding';
+import { useUserSettings } from '@/lib/user-settings-context';
 
 type ActiveAlert = {
   id: string;
   user_id: string;
   full_name: string;
+  avatar_url: string | null;
   created_at: string;
   last_lat: number | null;
   last_lng: number | null;
@@ -52,6 +55,7 @@ type AlertsChangeRow = {
 export default function GuardianActiveAlertsScreen() {
   const { session } = useAuth();
   const { t } = useLanguage();
+  const { fullName, avatarPath } = useUserSettings();
   const {
     checking: checkingOnboarding,
     show: showOnboarding,
@@ -85,7 +89,7 @@ export default function GuardianActiveAlertsScreen() {
       const { data } = await supabase
         .from('alerts')
         .select(
-          'id, user_id, created_at, last_lat, last_lng, trigger_type, user:profiles!alerts_user_id_fkey(full_name)'
+          'id, user_id, created_at, last_lat, last_lng, trigger_type, user:profiles!alerts_user_id_fkey(full_name, avatar_url)'
         )
         .eq('status', 'active')
         .order('created_at', { ascending: false });
@@ -103,7 +107,7 @@ export default function GuardianActiveAlertsScreen() {
         last_lat: number | null;
         last_lng: number | null;
         trigger_type: string;
-        user: { full_name: string } | null;
+        user: { full_name: string; avatar_url: string | null } | null;
       }[];
 
       setAlerts(
@@ -115,6 +119,7 @@ export default function GuardianActiveAlertsScreen() {
           last_lng: row.last_lng,
           trigger_type: row.trigger_type,
           full_name: row.user?.full_name || tRef.current('unnamedUser'),
+          avatar_url: row.user?.avatar_url ?? null,
         }))
       );
       setLoading(false);
@@ -151,7 +156,7 @@ export default function GuardianActiveAlertsScreen() {
 
             const { data: profile } = await supabase
               .from('profiles')
-              .select('full_name')
+              .select('full_name, avatar_url')
               .eq('id', row.user_id)
               .single();
 
@@ -168,6 +173,7 @@ export default function GuardianActiveAlertsScreen() {
                   last_lng: row.last_lng,
                   trigger_type: row.trigger_type,
                   full_name: profile?.full_name || tRef.current('unnamedUser'),
+                  avatar_url: profile?.avatar_url ?? null,
                 },
                 ...prev,
               ];
@@ -244,7 +250,10 @@ export default function GuardianActiveAlertsScreen() {
         ListHeaderComponent={
           <View>
             <RoleBadge style={styles.roleBadge} />
-            <Text style={styles.title}>{t('guardianActiveAlertsTitle')}</Text>
+            <View style={styles.headerRow}>
+              <Avatar name={fullName} url={avatarPath} size={36} />
+              <Text style={styles.title}>{t('guardianActiveAlertsTitle')}</Text>
+            </View>
             {loading && <ActivityIndicator style={styles.loadingIndicator} />}
             {!loading && alerts.length === 0 && (
               <Text style={styles.emptyState}>{t('noActiveAlertsMessage')}</Text>
@@ -258,8 +267,13 @@ export default function GuardianActiveAlertsScreen() {
                 ? t('missedCheckinTypeLabel')
                 : t('sosAlertTypeLabel')}
             </Text>
-            <Text style={styles.cardName}>{item.full_name}</Text>
-            <Text style={styles.cardTime}>{relativeTime(item.created_at, now, t)}</Text>
+            <View style={styles.cardNameRow}>
+              <Avatar name={item.full_name} url={item.avatar_url} size={40} />
+              <View style={styles.cardNameText}>
+                <Text style={styles.cardName}>{item.full_name}</Text>
+                <Text style={styles.cardTime}>{relativeTime(item.created_at, now, t)}</Text>
+              </View>
+            </View>
 
             {item.last_lat != null && item.last_lng != null ? (
               <Pressable
@@ -315,10 +329,15 @@ const styles = StyleSheet.create({
   roleBadge: {
     alignSelf: 'flex-start',
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
   title: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 8,
   },
   loadingIndicator: {
     marginTop: 12,
@@ -342,6 +361,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     color: '#a32a1f',
     textTransform: 'uppercase',
+  },
+  cardNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  cardNameText: {
+    flex: 1,
   },
   cardName: {
     fontSize: 17,
