@@ -12,3 +12,9 @@ pnpm-lock.yaml
 # issue, just local build artifacts Prettier shouldn't be checking at all.
 dashboard/next-env.d.ts
 mobile/expo-env.d.ts
+
+# Verbatim output of `supabase gen types typescript` (see scripts/gen-types.mjs).
+# Tracked (mobile/ and dashboard/ import it), but not hand-edited — its
+# header says so — so Prettier shouldn't reformat it and create a diff
+# against what the generator actually produces on the next `pnpm gen:types`.
+packages/shared-types/src/database.ts
