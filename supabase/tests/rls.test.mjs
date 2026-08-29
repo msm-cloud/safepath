@@ -44,6 +44,48 @@ create table auth.users (
 create or replace function auth.uid() returns uuid
   language sql stable
   as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+
+-- Minimal stand-in for the storage schema a real Supabase project
+-- already has (buckets + objects tables, objects RLS pre-enabled, and
+-- the storage.foldername() path helper) -- enough for the avatars-bucket
+-- migration (20260830001400) and its policies to apply and be exercised
+-- here, the same way the auth stubs above let the profiles policies run.
+create schema if not exists storage;
+
+create table storage.buckets (
+  id text primary key,
+  name text not null,
+  public boolean not null default false,
+  file_size_limit bigint,
+  allowed_mime_types text[],
+  created_at timestamptz not null default now()
+);
+
+create table storage.objects (
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text references storage.buckets (id),
+  name text,
+  owner uuid,
+  created_at timestamptz not null default now()
+);
+
+alter table storage.objects enable row level security;
+
+-- Byte-for-byte the same implementation Supabase ships: split the path
+-- on '/' and return every segment except the last (the filename), so
+-- storage.foldername('<uid>/avatar.jpg') = '{<uid>}'.
+create or replace function storage.foldername(name text)
+returns text[]
+language plpgsql
+immutable
+as $$
+declare
+  _parts text[];
+begin
+  select string_to_array(name, '/') into _parts;
+  return _parts[1:array_length(_parts, 1) - 1];
+end
+$$;
 `;
 
 await db.exec(bootstrap);
@@ -61,6 +103,13 @@ console.log(`applied ${files.length} migrations.\n`);
 // starts from a blank slate, so this test harness has to do it itself.
 await db.exec(`grant usage on schema public to authenticated;`);
 await db.exec(`grant usage on schema public to anon;`);
+
+// Same idea for the storage stubs: a real Supabase project grants the
+// authenticated role table-level DML on storage.objects (RLS then does
+// the actual filtering) and read access to the bucket list.
+await db.exec(`grant usage on schema storage to authenticated, anon;`);
+await db.exec(`grant select, insert, update, delete on storage.objects to authenticated;`);
+await db.exec(`grant select on storage.buckets to authenticated, anon;`);
 
 let passed = 0;
 let failed = 0;
@@ -167,6 +216,30 @@ await asUser(userX, async () => {
   );
   check(
     "X cannot update A's profile (zero rows affected, not an error)",
+    updated.rows.length === 0
+  );
+});
+
+// avatar_url (20260830001300_profiles_avatar_url.sql): same story as the
+// safety-feature columns above — profiles_update_own has no column
+// restrictions, so the new column needs no RLS change. Covered here
+// rather than assumed.
+console.log('\n--- profiles RLS: update (avatar_url column) ---');
+await asUser(userA, async () => {
+  const updated = await db.query(
+    `update public.profiles set avatar_url = '${userA}/avatar.jpg' where id = '${userA}' returning avatar_url`
+  );
+  check(
+    'A can set their own avatar_url',
+    updated.rows.length === 1 && updated.rows[0].avatar_url === `${userA}/avatar.jpg`
+  );
+});
+await asUser(userX, async () => {
+  const updated = await db.query(
+    `update public.profiles set avatar_url = 'x/hijack.jpg' where id = '${userA}' returning id`
+  );
+  check(
+    "X cannot set A's avatar_url (zero rows affected, not an error)",
     updated.rows.length === 0
   );
 });
@@ -340,6 +413,105 @@ await asUser(userX, async () => {
     "unrelated X cannot select G's profile via this policy either",
     profileOfG.rows.length === 0
   );
+});
+
+console.log('\n--- storage.objects RLS: avatars bucket (20260830001400) ---');
+// The bucket row itself is created by the migration, not the app.
+const avatarsBucket = await db.query(
+  `select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'avatars'`
+);
+check(
+  'avatars bucket exists, is private, and caps size + mime types',
+  avatarsBucket.rows.length === 1 &&
+    avatarsBucket.rows[0].public === false &&
+    Number(avatarsBucket.rows[0].file_size_limit) === 2097152 &&
+    Array.isArray(avatarsBucket.rows[0].allowed_mime_types) &&
+    avatarsBucket.rows[0].allowed_mime_types.join(',') === 'image/jpeg,image/png,image/webp'
+);
+
+// --- writes are confined to the caller's own '<uid>/...' prefix ---
+await asUser(userA, async () => {
+  const ins = await db.query(
+    `insert into storage.objects (bucket_id, name, owner) values ('avatars', '${userA}/avatar.jpg', '${userA}') returning id`
+  );
+  check("A can upload under their own '<uid>/' prefix", ins.rows.length === 1);
+});
+
+await asUser(userX, async () => {
+  try {
+    await db.query(
+      `insert into storage.objects (bucket_id, name, owner) values ('avatars', '${userA}/hijack.jpg', '${userX}')`
+    );
+    check("X cannot upload into A's avatar folder (should have thrown)", false);
+  } catch (err) {
+    check(
+      "X cannot upload into A's avatar folder",
+      /row-level security|violates/i.test(String(err.message ?? err))
+    );
+  }
+});
+
+// --- reads: owner, plus either side of an ACCEPTED guardian link ---
+await asUser(userA, async () => {
+  const own = await db.query(`select name from storage.objects where name = '${userA}/avatar.jpg'`);
+  check('A can read their own avatar object', own.rows.length === 1);
+});
+
+await asUser(userG, async () => {
+  const seen = await db.query(
+    `select name from storage.objects where name = '${userA}/avatar.jpg'`
+  );
+  check(
+    "accepted guardian G can read A's avatar object (mirrors profiles_select_by_accepted_guardian)",
+    seen.rows.length === 1
+  );
+
+  // Reverse direction: G uploads their own avatar, A (their student) can read it.
+  await db.query(
+    `insert into storage.objects (bucket_id, name, owner) values ('avatars', '${userG}/avatar.jpg', '${userG}')`
+  );
+});
+
+await asUser(userA, async () => {
+  const seen = await db.query(
+    `select name from storage.objects where name = '${userG}/avatar.jpg'`
+  );
+  check(
+    "A can read their accepted guardian G's avatar object (mirrors profiles_select_by_own_guardian)",
+    seen.rows.length === 1
+  );
+});
+
+await asUser(userX, async () => {
+  const seen = await db.query(
+    `select name from storage.objects where name = '${userA}/avatar.jpg'`
+  );
+  check('unrelated X cannot read A avatar object', seen.rows.length === 0);
+});
+
+await asUser(userG2, async () => {
+  const seen = await db.query(
+    `select name from storage.objects where name = '${userG}/avatar.jpg'`
+  );
+  check(
+    'G2 (only ever attempted redemption, never accepted) cannot read G avatar object',
+    seen.rows.length === 0
+  );
+});
+
+// --- delete is owner-only too ---
+await asUser(userX, async () => {
+  const del = await db.query(
+    `delete from storage.objects where name = '${userA}/avatar.jpg' returning id`
+  );
+  check("X cannot delete A's avatar (zero rows affected, not an error)", del.rows.length === 0);
+});
+
+await asUser(userA, async () => {
+  const del = await db.query(
+    `delete from storage.objects where name = '${userA}/avatar.jpg' returning id`
+  );
+  check('A can delete their own avatar', del.rows.length === 1);
 });
 
 console.log(
