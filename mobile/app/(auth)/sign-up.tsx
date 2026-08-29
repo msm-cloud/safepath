@@ -24,6 +24,13 @@ import { isValidEmail, isValidPhone, MIN_PASSWORD_LENGTH } from '@/lib/validatio
 // supabase/migrations/20260828063528_phone_login_and_password_reset.sql.
 const PHONE_UNIQUE_VIOLATION = '23505';
 
+// Deep link the confirmation email points at, so tapping it reopens the
+// app rather than dead-ending in a browser — same pattern as
+// RESET_PASSWORD_REDIRECT_URL in forgot-password.tsx. Bare scheme (no
+// path): the root layout routes by session/role from here. Must also be
+// allow-listed in Supabase → Authentication → URL Configuration.
+const EMAIL_CONFIRM_REDIRECT_URL = 'safepath://';
+
 export default function SignUpScreen() {
   const { t, language } = useLanguage();
   // Carried from the welcome screen (see app/(auth)/index.tsx), via
@@ -96,6 +103,7 @@ export default function SignUpScreen() {
       email: email.trim(),
       password,
       options: {
+        emailRedirectTo: EMAIL_CONFIRM_REDIRECT_URL,
         // Defensive fallback for when this project requires email
         // confirmation (which it now always does — see the phone-login
         // migration's follow-up notes): there's no session yet below to
