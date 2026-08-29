@@ -24,6 +24,7 @@ export type Database = {
           shake_sos_enabled: boolean;
           fake_call_enabled: boolean;
           fake_call_caller_name: string | null;
+          avatar_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -35,6 +36,7 @@ export type Database = {
           shake_sos_enabled?: boolean;
           fake_call_enabled?: boolean;
           fake_call_caller_name?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -46,6 +48,7 @@ export type Database = {
           shake_sos_enabled?: boolean;
           fake_call_enabled?: boolean;
           fake_call_caller_name?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
         };
         Relationships: [
