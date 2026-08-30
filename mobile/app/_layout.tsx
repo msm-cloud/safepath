@@ -7,13 +7,13 @@ import ShakeSosListener from '@/components/ShakeSosListener';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { LanguageProvider } from '@/lib/language-context';
-// Side-effect import: registers the live-location-sharing background task
-// (TaskManager.defineTask) at app startup. Must run during initial bundle
-// evaluation — not lazily when the Home screen mounts — so the OS can
-// relaunch the headless task after the app is killed while a session is
-// still active. See mobile/lib/live-sharing.ts.
-import '@/lib/live-sharing';
 import { UserSettingsProvider } from '@/lib/user-settings-context';
+
+// NOTE: the live-location-sharing background task (TaskManager.defineTask)
+// is registered from the custom entry point mobile/index.js, NOT here.
+// This file is only evaluated on a UI launch; a headless launch for a
+// background location delivery never renders the route tree, so a task
+// defined here would be undefined on exactly the launches that need it.
 
 export {
   // Catch any errors thrown by the Layout component.

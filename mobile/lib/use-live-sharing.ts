@@ -81,9 +81,13 @@ export function useLiveSharing(): UseLiveSharing {
         if (cancelled) return;
 
         if (!data) {
-          // DB says not sharing. Tear down tracking that somehow outlived
-          // its session (e.g. stopped from another device).
-          if (trackingActive) await stopLiveSharing(null);
+          // DB says not sharing. Always run the teardown (it's cheap and
+          // idempotent) rather than gating on trackingActive — on a fresh
+          // process that flag is false even if a persisted-but-orphaned OS
+          // location task is still alive (stopped from another device, or
+          // a force-stop that the OS later restored), and we want that
+          // zombie foreground service gone.
+          await stopLiveSharing(null);
           if (cancelled) return;
           clearLocalState();
           setLoading(false);

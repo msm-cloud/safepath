@@ -27,6 +27,11 @@ import { supabase } from '@/lib/supabase';
 // This module is UI-agnostic, like sos-trigger.ts — no React, no t(). The
 // one piece of user-facing text it needs (the Android notification) is
 // passed in by the caller, already translated.
+//
+// TaskManager.defineTask below runs at module scope. This module is
+// imported from the custom entry point (mobile/index.js) so that runs on
+// EVERY JS launch, headless ones included — see that file for why that
+// matters.
 
 export const LIVE_SHARING_TASK = 'safepath-live-location-sharing';
 
@@ -54,6 +59,15 @@ type ForegroundServiceText = {
 // session is currently running in this JS context). Background mode uses
 // the OS task instead and leaves this null.
 let foregroundSubscription: Location.LocationSubscription | null = null;
+
+// Whether startTracking() has actually run in THIS JS process. The native
+// Location.hasStartedLocationUpdatesAsync() flag is persisted and survives
+// process death, so after a force-stop / OEM battery-kill / low-memory
+// kill it can read `true` while the underlying request and foreground
+// service are gone (and, before the entry-point fix, while the task had
+// been auto-unregistered). On a fresh process we therefore treat tracking
+// as NOT active until we've re-issued startLocationUpdatesAsync ourselves.
+let trackingStartedThisProcess = false;
 
 async function getStoredSessionId(): Promise<string | null> {
   try {
@@ -170,9 +184,15 @@ async function stopBackgroundTask(): Promise<void> {
   }
 }
 
-// True if either delivery path is currently running in this JS context.
+// True only if a delivery path is genuinely running in THIS process — a
+// foreground watcher we hold a handle to, or an OS task we started (and
+// that the native side still reports as started). A persisted-but-dead
+// native "started" flag from a previous process reads as not active, so
+// the reconcile path re-establishes tracking on a fresh launch instead of
+// trusting it.
 export async function isLiveSharingActive(): Promise<boolean> {
   if (foregroundSubscription) return true;
+  if (!trackingStartedThisProcess) return false;
   return Location.hasStartedLocationUpdatesAsync(LIVE_SHARING_TASK);
 }
 
@@ -205,6 +225,7 @@ async function startTracking(
     await stopBackgroundTask();
     await startForegroundWatch(sessionId);
   }
+  trackingStartedThisProcess = true;
 }
 
 // Creates a fresh live_sharing_sessions row (one per toggle-on, matching
@@ -285,6 +306,7 @@ export async function stopLiveSharing(sessionId?: string | null): Promise<{ ok: 
   await stopForegroundWatch();
   await stopBackgroundTask();
   await setStoredSessionId(null);
+  trackingStartedThisProcess = false;
   return { ok: true };
 }
 
