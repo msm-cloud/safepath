@@ -188,6 +188,48 @@ export const translations = {
   fakeCallInCallLabel: { en: 'On call', bn: 'কলে আছেন' },
   fakeCallEndButton: { en: 'End Call', bn: 'কল শেষ করুন' },
 
+  // --- Live location sharing (Home screen + Android tracking notification) ---
+  // Android shows liveSharingNotification* as a persistent notification for
+  // the whole time sharing is on — it's what keeps the tracking visible and
+  // non-covert, so the wording must make the current state obvious.
+  liveSharingNotificationTitle: {
+    en: 'Sharing your live location',
+    bn: 'আপনার লাইভ লোকেশন শেয়ার করা হচ্ছে',
+  },
+  liveSharingNotificationBody: {
+    en: 'Your guardians can see where you are until you turn this off.',
+    bn: 'আপনি বন্ধ না করা পর্যন্ত আপনার অভিভাবকরা আপনার অবস্থান দেখতে পারবেন।',
+  },
+  liveSharingTitle: { en: 'Share Live Location', bn: 'লাইভ লোকেশন শেয়ার করুন' },
+  liveSharingSubtitle: {
+    en: "Let your guardians see where you are in real time. You're in control — turn it off whenever you want.",
+    bn: 'আপনার অভিভাবকরা যেন সরাসরি আপনার অবস্থান দেখতে পারেন। নিয়ন্ত্রণ আপনার হাতেই — যখন খুশি বন্ধ করে দিন।',
+  },
+  liveSharingOnStatus: {
+    en: "You're sharing your live location with your guardians.",
+    bn: 'আপনি আপনার অভিভাবকদের সাথে লাইভ লোকেশন শেয়ার করছেন।',
+  },
+  liveSharingForegroundWarning: {
+    en: '"Allow all the time" is off, so your guardians won\'t get updates while your phone is locked or SafePath is closed. Tap to fix this in Settings.',
+    bn: '"সব সময় অনুমতি দিন" বন্ধ আছে, তাই আপনার ফোন লক থাকলে বা সেফপাথ বন্ধ থাকলে আপনার অভিভাবকরা নতুন তথ্য পাবেন না। সেটিংসে ঠিক করতে ট্যাপ করুন।',
+  },
+  liveSharingPermissionDenied: {
+    en: 'SafePath needs location permission to share your location. Turn it on in Settings.',
+    bn: 'আপনার অবস্থান শেয়ার করতে সেফপাথের লোকেশন অনুমতি প্রয়োজন। সেটিংসে এটি চালু করুন।',
+  },
+  liveSharingStartError: {
+    en: "Couldn't start location sharing. Try again.",
+    bn: 'লোকেশন শেয়ারিং শুরু করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  liveSharingStopError: {
+    en: "Couldn't stop location sharing. Try again.",
+    bn: 'লোকেশন শেয়ারিং বন্ধ করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  liveSharingAlreadyElsewhere: {
+    en: "You're already sharing your location from another device. Turn it off there first.",
+    bn: 'আপনি ইতিমধ্যে অন্য একটি ডিভাইস থেকে আপনার অবস্থান শেয়ার করছেন। প্রথমে সেখানে বন্ধ করুন।',
+  },
+
   // --- SOS ---
   // "SOS" itself is left as the Latin acronym in both languages — it's an
   // internationally recognized distress signal, and translating/
@@ -426,6 +468,24 @@ export const translations = {
   },
   sosAlertTypeLabel: { en: 'SOS', bn: 'SOS' },
   missedCheckinTypeLabel: { en: 'Missed Check-in', bn: 'চেক-ইন মিস হয়েছে' },
+
+  // --- Guardian: live location sharing ---
+  // Only shown while a linked person is actively sharing. A card
+  // disappears the moment they stop (Realtime), so a guardian never sees a
+  // stale position without it being labelled current.
+  guardianLiveLocationTitle: { en: 'Live location', bn: 'লাইভ লোকেশন' },
+  guardianLiveLocationBadge: { en: 'SHARING LIVE', bn: 'লাইভ শেয়ারিং' },
+  guardianLiveLocationWaiting: {
+    en: 'Waiting for the first location…',
+    bn: 'প্রথম অবস্থানের জন্য অপেক্ষা করা হচ্ছে…',
+  },
+  guardianLiveLocationUpdated: { en: 'Updated {ago}', bn: '{ago} আপডেট হয়েছে' },
+  guardianLiveLocationStaleBadge: { en: 'NOT UPDATING', bn: 'আপডেট হচ্ছে না' },
+  guardianLiveLocationStale: {
+    en: "No update for {ago} — the phone may be offline. This isn't their current position.",
+    bn: '{ago} ধরে কোনো আপডেট নেই — ফোনটি অফলাইন থাকতে পারে। এটি তাদের বর্তমান অবস্থান নয়।',
+  },
+  viewOnMapLink: { en: 'View on map', bn: 'ম্যাপে দেখুন' },
   viewLastKnownLocationLink: {
     en: 'View last known location',
     bn: 'সর্বশেষ জানা অবস্থান দেখুন',

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import Avatar from '@/components/Avatar';
+import GuardianLiveSharing from '@/components/GuardianLiveSharing';
 import OnboardingScreen from '@/components/OnboardingScreen';
 import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
@@ -254,6 +255,9 @@ export default function GuardianActiveAlertsScreen() {
               <Avatar name={fullName} url={avatarPath} size={36} />
               <Text style={styles.title}>{t('guardianActiveAlertsTitle')}</Text>
             </View>
+            {/* Renders nothing unless a linked person is actively sharing
+                their live location — its own data + Realtime lifecycle. */}
+            <GuardianLiveSharing />
             {loading && <ActivityIndicator style={styles.loadingIndicator} />}
             {!loading && alerts.length === 0 && (
               <Text style={styles.emptyState}>{t('noActiveAlertsMessage')}</Text>

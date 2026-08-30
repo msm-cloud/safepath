@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { t, type Language } from '@/lib/translations';
 
 import ActiveAlerts from './active-alerts';
+import LiveSharing from './live-sharing';
 import PastAlerts from './past-alerts';
 import RedeemInviteForm from './redeem-invite-form';
 
@@ -54,6 +55,10 @@ export default async function DashboardPage() {
           subscription) — see active-alerts.tsx. Renders nothing when
           there's no active alert for any linked user. */}
       <ActiveAlerts />
+
+      {/* Same self-contained pattern — renders nothing unless a linked
+          person is actively sharing their live location. */}
+      <LiveSharing />
 
       {/* Plain server-side fetch, not Realtime — see past-alerts.tsx. */}
       <PastAlerts language={language} />
