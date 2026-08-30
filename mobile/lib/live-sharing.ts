@@ -44,6 +44,20 @@ const SESSION_ID_KEY = 'safepath.liveSharing.sessionId';
 const PING_INTERVAL_MS = 12000;
 const PING_DISTANCE_M = 10;
 
+// A delivered fix older than this is rejected, not written. Android hands
+// back the OS's cached "last known location" as the first callback after
+// (re)subscribing — with its ORIGINAL timestamp, which can be hours or a
+// full day old if the device hasn't had a real fix recently. Writing that
+// would show a guardian a position the person left long ago, labelled as
+// recent. 2 min is well above any real jitter (updates are every ~12s) and
+// below the guardian-side 3-min "not updating" threshold.
+const MAX_FIX_AGE_MS = 2 * 60 * 1000;
+// A fix whose timestamp is further in the future than this means the
+// device clock is badly wrong — its timestamps can't be trusted at all,
+// so reject. (A few seconds of "future" is normal clock jitter and is
+// handled by clamping recorded_at to now instead.)
+const MAX_FIX_FUTURE_SKEW_MS = 60 * 1000;
+
 export type LiveSharingMode = 'background' | 'foreground';
 
 export type StartLiveSharingResult =
@@ -96,14 +110,28 @@ async function writeLocationPoint(
   sessionId: string,
   location: Location.LocationObject
 ): Promise<void> {
+  const now = Date.now();
+  const age = now - location.timestamp;
+
+  if (age > MAX_FIX_AGE_MS || age < -MAX_FIX_FUTURE_SKEW_MS) {
+    // Stale cached fix, or a device with a badly-wrong clock. Skip it and
+    // wait for a real fix — the watcher will deliver one once GPS gets a
+    // lock. A guardian sees "waiting" / "not updating" in the meantime,
+    // which is the honest state.
+    console.warn(
+      `[live-sharing] ignoring a location fix ${Math.round(age / 1000)}s off (session ${sessionId})`
+    );
+    return;
+  }
+
   const { error } = await supabase.from('live_locations').insert({
     session_id: sessionId,
     lat: location.coords.latitude,
     lng: location.coords.longitude,
-    // Stamp from the GPS fix's own time, not server now() — a deferred or
-    // batched delivery can be minutes old, and the guardian's "Updated Xs
-    // ago" must reflect the real age of the position.
-    recorded_at: new Date(location.timestamp).toISOString(),
+    // Stamp from the fix's own time, not server now() — a slightly
+    // deferred delivery should reflect the real age of the position. But
+    // never store a future time (small clock jitter), so clamp to now.
+    recorded_at: new Date(Math.min(location.timestamp, now)).toISOString(),
   });
 
   if (error) {
