@@ -10,6 +10,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -25,6 +26,7 @@ import { cancelScheduledNotification, scheduleArrivalCheckNotification } from '@
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
+import { useLiveSharing } from '@/lib/use-live-sharing';
 import { usePendingOnboarding } from '@/lib/use-pending-onboarding';
 import { useUserSettings } from '@/lib/user-settings-context';
 
@@ -64,6 +66,8 @@ export default function HomeScreen() {
     show: showOnboarding,
     dismiss: dismissOnboarding,
   } = usePendingOnboarding(userId);
+
+  const liveSharing = useLiveSharing();
 
   const [journey, setJourney] = useState<Journey | null>(null);
   const [loading, setLoading] = useState(true);
@@ -310,6 +314,15 @@ export default function HomeScreen() {
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`);
   };
 
+  const handleLiveSharingToggle = (next: boolean) => {
+    if (liveSharing.busy || liveSharing.loading) return;
+    if (next) {
+      liveSharing.start();
+    } else {
+      liveSharing.stop();
+    }
+  };
+
   const minutesUntil = journey
     ? Math.round((new Date(journey.expected_arrival_at).getTime() - now) / 60000)
     : 0;
@@ -445,6 +458,68 @@ export default function HomeScreen() {
             )}
           </View>
         )}
+
+        {/* Live location sharing — consent-based, always visible while on.
+            The DB session (via useLiveSharing) is the source of truth, so
+            this reflects reality after an app kill/reopen or a stop from
+            another device, not just this screen's local state. */}
+        <View style={styles.liveSharingCard}>
+          <View style={styles.liveSharingHeader}>
+            <View style={styles.liveSharingHeaderText}>
+              <Text style={styles.cardTitle}>{t('liveSharingTitle')}</Text>
+              <Text style={styles.cardSubtitle}>{t('liveSharingSubtitle')}</Text>
+            </View>
+            {liveSharing.busy ? (
+              <ActivityIndicator />
+            ) : (
+              <Switch
+                value={liveSharing.isSharing}
+                onValueChange={handleLiveSharingToggle}
+                disabled={liveSharing.loading}
+              />
+            )}
+          </View>
+
+          {liveSharing.isSharing && (
+            <View style={styles.liveSharingOnBanner}>
+              <Text style={styles.liveSharingOnBannerText}>{t('liveSharingOnStatus')}</Text>
+            </View>
+          )}
+
+          {liveSharing.isSharing && liveSharing.mode === 'foreground' && (
+            <Pressable style={styles.liveSharingWarnBanner} onPress={() => Linking.openSettings()}>
+              <Text style={styles.liveSharingWarnBannerText}>
+                {t('liveSharingForegroundWarning')}
+              </Text>
+            </Pressable>
+          )}
+
+          {liveSharing.error === 'permission-denied' && (
+            <View style={styles.liveSharingWarnBanner}>
+              <Text style={styles.liveSharingWarnBannerText}>
+                {t('liveSharingPermissionDenied')}
+              </Text>
+              <Pressable onPress={() => Linking.openSettings()}>
+                <Text style={styles.liveSharingSettingsLink}>{t('openSettings')}</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {liveSharing.error === 'already-sharing-elsewhere' && (
+            <View style={styles.liveSharingWarnBanner}>
+              <Text style={styles.liveSharingWarnBannerText}>
+                {t('liveSharingAlreadyElsewhere')}
+              </Text>
+            </View>
+          )}
+
+          {liveSharing.error === 'start-failed' && (
+            <Text style={styles.error}>{t('liveSharingStartError')}</Text>
+          )}
+          {liveSharing.error === 'stop-failed' && (
+            <Text style={styles.error}>{t('liveSharingStopError')}</Text>
+          )}
+        </View>
 
         <View style={styles.nearbySection}>
           <Pressable style={styles.nearbyButton} onPress={() => openNearbySearch('police station')}>
@@ -597,6 +672,46 @@ const styles = StyleSheet.create({
   cardSubtitle: {
     fontSize: 13,
     color: '#666',
+  },
+  liveSharingCard: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 16,
+    gap: 10,
+  },
+  liveSharingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  liveSharingHeaderText: {
+    flex: 1,
+    gap: 4,
+  },
+  liveSharingOnBanner: {
+    backgroundColor: '#e6f4ea',
+    borderRadius: 10,
+    padding: 12,
+  },
+  liveSharingOnBannerText: {
+    color: '#1a7f37',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  liveSharingWarnBanner: {
+    backgroundColor: '#fff4e5',
+    borderRadius: 10,
+    padding: 12,
+    gap: 6,
+  },
+  liveSharingWarnBannerText: {
+    color: '#7a4a00',
+    fontSize: 13,
+  },
+  liveSharingSettingsLink: {
+    color: '#2f95dc',
+    fontSize: 13,
+    fontWeight: '600',
   },
   fieldLabel: {
     fontSize: 13,

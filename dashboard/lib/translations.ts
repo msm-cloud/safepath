@@ -118,6 +118,25 @@ export const translations = {
   minutesAgo: { en: '{n}m ago', bn: '{n} মিনিট আগে' },
   hoursAgo: { en: '{n}h ago', bn: '{n} ঘণ্টা আগে' },
 
+  // --- Live location sharing card ---
+  // Only shown while a linked person is actively sharing. The card is
+  // removed the instant they stop (Realtime); and if points stop arriving
+  // for a few minutes it switches to a "not updating" state instead of
+  // implying the last position is current.
+  liveLocationTitle: { en: 'Live location', bn: 'লাইভ লোকেশন' },
+  liveLocationBadge: { en: 'SHARING LIVE', bn: 'লাইভ শেয়ারিং' },
+  liveLocationWaiting: {
+    en: 'Waiting for the first location…',
+    bn: 'প্রথম অবস্থানের জন্য অপেক্ষা করা হচ্ছে…',
+  },
+  liveLocationUpdated: { en: 'Updated {ago}', bn: '{ago} আপডেট হয়েছে' },
+  liveLocationStaleBadge: { en: 'NOT UPDATING', bn: 'আপডেট হচ্ছে না' },
+  liveLocationStale: {
+    en: "No update for {ago} — the phone may be offline. This isn't their current position.",
+    bn: '{ago} ধরে কোনো আপডেট নেই — ফোনটি অফলাইন থাকতে পারে। এটি তাদের বর্তমান অবস্থান নয়।',
+  },
+  viewOnMap: { en: 'View on map', bn: 'ম্যাপে দেখুন' },
+
   // --- Past alerts section ---
   pastAlertsTitle: { en: 'Past Alerts', bn: 'পূর্ববর্তী অ্যালার্ট' },
   noResolvedAlertsYet: {

@@ -9,6 +9,12 @@ import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { LanguageProvider } from '@/lib/language-context';
 import { UserSettingsProvider } from '@/lib/user-settings-context';
 
+// NOTE: the live-location-sharing background task (TaskManager.defineTask)
+// is registered from the custom entry point mobile/index.js, NOT here.
+// This file is only evaluated on a UI launch; a headless launch for a
+// background location delivery never renders the route tree, so a task
+// defined here would be undefined on exactly the launches that need it.
+
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,

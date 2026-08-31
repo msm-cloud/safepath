@@ -2,13 +2,16 @@
   "expo": {
     "name": "SafePath",
     "slug": "safepath",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "safepath",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": ["location"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +25,10 @@
       "package": "com.msmcloud.safepath",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "web": {
@@ -43,7 +49,10 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "SafePath uses your location to include it in SOS alerts, so your guardians can see where you are."
+          "locationWhenInUsePermission": "SafePath uses your location to include it in SOS alerts, so your guardians can see where you are.",
+          "locationAlwaysAndWhenInUsePermission": "SafePath uses your location in the background only while you turn on live location sharing, so your guardians can follow you in real time until you turn it off.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       "expo-notifications",

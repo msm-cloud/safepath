@@ -1,6 +1,6 @@
 {
   "name": "@safepath/mobile",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "version": "1.0.0",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.14",
@@ -24,6 +24,7 @@
     "expo-splash-screen": "~57.0.8",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.2",
+    "expo-task-manager": "~57.0.14",
     "expo-updates": "~57.0.18",
     "expo-web-browser": "~57.0.2",
     "react": "19.2.3",

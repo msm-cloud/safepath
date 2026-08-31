@@ -809,6 +809,260 @@ check(
   Number(cronExtensionExists.rows[0].n) === 0
 );
 
+console.log('\n--- live location sharing: live_sharing_sessions + live_locations RLS ---');
+// Structurally the same shape as alerts/alert_locations above: a parent
+// session owned by an at-risk user, a child ping table, INSERT gated by
+// session ownership (+ the session still being active), SELECT gated by
+// "session owner OR accepted guardian".
+let liveSessionId;
+let liveSessionStartedAt;
+await asUser(userA, async () => {
+  const ins = await db.query(
+    `insert into public.live_sharing_sessions (user_id, is_active) values ('${userA}', true)
+     returning id, started_at, stopped_at`
+  );
+  liveSessionId = ins.rows[0].id;
+  liveSessionStartedAt = ins.rows[0].started_at;
+  check(
+    'A can start their own live sharing session, and the trigger stamps started_at',
+    ins.rows.length === 1 && ins.rows[0].started_at !== null && ins.rows[0].stopped_at === null
+  );
+});
+
+await asUser(userX, async () => {
+  try {
+    await db.query(
+      `insert into public.live_sharing_sessions (user_id, is_active) values ('${userA}', true)`
+    );
+    check('X cannot start a live sharing session on behalf of A (should have thrown)', false);
+  } catch {
+    check('X cannot start a live sharing session on behalf of A', true);
+  }
+});
+
+await asUser(userA, async () => {
+  // Partial unique index live_sharing_sessions_one_active_per_user: a user
+  // can't have two active sessions at once (covers the double-tap race).
+  try {
+    await db.query(
+      `insert into public.live_sharing_sessions (user_id, is_active) values ('${userA}', true)`
+    );
+    check('A cannot open a second concurrent active session (should have thrown)', false);
+  } catch (err) {
+    check(
+      'A cannot open a second concurrent active session',
+      /duplicate key|unique constraint/i.test(String(err.message ?? err))
+    );
+  }
+});
+
+await asUser(userA, async () => {
+  const ins = await db.query(
+    `insert into public.live_locations (session_id, lat, lng) values
+       ('${liveSessionId}', 23.81, 90.41),
+       ('${liveSessionId}', 23.82, 90.42)
+     returning id`
+  );
+  check('A can push location points to their own active session', ins.rows.length === 2);
+});
+
+await asUser(userG, async () => {
+  const session = await db.query(
+    `select id from public.live_sharing_sessions where id = '${liveSessionId}'`
+  );
+  check('accepted guardian G can see A live sharing session', session.rows.length === 1);
+
+  const points = await db.query(
+    `select id from public.live_locations where session_id = '${liveSessionId}'`
+  );
+  check('accepted guardian G can read A live location points', points.rows.length === 2);
+});
+
+await asUser(userG2, async () => {
+  const session = await db.query(
+    `select id from public.live_sharing_sessions where id = '${liveSessionId}'`
+  );
+  check(
+    'G2 (only ever attempted redemption, never accepted) cannot see A live sharing session',
+    session.rows.length === 0
+  );
+
+  const points = await db.query(
+    `select id from public.live_locations where session_id = '${liveSessionId}'`
+  );
+  check('G2 cannot read A live location points', points.rows.length === 0);
+});
+
+await asUser(userX, async () => {
+  const session = await db.query(
+    `select id from public.live_sharing_sessions where id = '${liveSessionId}'`
+  );
+  check('unrelated X cannot see A live sharing session', session.rows.length === 0);
+
+  const points = await db.query(
+    `select id from public.live_locations where session_id = '${liveSessionId}'`
+  );
+  check('unrelated X cannot read A live location points', points.rows.length === 0);
+});
+
+await asUser(userX, async () => {
+  try {
+    await db.query(
+      `insert into public.live_locations (session_id, lat, lng) values ('${liveSessionId}', 0, 0)`
+    );
+    check("X cannot push points into A's session (should have thrown)", false);
+  } catch (err) {
+    check(
+      "X cannot push points into A's session",
+      /row-level security|violates/i.test(String(err.message ?? err))
+    );
+  }
+});
+
+await asUser(userA, async () => {
+  const updated = await db.query(
+    `update public.live_sharing_sessions set is_active = false where id = '${liveSessionId}'
+     returning started_at, stopped_at`
+  );
+  check(
+    'A toggling their session off stamps stopped_at and leaves started_at intact',
+    updated.rows.length === 1 &&
+      updated.rows[0].stopped_at !== null &&
+      updated.rows[0].started_at !== null &&
+      new Date(updated.rows[0].started_at).getTime() === new Date(liveSessionStartedAt).getTime()
+  );
+});
+
+await asUser(userG, async () => {
+  // is_active gate on live_locations_select_...: the moment the owner
+  // toggles off, a guardian's direct read access to that session's points
+  // is revoked (not just hidden by the app) — this is what actually backs
+  // the "no location history for guardians" guarantee.
+  const points = await db.query(
+    `select id from public.live_locations where session_id = '${liveSessionId}'`
+  );
+  check(
+    'accepted guardian G can no longer read points once the session is stopped',
+    points.rows.length === 0
+  );
+
+  // The session row itself stays visible to the guardian — that's what
+  // lets the Realtime UPDATE (is_active -> false) reach them and clear the
+  // card. Only the points table has the is_active SELECT gate.
+  const session = await db.query(
+    `select is_active from public.live_sharing_sessions where id = '${liveSessionId}'`
+  );
+  check(
+    'accepted guardian G can still see the now-inactive session row (for the Realtime stop event)',
+    session.rows.length === 1 && session.rows[0].is_active === false
+  );
+});
+
+await asUser(userA, async () => {
+  // The owner branch has no is_active gate — A can still read their own
+  // stopped session's points, within the retention window.
+  const points = await db.query(
+    `select id from public.live_locations where session_id = '${liveSessionId}'`
+  );
+  check(
+    'owner A can still read their own stopped session points within the retention window',
+    points.rows.length === 2
+  );
+});
+
+await asUser(userA, async () => {
+  // The is_active gate in live_locations_insert_own_active_session: once
+  // the session is stopped it stops accepting pings, even from the owner.
+  try {
+    await db.query(
+      `insert into public.live_locations (session_id, lat, lng) values ('${liveSessionId}', 23.9, 90.5)`
+    );
+    check('A cannot push points to a stopped session (should have thrown)', false);
+  } catch (err) {
+    check(
+      'A cannot push points to a stopped session',
+      /row-level security|violates/i.test(String(err.message ?? err))
+    );
+  }
+});
+
+await asUser(userA, async () => {
+  try {
+    await db.query(
+      `update public.live_sharing_sessions set user_id = '${userX}' where id = '${liveSessionId}'`
+    );
+    check('A cannot reassign a session to another user (should have thrown)', false);
+  } catch (err) {
+    check(
+      'A cannot reassign a session to another user',
+      /user_id cannot be changed/i.test(String(err.message ?? err))
+    );
+  }
+});
+
+let liveSession2Id;
+await asUser(userA, async () => {
+  // The partial unique index only blocked a *second active* session — with
+  // the first one now stopped, starting a fresh one is fine (append-style,
+  // one row per toggle-on).
+  const ins = await db.query(
+    `insert into public.live_sharing_sessions (user_id, is_active) values ('${userA}', true)
+     returning id`
+  );
+  liveSession2Id = ins.rows[0].id;
+  check('A can start a new session once the previous one is stopped', ins.rows.length === 1);
+});
+
+await asUser(userA, async () => {
+  // live_locations has no client DELETE grant at all — only
+  // purge_old_live_locations() (SECURITY DEFINER) deletes from it.
+  try {
+    await db.query(`delete from public.live_locations where session_id = '${liveSessionId}'`);
+    check('A cannot DELETE live location points directly (should have thrown)', false);
+  } catch (err) {
+    check(
+      'A cannot DELETE live location points directly',
+      /permission denied/i.test(String(err.message ?? err))
+    );
+  }
+});
+
+console.log('\n--- purge_old_live_locations() (pg_cron cleanup job) ---');
+// What this proves locally: the function deletes points older than 2h and
+// leaves fresher ones alone, invoked directly. What it can't prove (same as
+// check_overdue_journeys above): that pg_cron actually runs it every 30 min
+// — pglite has no pg_cron, so cron.schedule() in the migration silently
+// skipped, confirmed by the pg_extension check below.
+await asUser(userA, async () => {
+  await db.query(
+    `insert into public.live_locations (session_id, lat, lng, recorded_at) values
+       ('${liveSession2Id}', 23.7, 90.3, now() - interval '3 hours'),
+       ('${liveSession2Id}', 23.7, 90.3, now() - interval '20 minutes')`
+  );
+});
+
+await db.query(`select public.purge_old_live_locations();`);
+
+const remainingPoints = await db.query(
+  `select recorded_at from public.live_locations where session_id = '${liveSession2Id}' order by recorded_at`
+);
+check(
+  'purge_old_live_locations() deleted the 3h-old point and kept the 20min-old one',
+  remainingPoints.rows.length === 1 &&
+    Date.now() - new Date(remainingPoints.rows[0].recorded_at).getTime() < 60 * 60 * 1000
+);
+
+const livePurgeCatalog = await db.query(`
+  select
+    (select count(*) from pg_proc where proname = 'purge_old_live_locations') as fn_count,
+    (select count(*) from pg_extension where extname = 'pg_cron') as cron_count
+`);
+check(
+  'purge_old_live_locations() exists and (as with journeys) pg_cron itself is absent in pglite — schedule degraded gracefully',
+  Number(livePurgeCatalog.rows[0].fn_count) === 1 &&
+    Number(livePurgeCatalog.rows[0].cron_count) === 0
+);
+
 console.log('\n--- profiles.phone: normalized unique constraint ---');
 await asUser(userA, async () => {
   const set = await db.query(

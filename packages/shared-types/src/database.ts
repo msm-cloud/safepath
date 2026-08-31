@@ -217,6 +217,73 @@ export type Database = {
           },
         ]
       }
+      live_locations: {
+        Row: {
+          id: string
+          lat: number
+          lng: number
+          recorded_at: string
+          session_id: string
+        }
+        Insert: {
+          id?: string
+          lat: number
+          lng: number
+          recorded_at?: string
+          session_id: string
+        }
+        Update: {
+          id?: string
+          lat?: number
+          lng?: number
+          recorded_at?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_locations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sharing_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_sharing_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          started_at: string | null
+          stopped_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          started_at?: string | null
+          stopped_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          started_at?: string | null
+          stopped_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_sharing_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -293,6 +360,7 @@ export type Database = {
       check_overdue_journeys: { Args: never; Returns: undefined }
       generate_invite_code: { Args: never; Returns: string }
       normalize_phone: { Args: { p_phone: string }; Returns: string }
+      purge_old_live_locations: { Args: never; Returns: undefined }
       redeem_guardian_invite: { Args: { p_invite_code: string }; Returns: Json }
       resolve_login_identifier: {
         Args: { identifier: string }
@@ -459,3 +527,5 @@ export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Alert = Database['public']['Tables']['alerts']['Row'];
 export type GuardianLink = Database['public']['Tables']['guardian_links']['Row'];
 export type EmergencyContact = Database['public']['Tables']['emergency_contacts']['Row'];
+export type LiveSharingSession = Database['public']['Tables']['live_sharing_sessions']['Row'];
+export type LiveLocation = Database['public']['Tables']['live_locations']['Row'];
