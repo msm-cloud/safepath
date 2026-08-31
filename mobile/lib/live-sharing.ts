@@ -41,8 +41,31 @@ export const LIVE_SHARING_TASK = 'safepath-live-location-sharing';
 // only once the DB confirms the session is inactive.
 const SESSION_ID_KEY = 'safepath.liveSharing.sessionId';
 
+// Target reporting cadence. Driven by time alone — NOT distanceInterval.
+// A distance filter (we previously set 10 m) tells Android to withhold
+// every fix until the device physically moves that far, so a stationary
+// sharer transmitted their initial fix and then nothing, and the guardian
+// card flipped to "not updating" after 3 min. A person being followed for
+// safety is often deliberately still (waiting, hiding, in a vehicle at a
+// light) and must keep transmitting.
 const PING_INTERVAL_MS = 12000;
-const PING_DISTANCE_M = 10;
+// Android background batching hint: once a fix is delivered, later ones may
+// be held and delivered together no sooner than this. Fewer process
+// wake-ups while backgrounded; still ~9x under the guardian 3-min
+// "not updating" threshold.
+const DEFERRED_UPDATE_MS = 20000;
+
+// Live sharing acquires GPS actively (High), not the Balanced/network
+// tier. Balanced leans on the fused provider's cached fix, which indoors
+// or on a cold start is routinely minutes-to-hours old — every such fix
+// then trips MAX_FIX_AGE_MS below and nothing is written at all.
+const LIVE_SHARING_ACCURACY = Location.Accuracy.High;
+
+// getCurrentPositionAsync on session start can hang on a cold GPS; cap it
+// so a stuck one-shot doesn't leak. The continuous watcher is what the
+// session actually relies on — this is only to put a point on the
+// guardian's map immediately instead of after the first watcher callback.
+const INITIAL_FIX_TIMEOUT_MS = 15000;
 
 // A delivered fix older than this is rejected, not written. Android hands
 // back the OS's cached "last known location" as the first callback after
@@ -73,6 +96,15 @@ type ForegroundServiceText = {
 // session is currently running in this JS context). Background mode uses
 // the OS task instead and leaves this null.
 let foregroundSubscription: Location.LocationSubscription | null = null;
+
+// Bumped every time a foreground watch is started or stopped. watchPositionAsync
+// is async: a stop() that runs while a previous start() is still resolving
+// would otherwise leave that resolved subscription installed with nothing
+// tracking its lifecycle — an orphaned watcher that keeps firing points
+// (and RLS violations) against a session the user already stopped. Each
+// startForegroundWatch captures the generation it began in and discards
+// its own subscription if the generation moved on before it resolved.
+let foregroundWatchGeneration = 0;
 
 // Whether startTracking() has actually run in THIS JS process. The native
 // Location.hasStartedLocationUpdatesAsync() flag is persisted and survives
@@ -113,40 +145,109 @@ async function writeLocationPoint(
   const now = Date.now();
   const age = now - location.timestamp;
 
+  console.log(
+    `[live-sharing] writeLocationPoint session=${sessionId} fixAge=${Math.round(age / 1000)}s ` +
+      `coords=${location.coords.latitude.toFixed(5)},${location.coords.longitude.toFixed(5)} ` +
+      `acc=${location.coords.accuracy ?? '?'}m`
+  );
+
   if (age > MAX_FIX_AGE_MS || age < -MAX_FIX_FUTURE_SKEW_MS) {
     // Stale cached fix, or a device with a badly-wrong clock. Skip it and
     // wait for a real fix — the watcher will deliver one once GPS gets a
     // lock. A guardian sees "waiting" / "not updating" in the meantime,
     // which is the honest state.
     console.warn(
-      `[live-sharing] ignoring a location fix ${Math.round(age / 1000)}s off (session ${sessionId})`
+      `[live-sharing] SKIPPED insert — fix ${Math.round(age / 1000)}s off (limit ` +
+        `${MAX_FIX_AGE_MS / 1000}s stale / ${MAX_FIX_FUTURE_SKEW_MS / 1000}s future), session ${sessionId}`
     );
     return;
   }
 
-  const { error } = await supabase.from('live_locations').insert({
-    session_id: sessionId,
-    lat: location.coords.latitude,
-    lng: location.coords.longitude,
-    // Stamp from the fix's own time, not server now() — a slightly
-    // deferred delivery should reflect the real age of the position. But
-    // never store a future time (small clock jitter), so clamp to now.
-    recorded_at: new Date(Math.min(location.timestamp, now)).toISOString(),
-  });
+  const insertStartedAt = Date.now();
+  const { data, error } = await supabase
+    .from('live_locations')
+    .insert({
+      session_id: sessionId,
+      lat: location.coords.latitude,
+      lng: location.coords.longitude,
+      // Stamp from the fix's own time, not server now() — a slightly
+      // deferred delivery should reflect the real age of the position. But
+      // never store a future time (small clock jitter), so clamp to now.
+      recorded_at: new Date(Math.min(location.timestamp, now)).toISOString(),
+    })
+    .select('id')
+    .single();
 
   if (error) {
     // Most likely causes: the session was flipped inactive elsewhere (RLS
     // WITH CHECK then rejects the insert), or the access token needs a
     // refresh. Log and let the next tick retry — the visible toggle, not
     // this write, is what the user is relying on.
-    console.warn('[live-sharing] failed to write location point:', error.message);
+    console.warn(
+      `[live-sharing] INSERT FAILED after ${Date.now() - insertStartedAt}ms — ` +
+        `code=${error.code ?? '?'} message=${error.message} ` +
+        `details=${error.details ?? '-'} hint=${error.hint ?? '-'}`
+    );
+    return;
+  }
+
+  console.log(
+    `[live-sharing] INSERT OK id=${data?.id ?? '?'} in ${Date.now() - insertStartedAt}ms`
+  );
+}
+
+// Resolve the session to write to at delivery time, from AsyncStorage —
+// never from a value captured when the watcher was created. A watcher can
+// outlive the session it was started for (rapid toggle off/on, mode
+// handover), and writing a fix against a stale, now-inactive session id is
+// exactly what produced the RLS-violation log noise. If sharing has been
+// stopped, getStoredSessionId() is null and the fix is simply dropped.
+async function writeCurrentSessionPoint(location: Location.LocationObject): Promise<void> {
+  const sessionId = await getStoredSessionId();
+  if (!sessionId) {
+    console.warn('[live-sharing] location fix with no active stored session — dropping');
+    return;
+  }
+  await writeLocationPoint(sessionId, location);
+}
+
+// One-shot fresh fix at session start so a point lands on the guardian's
+// map right away, rather than after the continuous watcher's first
+// callback (which can be a stale cached fix, or many seconds out on a cold
+// GPS). Best effort and time-boxed — the ongoing watcher/task is what the
+// session actually depends on, so a failure here is only logged.
+async function captureInitialFix(sessionId: string): Promise<void> {
+  try {
+    const location = await Promise.race([
+      Location.getCurrentPositionAsync({ accuracy: LIVE_SHARING_ACCURACY }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), INITIAL_FIX_TIMEOUT_MS)),
+    ]);
+    if (!location) {
+      console.warn('[live-sharing] initial fix timed out — watcher will deliver the first point');
+      return;
+    }
+    // Guard against a toggle-off landing between start and this fix
+    // resolving: only write if this is still the active stored session.
+    if ((await getStoredSessionId()) !== sessionId) return;
+    await writeLocationPoint(sessionId, location);
+  } catch (err) {
+    console.warn('[live-sharing] initial fix failed (watcher will catch up):', err);
   }
 }
 
 // --- The background task. Defined at module scope (an expo-task-manager
-// hard requirement — the OS may call this before any screen mounts) via
-// the side-effect import in app/_layout.tsx. ---
+// hard requirement — the OS may call this before any screen mounts). This
+// module is imported first thing from the custom entry point
+// mobile/index.js, so defineTask runs on every JS launch, headless
+// included. ---
+console.log(`[live-sharing] module loaded — registering task ${LIVE_SHARING_TASK}`);
+
 TaskManager.defineTask(LIVE_SHARING_TASK, async ({ data, error }) => {
+  console.log(
+    `[live-sharing] TASK FIRED error=${error ? error.message : 'none'} ` +
+      `locations=${(data as { locations?: unknown[] } | null)?.locations?.length ?? 0}`
+  );
+
   if (error) {
     console.warn('[live-sharing] location task error:', error.message);
     return;
@@ -159,6 +260,7 @@ TaskManager.defineTask(LIVE_SHARING_TASK, async ({ data, error }) => {
   if (!sessionId) {
     // Sharing was stopped (or never started in this install) — nothing to
     // write to. The task should already be torn down; this is just belt.
+    console.warn('[live-sharing] TASK: no stored session id — nothing to write to');
     return;
   }
 
@@ -175,6 +277,8 @@ TaskManager.defineTask(LIVE_SHARING_TASK, async ({ data, error }) => {
     console.warn('[live-sharing] no auth session yet in background task — skipping this batch');
     return;
   }
+  const tokenTtlS = session.expires_at ? session.expires_at - Math.round(Date.now() / 1000) : null;
+  console.log(`[live-sharing] TASK: auth session present (token ttl ${tokenTtlS ?? '?'}s)`);
 
   // Only the most recent fix matters — guardians see current position, not
   // a trail, and the 2h cleanup job would purge a dense trail anyway.
@@ -182,24 +286,40 @@ TaskManager.defineTask(LIVE_SHARING_TASK, async ({ data, error }) => {
 });
 
 async function stopForegroundWatch(): Promise<void> {
+  // Invalidate any startForegroundWatch still in flight (see the generation
+  // counter's comment) as well as the one we currently hold.
+  foregroundWatchGeneration += 1;
   if (foregroundSubscription) {
     foregroundSubscription.remove();
     foregroundSubscription = null;
   }
 }
 
-async function startForegroundWatch(sessionId: string): Promise<void> {
+async function startForegroundWatch(): Promise<void> {
   await stopForegroundWatch();
-  foregroundSubscription = await Location.watchPositionAsync(
+  const generation = foregroundWatchGeneration;
+  const subscription = await Location.watchPositionAsync(
     {
-      accuracy: Location.Accuracy.Balanced,
+      accuracy: LIVE_SHARING_ACCURACY,
       timeInterval: PING_INTERVAL_MS,
-      distanceInterval: PING_DISTANCE_M,
+      // Time-based only — see PING_INTERVAL_MS. 0 disables the distance filter.
+      distanceInterval: 0,
     },
     (location) => {
-      void writeLocationPoint(sessionId, location);
+      void writeCurrentSessionPoint(location);
     }
   );
+
+  if (generation !== foregroundWatchGeneration) {
+    // stopForegroundWatch (or another start) ran while watchPositionAsync
+    // was resolving. This subscription is already orphaned — drop it
+    // instead of installing it, so it can never fire.
+    subscription.remove();
+    console.log('[live-sharing] foreground watcher discarded (superseded before it resolved)');
+    return;
+  }
+  foregroundSubscription = subscription;
+  console.log('[live-sharing] foreground watcher subscribed');
 }
 
 async function stopBackgroundTask(): Promise<void> {
@@ -232,13 +352,17 @@ async function startTracking(
   sessionId: string,
   text: ForegroundServiceText
 ): Promise<void> {
+  console.log(`[live-sharing] startTracking mode=${mode} session=${sessionId}`);
   if (mode === 'background') {
     await stopForegroundWatch();
     await stopBackgroundTask();
     await Location.startLocationUpdatesAsync(LIVE_SHARING_TASK, {
-      accuracy: Location.Accuracy.Balanced,
+      accuracy: LIVE_SHARING_ACCURACY,
       timeInterval: PING_INTERVAL_MS,
-      distanceInterval: PING_DISTANCE_M,
+      // Time-based only — see PING_INTERVAL_MS. 0 disables the distance filter.
+      distanceInterval: 0,
+      // Android: allow the OS to batch background deliveries to cut wake-ups.
+      deferredUpdatesInterval: DEFERRED_UPDATE_MS,
       // iOS: show the blue "app is using your location" pill — same
       // visible-tracking principle as the Android foreground notification.
       showsBackgroundLocationIndicator: true,
@@ -249,11 +373,19 @@ async function startTracking(
         notificationColor: '#2f95dc',
       },
     });
+    const started = await Location.hasStartedLocationUpdatesAsync(LIVE_SHARING_TASK);
+    console.log(
+      `[live-sharing] startLocationUpdatesAsync resolved — hasStarted=${started} ` +
+        `interval=${PING_INTERVAL_MS}ms deferred=${DEFERRED_UPDATE_MS}ms distance=0`
+    );
   } else {
     await stopBackgroundTask();
-    await startForegroundWatch(sessionId);
+    await startForegroundWatch();
   }
   trackingStartedThisProcess = true;
+
+  // Put a point on the guardian's map now, not after the first watcher tick.
+  void captureInitialFix(sessionId);
 }
 
 // Creates a fresh live_sharing_sessions row (one per toggle-on, matching
@@ -328,12 +460,17 @@ export async function stopLiveSharing(sessionId?: string | null): Promise<{ ok: 
     }
   }
 
+  // Clear the stored id BEFORE tearing the watchers down: a location fix
+  // that fires during the awaits below then resolves to "no session" and
+  // is dropped in writeCurrentSessionPoint, rather than racing an insert
+  // against the row we just made inactive (RLS rejects it, but that's the
+  // log noise we're removing).
+  await setStoredSessionId(null);
+
   // DB is now inactive (or there was no session at all) — safe to stop the
-  // device. RLS already rejects any further inserts at this point, so the
-  // brief window before these calls complete is harmless.
+  // device.
   await stopForegroundWatch();
   await stopBackgroundTask();
-  await setStoredSessionId(null);
   trackingStartedThisProcess = false;
   return { ok: true };
 }
