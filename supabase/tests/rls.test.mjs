@@ -1014,6 +1014,27 @@ await asUser(userA, async () => {
 });
 
 await asUser(userA, async () => {
+  // Regression: a device that kept a stale session id after a rapid
+  // toggle-off/on (old session `liveSessionId` stopped, new one
+  // `liveSession2Id` active) was firing writes at the OLD id and getting a
+  // stream of RLS violations. The insert policy keys on the *target row's*
+  // is_active, not "does this user have any active session" — so the stale
+  // write must still fail even though A is sharing again on another row.
+  // (The happy path — writing to the active session — is covered above.)
+  try {
+    await db.query(
+      `insert into public.live_locations (session_id, lat, lng) values ('${liveSessionId}', 23.8, 90.4)`
+    );
+    check('A cannot push points to a stale stopped session while a newer one is active', false);
+  } catch (err) {
+    check(
+      'A cannot push points to a stale stopped session while a newer one is active',
+      /row-level security|violates/i.test(String(err.message ?? err))
+    );
+  }
+});
+
+await asUser(userA, async () => {
   // live_locations has no client DELETE grant at all — only
   // purge_old_live_locations() (SECURITY DEFINER) deletes from it.
   try {
