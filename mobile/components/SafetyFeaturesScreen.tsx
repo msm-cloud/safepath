@@ -139,5 +139,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,
+    color: '#000',
+    backgroundColor: '#fff',
   },
 });
