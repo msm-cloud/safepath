@@ -79,6 +79,8 @@ const styles = StyleSheet.create({
     paddingRight: 44,
     paddingVertical: 12,
     fontSize: 16,
+    color: '#000',
+    backgroundColor: '#fff',
   },
   toggle: {
     position: 'absolute',
