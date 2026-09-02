@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -30,6 +31,12 @@ const PHONE_UNIQUE_VIOLATION = '23505';
 // path): the root layout routes by session/role from here. Must also be
 // allow-listed in Supabase → Authentication → URL Configuration.
 const EMAIL_CONFIRM_REDIRECT_URL = 'safepath://';
+
+// Publicly hosted in Supabase Storage (manuals bucket) — opened in the
+// system browser via Linking.openURL, same pattern as the map links in
+// app/(tabs)/index.tsx and app/(guardian)/index.tsx.
+const USER_MANUAL_URL =
+  'https://njeqiynkyjftlfhodqce.supabase.co/storage/v1/object/public/manuals/SafePath_User_Manual.pdf';
 
 export default function SignUpScreen() {
   const { t, language } = useLanguage();
@@ -264,6 +271,10 @@ export default function SignUpScreen() {
         <Link href={{ pathname: '/(auth)/sign-in', params: { role } }} style={styles.link}>
           {t('signInLink')}
         </Link>
+
+        <Pressable onPress={() => Linking.openURL(USER_MANUAL_URL)}>
+          <Text style={styles.userManualLink}>{t('userManualLink')}</Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -323,5 +334,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: '#2f95dc',
     fontSize: 14,
+  },
+  userManualLink: {
+    textAlign: 'center',
+    marginTop: 8,
+    color: '#666',
+    fontSize: 13,
   },
 });

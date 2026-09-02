@@ -57,6 +57,7 @@ export const translations = {
   // this un-enumerable — see sign-in.tsx.
   invalidCredentials: { en: 'Invalid login credentials', bn: 'সাইন ইন তথ্য সঠিক নয়।' },
   forgotPasswordLink: { en: 'Forgot Password?', bn: 'পাসওয়ার্ড ভুলে গেছেন?' },
+  userManualLink: { en: 'Need help? View the user guide', bn: 'সাহায্য দরকার? ব্যবহার নির্দেশিকা দেখুন' },
 
   // --- Sign up ---
   signUpTitle: { en: 'Create your SafePath account', bn: 'আপনার সেফপাথ অ্যাকাউন্ট তৈরি করুন' },

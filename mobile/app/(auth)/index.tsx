@@ -1,8 +1,14 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import LanguageToggle from '@/components/LanguageToggle';
 import { useLanguage } from '@/lib/language-context';
+
+// Publicly hosted in Supabase Storage (manuals bucket) — opened in the
+// system browser via Linking.openURL, same pattern as the map links in
+// app/(tabs)/index.tsx and app/(guardian)/index.tsx.
+const USER_MANUAL_URL =
+  'https://njeqiynkyjftlfhodqce.supabase.co/storage/v1/object/public/manuals/SafePath_User_Manual.pdf';
 
 // Shown only when there's no active session (see the `!session` guard in
 // app/_layout.tsx) — the very first thing anyone sees before signing in.
@@ -39,6 +45,10 @@ export default function WelcomeScreen() {
       <View style={styles.languageSectionWrap}>
         <LanguageToggle />
       </View>
+
+      <Pressable onPress={() => Linking.openURL(USER_MANUAL_URL)}>
+        <Text style={styles.userManualLink}>{t('userManualLink')}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -68,6 +78,12 @@ const styles = StyleSheet.create({
   },
   languageSectionWrap: {
     marginTop: 32,
+  },
+  userManualLink: {
+    marginTop: 20,
+    color: '#666',
+    fontSize: 13,
+    textAlign: 'center',
   },
   button: {
     backgroundColor: '#2f95dc',
