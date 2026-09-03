@@ -42,6 +42,7 @@ export const translations = {
   noAccountQuestion: { en: "Don't have an account?", bn: 'অ্যাকাউন্ট নেই?' },
   signUpNow: { en: 'Sign up', bn: 'সাইন আপ করুন' },
   forgotPasswordLink: { en: 'Forgot Password?', bn: 'পাসওয়ার্ড ভুলে গেছেন?' },
+  userManualLink: { en: 'Need help? View the user guide', bn: 'সাহায্য দরকার? ব্যবহার নির্দেশিকা দেখুন' },
 
   // --- Sign up ---
   signUpTitle: { en: 'Create your guardian account', bn: 'আপনার অভিভাবক অ্যাকাউন্ট তৈরি করুন' },

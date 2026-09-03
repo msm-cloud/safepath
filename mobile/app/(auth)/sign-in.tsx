@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -18,6 +19,12 @@ import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { isValidEmail, isValidPhone, MIN_PASSWORD_LENGTH } from '@/lib/validation';
+
+// Publicly hosted in Supabase Storage (manuals bucket) — opened in the
+// system browser via Linking.openURL, same pattern as the map links in
+// app/(tabs)/index.tsx and app/(guardian)/index.tsx.
+const USER_MANUAL_URL =
+  'https://njeqiynkyjftlfhodqce.supabase.co/storage/v1/object/public/manuals/SafePath_User_Manual.pdf';
 
 export default function SignInScreen() {
   const { t } = useLanguage();
@@ -171,6 +178,10 @@ export default function SignInScreen() {
         >
           {t('signUpLink')}
         </Link>
+
+        <Pressable onPress={() => Linking.openURL(USER_MANUAL_URL)}>
+          <Text style={styles.userManualLink}>{t('userManualLink')}</Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -231,5 +242,11 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     color: '#2f95dc',
     fontSize: 14,
+  },
+  userManualLink: {
+    textAlign: 'center',
+    marginTop: 8,
+    color: '#666',
+    fontSize: 13,
   },
 });

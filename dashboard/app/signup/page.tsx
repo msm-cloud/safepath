@@ -9,6 +9,11 @@ import { useLanguage } from '@/lib/language-context';
 
 const initialState: AuthActionState = { error: null, info: null };
 
+// Publicly hosted in Supabase Storage (manuals bucket) — opened in a new
+// tab via a plain anchor tag.
+const USER_MANUAL_URL =
+  'https://njeqiynkyjftlfhodqce.supabase.co/storage/v1/object/public/manuals/SafePath_User_Manual.pdf';
+
 export default function SignUpPage() {
   const { t } = useLanguage();
   const [state, formAction, pending] = useActionState(signUpAction, initialState);
@@ -82,6 +87,15 @@ export default function SignUpPage() {
         </Link>
         .
       </p>
+
+      <a
+        href={USER_MANUAL_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-zinc-400 underline"
+      >
+        {t('userManualLink')}
+      </a>
     </main>
   );
 }
