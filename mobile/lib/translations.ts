@@ -57,7 +57,10 @@ export const translations = {
   // this un-enumerable — see sign-in.tsx.
   invalidCredentials: { en: 'Invalid login credentials', bn: 'সাইন ইন তথ্য সঠিক নয়।' },
   forgotPasswordLink: { en: 'Forgot Password?', bn: 'পাসওয়ার্ড ভুলে গেছেন?' },
-  userManualLink: { en: 'Need help? View the user guide', bn: 'সাহায্য দরকার? ব্যবহার নির্দেশিকা দেখুন' },
+  userManualLink: {
+    en: 'Need help? View the user guide',
+    bn: 'সাহায্য দরকার? ব্যবহার নির্দেশিকা দেখুন',
+  },
 
   // --- Sign up ---
   signUpTitle: { en: 'Create your SafePath account', bn: 'আপনার সেফপাথ অ্যাকাউন্ট তৈরি করুন' },
@@ -371,6 +374,16 @@ export const translations = {
   fakeCallToggleLabel: { en: 'Fake call escape', bn: 'ভুয়া কল এস্কেপ' },
   fakeCallCallerNameLabel: { en: 'Caller name', bn: 'কলারের নাম' },
   fakeCallDefaultCallerName: { en: 'Mom', bn: 'আম্মু' },
+  // Guardian-only — see the alarm_sound_enabled migration comment for why
+  // this doesn't show for role='user' accounts.
+  alarmSoundToggleLabel: {
+    en: 'Alarm sound & vibration for alerts',
+    bn: 'অ্যালার্টের জন্য শব্দ ও কম্পন',
+  },
+  alarmSoundToggleHint: {
+    en: 'When someone you guard sends an SOS alert, your phone will play a looping alarm sound and vibrate until you acknowledge it. The on-screen flash always shows either way.',
+    bn: 'আপনি যাকে নিরাপত্তা দিচ্ছেন তিনি SOS অ্যালার্ট পাঠালে, আপনি স্বীকার না করা পর্যন্ত আপনার ফোনে বারবার অ্যালার্ম শব্দ ও কম্পন হতে থাকবে। স্ক্রিনে ফ্ল্যাশ যেকোনো ক্ষেত্রেই দেখাবে।',
+  },
   // Row label on the main Settings list + the replay screen's own title
   // (components/HelpTutorialScreen.tsx) — replays the same onboarding
   // carousel shown once automatically right after sign-up.
@@ -461,6 +474,10 @@ export const translations = {
   // --- Guardian experience ---
   unnamedUser: { en: 'Unnamed user', bn: 'নামহীন ব্যবহারকারী' },
   guardianActiveAlertsTitle: { en: 'Active Alerts', bn: 'সক্রিয় অ্যালার্ট' },
+  tapToSilenceAlarmHint: {
+    en: 'Tap anywhere to silence — the alert stays until marked resolved',
+    bn: 'নিঃশব্দ করতে যেকোনো জায়গায় ট্যাপ করুন — সমাধান হিসেবে চিহ্নিত না করা পর্যন্ত অ্যালার্ট থাকবে',
+  },
   guardianPastAlertsTitle: { en: 'Past Alerts', bn: 'পূর্ববর্তী অ্যালার্ট' },
   guardianLinkTitle: { en: 'Link to Someone', bn: 'কারো সাথে যুক্ত হন' },
   guardianLinkSubtitle: {

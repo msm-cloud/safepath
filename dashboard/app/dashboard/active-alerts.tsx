@@ -7,6 +7,13 @@ import { useLanguage } from '@/lib/language-context';
 import { createClient } from '@/lib/supabase/client';
 import type { TranslationKey } from '@/lib/translations';
 
+// Same synthesized siren asset as mobile (mobile/assets/sounds/sos-alarm.wav)
+// — served from public/ so a plain <audio src> can reach it. No vibration
+// API worth relying on in a desktop/laptop browser, so sound + the pulsing
+// card border below are this surface's whole "repeating" signal, unlike
+// mobile's sound+haptics+flash combination.
+const ALARM_SOUND_SRC = '/sounds/sos-alarm.wav';
+
 type ActiveAlert = {
   id: string;
   user_id: string;
@@ -54,6 +61,57 @@ export default function ActiveAlerts() {
     const tickId = setInterval(() => setTick((t) => t + 1), 30000);
     return () => clearInterval(tickId);
   }, []);
+
+  // Local-only "seen it" flag, same semantics as the mobile guardian
+  // screen's `acknowledged` state — silences the alarm sound without
+  // touching any alert row; only "Mark Resolved" does that. Starts false so
+  // an alert already active when this page loads alarms immediately, not
+  // only ones that arrive while the tab happens to already be open. Reset
+  // to false on every genuinely new INSERT (below), so acknowledging alert
+  // #1 doesn't silently swallow #2.
+  const [acknowledged, setAcknowledged] = useState(false);
+  const isAlarming = alerts.length > 0 && !acknowledged;
+
+  // Browsers block <audio>.play() with sound until a real user gesture has
+  // happened on the page — there's no way to pre-grant this across page
+  // loads, so a one-time banner (rendered below) asks for that gesture
+  // itself: clicking it does a play()+immediate pause() on this exact
+  // <audio> element, which is enough to unlock later programmatic play()
+  // calls on it for the rest of this page's lifetime.
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+
+  const handleEnableSound = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio
+      .play()
+      .then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        setAudioUnlocked(true);
+      })
+      .catch(() => {
+        // Still blocked (e.g. the click wasn't treated as a "real" gesture
+        // by this browser) — leave the banner up so they can try again.
+      });
+  };
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isAlarming && audioUnlocked) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {
+        // Autoplay still blocked despite the earlier unlock click — nothing
+        // more to do client-side; the pulsing card border still carries the
+        // visual signal regardless.
+      });
+    } else {
+      audio.pause();
+    }
+  }, [isAlarming, audioUnlocked]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -152,6 +210,11 @@ export default function ActiveAlerts() {
             const row = payload.new as AlertsChangeRow;
             if (row.status !== 'active') return;
 
+            // A new alert re-arms the alarm even if an earlier one was
+            // already acknowledged — see the `acknowledged` state's own
+            // comment above.
+            setAcknowledged(false);
+
             const { data: profile } = await supabase
               .from('profiles')
               .select('full_name')
@@ -237,14 +300,50 @@ export default function ActiveAlerts() {
     }
   };
 
-  if (alerts.length === 0) return null;
+  // Renders nothing only once there's genuinely nothing left to show —
+  // unlike before, that's no longer just "alerts.length === 0": the sound-
+  // unlock banner still needs to show up front, before any alert has ever
+  // arrived, so a guardian who leaves this tab open gets sound on the very
+  // first alert rather than only from the second one onward.
+  if (alerts.length === 0 && audioUnlocked) return null;
 
   return (
     <section className="flex flex-col gap-3">
+      {/* Always mounted (not just while alarming) so the unlock click below
+          and the alarm-start effect above are both acting on one stable
+          element for the page's whole lifetime — swapping it in and out of
+          the tree would lose the unlock. Hidden from view; it's audio-only. */}
+      <audio ref={audioRef} src={ALARM_SOUND_SRC} preload="auto" className="hidden" />
+
+      {!audioUnlocked && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-sm text-amber-800">{t('enableSoundAlertsHint')}</p>
+          <button
+            type="button"
+            onClick={handleEnableSound}
+            className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white"
+          >
+            {t('enableSoundAlertsButton')}
+          </button>
+        </div>
+      )}
+
+      {isAlarming && (
+        <button
+          type="button"
+          onClick={() => setAcknowledged(true)}
+          className="self-start rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-semibold text-red-700"
+        >
+          {t('silenceAlarmButton')}
+        </button>
+      )}
+
       {alerts.map((alert) => (
         <div
           key={alert.id}
-          className="flex flex-col gap-3 rounded-lg border-2 border-red-600 bg-red-50 p-5 sm:flex-row sm:items-center sm:justify-between"
+          className={`flex flex-col gap-3 rounded-lg border-2 border-red-600 bg-red-50 p-5 sm:flex-row sm:items-center sm:justify-between ${
+            isAlarming ? 'sos-alert-pulse' : ''
+          }`}
         >
           <div>
             <p className="text-sm font-bold tracking-wide text-red-700 uppercase">

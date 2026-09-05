@@ -1,7 +1,10 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useAudioPlayer } from 'expo-audio';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   Linking,
   Pressable,
@@ -20,6 +23,13 @@ import { supabase } from '@/lib/supabase';
 import type { TranslationKey } from '@/lib/translations';
 import { usePendingOnboarding } from '@/lib/use-pending-onboarding';
 import { useUserSettings } from '@/lib/user-settings-context';
+
+// How often the repeating haptic pulse fires while an alert is unacknowledged
+// — same structural idea as the fake-call ringer's setInterval loop
+// (app/(tabs)/index.tsx), a different feature but the closest existing
+// precedent for "repeating Haptics.notificationAsync until dismissed".
+const ALARM_HAPTIC_INTERVAL_MS = 2000;
+const FLASH_HALF_CYCLE_MS = 400;
 
 type ActiveAlert = {
   id: string;
@@ -56,7 +66,7 @@ type AlertsChangeRow = {
 export default function GuardianActiveAlertsScreen() {
   const { session } = useAuth();
   const { t } = useLanguage();
-  const { fullName, avatarPath } = useUserSettings();
+  const { fullName, avatarPath, alarmSoundEnabled } = useUserSettings();
   const {
     checking: checkingOnboarding,
     show: showOnboarding,
@@ -70,6 +80,106 @@ export default function GuardianActiveAlertsScreen() {
   const [alerts, setAlerts] = useState<ActiveAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
+
+  // Local-only "I've seen it" flag — deliberately NOT the same thing as an
+  // alert's server-side status. Silences the sound/haptics/flash below
+  // without touching any alert row, so acknowledging never accidentally
+  // hides a card that's still genuinely active; only "Mark Resolved" does
+  // that. Starts false (not true) on purpose: if there's already an
+  // unresolved alert sitting in `alerts` the moment this screen loads —
+  // whether from a fresh app launch or just navigating back to this tab —
+  // the alarm should demand attention immediately, not only for alerts
+  // that arrive while the screen happens to already be open. Reset back to
+  // false whenever a genuinely new alert is inserted (see the INSERT
+  // handler below), so acknowledging alert #1 doesn't silently swallow #2.
+  const [acknowledged, setAcknowledged] = useState(false);
+  const isAlarming = alerts.length > 0 && !acknowledged;
+
+  // expo-audio player for the looping alarm sound — created once, started/
+  // stopped by the effect below rather than on every render. Confirmed
+  // working in Expo Go on Android via a throwaway smoke test before this
+  // was built (see PR description) — expo-notifications was deliberately
+  // avoided instead: importing it at all crashes Expo Go on Android (see
+  // lib/notifications.ts), and even setting that aside, a one-shot local
+  // notification can't loop indefinitely tied to "still unacknowledged"
+  // app state the way this player can.
+  const alarmPlayer = useAudioPlayer(require('@/assets/sounds/sos-alarm.wav'));
+  useEffect(() => {
+    // expo-audio's player is an intentionally mutable handle (closer to a
+    // <video> ref than to memoized render output) — setting .loop/.play()/
+    // .pause() imperatively on it is how its own API is meant to be used,
+    // not a violation of the immutability this rule otherwise protects.
+    // eslint-disable-next-line react-hooks/immutability
+    alarmPlayer.loop = true;
+  }, [alarmPlayer]);
+
+  useEffect(() => {
+    if (!isAlarming) {
+      alarmPlayer.pause();
+      return;
+    }
+
+    // The flash overlay below stays unconditional — only sound + haptics
+    // are gated on the guardian's own alarm_sound_enabled preference (see
+    // its migration comment for why this is a guardian-only device
+    // setting, not something the at-risk user controls).
+    if (!alarmSoundEnabled) {
+      alarmPlayer.pause();
+      return;
+    }
+
+    alarmPlayer.seekTo(0);
+    alarmPlayer.play();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    const hapticIntervalId = setInterval(() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }, ALARM_HAPTIC_INTERVAL_MS);
+
+    return () => {
+      clearInterval(hapticIntervalId);
+      alarmPlayer.pause();
+    };
+  }, [isAlarming, alarmSoundEnabled, alarmPlayer]);
+
+  // Full-screen red/white flash — this loop's lifetime tracks `isAlarming`
+  // directly (not alarmSoundEnabled): a guardian who's muted sound/haptics
+  // still needs the visual signal.
+  const flashAnim = useRef(new Animated.Value(0)).current;
+  const flashLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  useEffect(() => {
+    if (!isAlarming) {
+      flashLoopRef.current?.stop();
+      flashAnim.setValue(0);
+      return;
+    }
+
+    flashLoopRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(flashAnim, {
+          toValue: 1,
+          duration: FLASH_HALF_CYCLE_MS,
+          useNativeDriver: false, // color interpolation isn't supported by the native driver
+        }),
+        Animated.timing(flashAnim, {
+          toValue: 0,
+          duration: FLASH_HALF_CYCLE_MS,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    flashLoopRef.current.start();
+
+    return () => flashLoopRef.current?.stop();
+    // flashAnim deliberately excluded — it's a ref-derived Animated.Value,
+    // stable for the component's lifetime (same reasoning as sos.tsx never
+    // listing holdProgress as a dependency anywhere).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAlarming]);
+  // eslint-disable-next-line react-hooks/refs -- same static-derived-interpolation pattern as sos.tsx's fillHeight; see that file's comment.
+  const flashBackgroundColor = flashAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['rgba(211, 51, 51, 0.85)', 'rgba(255, 255, 255, 0.85)'],
+  });
 
   // Wall-clock time, refreshed every 30s so "time ago" stays fresh even
   // without a new Realtime event — captured into state (rather than
@@ -154,6 +264,11 @@ export default function GuardianActiveAlertsScreen() {
           async (payload) => {
             const row = payload.new as AlertsChangeRow;
             if (row.status !== 'active') return;
+
+            // A new alert re-arms the alarm even if an earlier one was
+            // already acknowledged — see the `acknowledged` state's own
+            // comment above.
+            setAcknowledged(false);
 
             const { data: profile } = await supabase
               .from('profiles')
@@ -244,6 +359,20 @@ export default function GuardianActiveAlertsScreen() {
 
   return (
     <View style={styles.container}>
+      {isAlarming && (
+        <Pressable
+          style={styles.flashOverlay}
+          onPress={() => setAcknowledged(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('tapToSilenceAlarmHint')}
+        >
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { backgroundColor: flashBackgroundColor }]}
+            pointerEvents="none"
+          />
+          <Text style={styles.flashHintText}>{t('tapToSilenceAlarmHint')}</Text>
+        </Pressable>
+      )}
       <FlatList
         data={alerts}
         keyExtractor={(item) => item.id}
@@ -325,6 +454,29 @@ function relativeTime(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  flashOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+    elevation: 10, // zIndex alone isn't reliably respected on Android
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 48,
+  },
+  flashHintText: {
+    color: '#1a1a1a',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   listContent: {
     padding: 20,

@@ -10,7 +10,9 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": [
+          "location"
+        ]
       }
     },
     "android": {
@@ -68,7 +70,8 @@
           "photosPermission": "SafePath uses your photo library so you can choose a profile photo.",
           "cameraPermission": "SafePath uses your camera so you can take a profile photo."
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true

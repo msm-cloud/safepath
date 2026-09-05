@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { useUserSettings } from '@/lib/user-settings-context';
@@ -25,15 +26,26 @@ import { useUserSettings } from '@/lib/user-settings-context';
 // fire-and-forget setters, the same "reads DB once, writes through in
 // the background" pattern) is completely unchanged, only where they're
 // rendered from.
+//
+// The alarm-sound toggle added below is the one row on this shared screen
+// that DOES differ by role — shake/fake-call are the at-risk user's own
+// escape tools and apply to either role's own device, but alarm_sound_enabled
+// is specifically "does MY device make noise when I, as a guardian, receive
+// someone else's alert" (see the migration's comment) — meaningless for a
+// role='user' account, so it's gated on role the same way SettingsScreen.tsx
+// already gates its Emergency Contacts row on role === 'user'.
 export default function SafetyFeaturesScreen() {
   const { t } = useLanguage();
+  const { role } = useAuth();
   const {
     shakeSosEnabled,
     fakeCallEnabled,
     fakeCallCallerName,
+    alarmSoundEnabled,
     setShakeSosEnabled,
     setFakeCallEnabled,
     setFakeCallCallerName,
+    setAlarmSoundEnabled,
   } = useUserSettings();
 
   const scrollViewRef = useRef<ScrollView>(null);
@@ -90,6 +102,16 @@ export default function SafetyFeaturesScreen() {
               onBlur={() => setFakeCallCallerName(callerNameDraft.trim() || null)}
             />
           </View>
+        )}
+
+        {role === 'guardian' && (
+          <>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>{t('alarmSoundToggleLabel')}</Text>
+              <Switch value={alarmSoundEnabled} onValueChange={setAlarmSoundEnabled} />
+            </View>
+            <Text style={styles.toggleHint}>{t('alarmSoundToggleHint')}</Text>
+          </>
         )}
       </ScrollView>
     </KeyboardAvoidingView>
