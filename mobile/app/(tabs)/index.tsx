@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -13,6 +12,7 @@ import {
   Switch,
   Text,
   TextInput,
+  Vibration,
   View,
 } from 'react-native';
 
@@ -34,9 +34,15 @@ const DURATION_OPTIONS_MINUTES = [15, 30, 45, 60];
 const EXTEND_MINUTES = 15;
 
 // Fake call escape — delay options (seconds) shown when "Fake Call" is
-// tapped, plus the repeat interval for the ringing vibration.
+// tapped, plus the repeating vibration pattern ([wait, buzz, pause] in ms)
+// used for the ringing. This replaced a setInterval + Haptics.
+// notificationAsync loop — see the identical fix and rationale in
+// app/(guardian)/index.tsx's ALARM_VIBRATION_PATTERN comment: RN suspends
+// JS timers once the Activity leaves the foreground, so a locked/backgrounded
+// phone would silently stop "ringing". Vibration.vibrate(pattern, true)
+// loops natively via the OS vibrator service instead.
 const FAKE_CALL_DELAY_OPTIONS_SECONDS = [0, 10, 30];
-const FAKE_CALL_RING_HAPTIC_INTERVAL_MS = 1200;
+const FAKE_CALL_RING_VIBRATION_PATTERN = [0, 500, 300];
 
 type FakeCallState = 'idle' | 'ringing' | 'in_call';
 
@@ -105,19 +111,15 @@ export default function HomeScreen() {
   const [fakeCallState, setFakeCallState] = useState<FakeCallState>('idle');
   const [callElapsedSeconds, setCallElapsedSeconds] = useState(0);
   const ringTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const ringHapticIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopRingHaptics = useCallback(() => {
-    if (ringHapticIntervalRef.current) {
-      clearInterval(ringHapticIntervalRef.current);
-      ringHapticIntervalRef.current = null;
-    }
+    Vibration.cancel();
   }, []);
 
-  // Clears every pending timer/interval on unmount — the delay picker's
-  // setTimeout, the ringing haptic loop, and the in-call elapsed-time
-  // ticker are otherwise all capable of outliving the component.
+  // Clears every pending timer on unmount — the delay picker's setTimeout,
+  // the ringing vibration loop, and the in-call elapsed-time ticker are
+  // otherwise all capable of outliving the component.
   useEffect(() => {
     return () => {
       if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current);
@@ -128,14 +130,13 @@ export default function HomeScreen() {
 
   const startRinging = useCallback(() => {
     setFakeCallState('ringing');
-    // Fires immediately, then repeats — approximates a ringtone's repeated
-    // buzz using only what's already available (no audio library in this
-    // environment; see Settings toggle hint / PR notes for why a
-    // synthesized tone was skipped rather than pulled in as a new dep).
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    ringHapticIntervalRef.current = setInterval(() => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    }, FAKE_CALL_RING_HAPTIC_INTERVAL_MS);
+    // Hands one repeating pattern to the OS vibrator service, which loops
+    // it natively — approximates a ringtone's repeated buzz using only
+    // what's already available (no audio library in this environment; see
+    // Settings toggle hint / PR notes for why a synthesized tone was
+    // skipped rather than pulled in as a new dep), and keeps ringing even
+    // if the app is backgrounded while the delay/ringing is in progress.
+    Vibration.vibrate(FAKE_CALL_RING_VIBRATION_PATTERN, true);
   }, []);
 
   const handleFakeCallDelaySelected = (delaySeconds: number) => {
