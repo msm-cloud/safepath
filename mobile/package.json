@@ -8,6 +8,7 @@
     "@safepath/shared-types": "workspace:*",
     "@supabase/supabase-js": "^2.45.4",
     "expo": "~57.0.17",
+    "expo-audio": "~57.0.4",
     "expo-clipboard": "~57.0.1",
     "expo-constants": "~57.0.15",
     "expo-haptics": "~57.0.2",

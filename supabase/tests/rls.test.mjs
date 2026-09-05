@@ -244,6 +244,30 @@ await asUser(userX, async () => {
   );
 });
 
+// alarm_sound_enabled (20260905120000_alarm_sound_setting.sql): same story
+// again — profiles_update_own has no column restrictions, so this new
+// column needs no RLS change either. Covered here rather than assumed, same
+// as every other profiles column added since.
+console.log('\n--- profiles RLS: update (alarm_sound_enabled column) ---');
+await asUser(userA, async () => {
+  const updated = await db.query(
+    `update public.profiles set alarm_sound_enabled = false where id = '${userA}' returning alarm_sound_enabled`
+  );
+  check(
+    'A can update their own alarm_sound_enabled',
+    updated.rows.length === 1 && updated.rows[0].alarm_sound_enabled === false
+  );
+});
+await asUser(userX, async () => {
+  const updated = await db.query(
+    `update public.profiles set alarm_sound_enabled = false where id = '${userA}' returning id`
+  );
+  check(
+    "X cannot update A's alarm_sound_enabled (zero rows affected, not an error)",
+    updated.rows.length === 0
+  );
+});
+
 console.log('\n--- guardian_links: invite creation ---');
 let inviteCode;
 await asUser(userA, async () => {

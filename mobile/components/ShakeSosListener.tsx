@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+} from 'react-native';
 
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
@@ -9,6 +18,13 @@ import { supabase } from '@/lib/supabase';
 import { useUserSettings } from '@/lib/user-settings-context';
 
 const COUNTDOWN_SECONDS = 3;
+const PULSE_HALF_CYCLE_MS = 500;
+
+// Animated.createAnimatedComponent at module scope, not inside the
+// component — recreating this on every render would defeat the point of
+// memoizing it at all (same reason styles.* is a module-level
+// StyleSheet.create call rather than an inline object).
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // Mounted once at the root layout (app/_layout.tsx), inside both
 // AuthProvider and UserSettingsProvider, so it's active on every screen
@@ -94,6 +110,11 @@ export default function ShakeSosListener() {
         const result = await triggerSosShared({ userId, emergencyContacts, fullName, t });
         setSending(false);
         setConfirming(false);
+        Haptics.notificationAsync(
+          result.mode === 'failed'
+            ? Haptics.NotificationFeedbackType.Error
+            : Haptics.NotificationFeedbackType.Success
+        );
         if (result.mode === 'failed') {
           Alert.alert(t('sosCreateError'), result.message);
         }
@@ -101,9 +122,56 @@ export default function ShakeSosListener() {
       return;
     }
 
+    // Fires once per tick (3, 2, 1) — including immediately when the
+    // countdown first mounts, since this effect runs then too. No new
+    // "repeating SOS-specific haptics" pattern already existed to copy
+    // (the hold button has none at all); structurally this mirrors the
+    // fake-call ringer's setInterval-based Haptics.notificationAsync loop
+    // in app/(tabs)/index.tsx, just driven by this countdown's own
+    // setTimeout tick instead of a separate interval.
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     const id = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(id);
   }, [confirming, countdown, userId, emergencyContacts, fullName, t]);
+
+  // Pulsing red background while confirming — replaces the previous static
+  // rgba(122,18,18,0.96) fill. Stops (freezes, doesn't jump) once sending
+  // starts, since that's a brief, already-distinct spinner phase.
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+  const pulseLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  useEffect(() => {
+    if (!confirming || sending) {
+      pulseLoopRef.current?.stop();
+      return;
+    }
+
+    pulseLoopRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: PULSE_HALF_CYCLE_MS,
+          useNativeDriver: false, // color interpolation isn't supported by the native driver
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0,
+          duration: PULSE_HALF_CYCLE_MS,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    pulseLoopRef.current.start();
+
+    return () => pulseLoopRef.current?.stop();
+    // pulseAnim deliberately excluded — it's a ref-derived Animated.Value,
+    // stable for the component's lifetime (same reasoning as sos.tsx never
+    // listing holdProgress as a dependency anywhere).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirming, sending]);
+  // eslint-disable-next-line react-hooks/refs -- same static-derived-interpolation pattern as sos.tsx's fillHeight; see that file's comment.
+  const overlayBackgroundColor = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['rgba(122, 18, 18, 0.96)', 'rgba(184, 30, 30, 0.96)'],
+  });
 
   const handleCancel = () => {
     if (sending) return; // already in flight — mirrors the hold button's own "no cancel once creating" behavior
@@ -114,8 +182,8 @@ export default function ShakeSosListener() {
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={handleCancel}>
-      <Pressable
-        style={styles.overlay}
+      <AnimatedPressable
+        style={[styles.overlay, { backgroundColor: overlayBackgroundColor }]}
         onPress={handleCancel}
         accessibilityRole="button"
         accessibilityLabel={t('cancelButton')}
@@ -132,7 +200,7 @@ export default function ShakeSosListener() {
             <Text style={styles.tapHint}>{t('tapAnywhereToCancelHint')}</Text>
           </>
         )}
-      </Pressable>
+      </AnimatedPressable>
     </Modal>
   );
 }
@@ -140,7 +208,8 @@ export default function ShakeSosListener() {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(122, 18, 18, 0.96)',
+    // backgroundColor intentionally not set here — animated between two red
+    // shades via overlayBackgroundColor above instead of a static value.
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,

@@ -42,7 +42,10 @@ export const translations = {
   noAccountQuestion: { en: "Don't have an account?", bn: 'অ্যাকাউন্ট নেই?' },
   signUpNow: { en: 'Sign up', bn: 'সাইন আপ করুন' },
   forgotPasswordLink: { en: 'Forgot Password?', bn: 'পাসওয়ার্ড ভুলে গেছেন?' },
-  userManualLink: { en: 'Need help? View the user guide', bn: 'সাহায্য দরকার? ব্যবহার নির্দেশিকা দেখুন' },
+  userManualLink: {
+    en: 'Need help? View the user guide',
+    bn: 'সাহায্য দরকার? ব্যবহার নির্দেশিকা দেখুন',
+  },
 
   // --- Sign up ---
   signUpTitle: { en: 'Create your guardian account', bn: 'আপনার অভিভাবক অ্যাকাউন্ট তৈরি করুন' },
@@ -115,6 +118,12 @@ export const translations = {
   },
   markResolvedButton: { en: 'Mark Resolved', bn: 'সমাধান হয়েছে চিহ্নিত করুন' },
   markingResolvedButton: { en: 'Marking resolved…', bn: 'সমাধান চিহ্নিত করা হচ্ছে…' },
+  enableSoundAlertsButton: { en: 'Enable sound alerts', bn: 'শব্দ সতর্কতা চালু করুন' },
+  enableSoundAlertsHint: {
+    en: 'Turn on sound so you hear a new SOS alert while this tab is open.',
+    bn: 'এই ট্যাব খোলা থাকা অবস্থায় নতুন SOS অ্যালার্ট শোনার জন্য শব্দ চালু করুন।',
+  },
+  silenceAlarmButton: { en: 'Silence', bn: 'নিঃশব্দ করুন' },
   secondsAgo: { en: '{n}s ago', bn: '{n} সেকেন্ড আগে' },
   minutesAgo: { en: '{n}m ago', bn: '{n} মিনিট আগে' },
   hoursAgo: { en: '{n}h ago', bn: '{n} ঘণ্টা আগে' },
