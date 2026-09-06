@@ -1,6 +1,5 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useAudioPlayer } from 'expo-audio';
-import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,6 +9,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  Vibration,
   View,
 } from 'react-native';
 
@@ -24,11 +24,17 @@ import type { TranslationKey } from '@/lib/translations';
 import { usePendingOnboarding } from '@/lib/use-pending-onboarding';
 import { useUserSettings } from '@/lib/user-settings-context';
 
-// How often the repeating haptic pulse fires while an alert is unacknowledged
-// — same structural idea as the fake-call ringer's setInterval loop
-// (app/(tabs)/index.tsx), a different feature but the closest existing
-// precedent for "repeating Haptics.notificationAsync until dismissed".
-const ALARM_HAPTIC_INTERVAL_MS = 2000;
+// Repeating vibration pattern for an unacknowledged alert, as
+// [wait, vibrate, wait, vibrate, ...] milliseconds. Handed to the OS
+// vibrator service once, as a looping pattern (see the effect below) —
+// NOT re-issued from JS on an interval. When the guardian's phone is
+// locked or SafePath is backgrounded (the exact situation an SOS alarm
+// has to punch through) React Native suspends the JS timer queue
+// (onHostPause), so the previous setInterval-driven
+// Haptics.notificationAsync loop simply stopped firing until the app was
+// foregrounded again. A native looping pattern keeps going on its own,
+// the same way the expo-audio loop does.
+const ALARM_VIBRATION_PATTERN = [0, 600, 400];
 const FLASH_HALF_CYCLE_MS = 400;
 
 type ActiveAlert = {
@@ -130,13 +136,16 @@ export default function GuardianActiveAlertsScreen() {
 
     alarmPlayer.seekTo(0);
     alarmPlayer.play();
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    const hapticIntervalId = setInterval(() => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }, ALARM_HAPTIC_INTERVAL_MS);
+
+    // Single call — the OS vibrator service loops the pattern itself, so
+    // it keeps buzzing while locked/backgrounded (see the pattern const's
+    // comment). Needs android.permission.VIBRATE, already merged into the
+    // manifest: React Native core declares it, and expo-haptics' config
+    // plugin adds it too.
+    Vibration.vibrate(ALARM_VIBRATION_PATTERN, true);
 
     return () => {
-      clearInterval(hapticIntervalId);
+      Vibration.cancel();
       alarmPlayer.pause();
     };
   }, [isAlarming, alarmSoundEnabled, alarmPlayer]);
