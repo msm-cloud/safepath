@@ -17,5 +17,6 @@
 import '@expo/metro-runtime';
 
 import './lib/live-sharing';
+import './lib/location-history';
 
 import 'expo-router/entry';
