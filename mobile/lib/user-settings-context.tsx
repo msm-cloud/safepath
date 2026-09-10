@@ -45,7 +45,13 @@ type UserSettingsContextValue = {
   setShakeSosEnabled: (value: boolean) => void;
   setFakeCallEnabled: (value: boolean) => void;
   setAlarmSoundEnabled: (value: boolean) => void;
-  setLocationHistoryEnabled: (value: boolean) => void;
+  // Unlike the fire-and-forget setters above, this one awaits the write and
+  // resolves to whether it persisted. Location history drives an OS
+  // background task and a guardian-visible "recording" state, so a silently
+  // dropped write (toggle stuck ON while the DB stays OFF) is a real
+  // failure the caller needs to surface — see use-location-history.ts. On
+  // failure the optimistic local flip is rolled back before it resolves.
+  setLocationHistoryEnabled: (value: boolean) => Promise<boolean>;
   setFakeCallCallerName: (value: string | null) => void;
   // Updates only the in-memory value, once SettingsScreen has confirmed
   // its own write actually succeeded.
@@ -150,11 +156,22 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
   );
 
   const setLocationHistoryEnabled = useCallback(
-    (value: boolean) => {
+    async (value: boolean): Promise<boolean> => {
       setLocationHistoryEnabledState(value);
-      if (userId) {
-        supabase.from('profiles').update({ location_history_enabled: value }).eq('id', userId);
+      if (!userId) return true;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ location_history_enabled: value })
+        .eq('id', userId);
+
+      if (error) {
+        // Roll the optimistic flip back — but only if nothing else changed
+        // the value in the meantime (a concurrent toggle / reconcile).
+        setLocationHistoryEnabledState((current) => (current === value ? !value : current));
+        return false;
       }
+      return true;
     },
     [userId]
   );

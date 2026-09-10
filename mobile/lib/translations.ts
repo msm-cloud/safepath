@@ -257,6 +257,10 @@ export const translations = {
     en: "You're recording your location history. Your guardians can see the saved trail.",
     bn: 'আপনি আপনার লোকেশন ইতিহাস রেকর্ড করছেন। আপনার অভিভাবকরা সংরক্ষিত পথটি দেখতে পারবেন।',
   },
+  locationHistoryForegroundWarning: {
+    en: '"Allow all the time" is off, so nothing is saved while your phone is locked or SafePath is closed. Tap to fix this in Settings.',
+    bn: '"সব সময় অনুমতি দিন" বন্ধ আছে, তাই আপনার ফোন লক থাকলে বা সেফপাথ বন্ধ থাকলে কিছুই সংরক্ষণ হয় না। সেটিংসে ঠিক করতে ট্যাপ করুন।',
+  },
   locationHistoryPermissionDenied: {
     en: 'Location history needs "Allow all the time" location access. Turn it on in Settings.',
     bn: 'লোকেশন ইতিহাসের জন্য "সব সময় অনুমতি দিন" লোকেশন অ্যাক্সেস প্রয়োজন। সেটিংসে এটি চালু করুন।',
@@ -268,6 +272,10 @@ export const translations = {
   locationHistoryStopError: {
     en: "Couldn't stop location history recording. Try again.",
     bn: 'লোকেশন ইতিহাস রেকর্ডিং বন্ধ করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  locationHistorySaveError: {
+    en: "Couldn't save that change. Check your connection and try again.",
+    bn: 'পরিবর্তনটি সংরক্ষণ করা যায়নি। আপনার সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
   },
   // Retention presets — shared by the student's per-guardian control
   // (Guardians screen) and the guardian's own screen.
