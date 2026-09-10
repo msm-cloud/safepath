@@ -1235,5 +1235,251 @@ await asAnon(async () => {
   }
 });
 
+console.log(
+  '\n--- recorded live location: location_history_points + location_history_retention RLS ---'
+);
+// The A–G link is already accepted (redeemed above); G2 only ever
+// attempted redemption, X is unrelated — same cast as the live-sharing
+// block.
+
+// profiles.location_history_enabled: the student flips it; an accepted
+// guardian (read-only on profiles) cannot.
+await asUser(userA, async () => {
+  const updated = await db.query(
+    `update public.profiles set location_history_enabled = true where id = '${userA}'
+     returning location_history_enabled`
+  );
+  check(
+    'A can turn on their own location_history_enabled',
+    updated.rows.length === 1 && updated.rows[0].location_history_enabled === true
+  );
+});
+await asUser(userG, async () => {
+  const updated = await db.query(
+    `update public.profiles set location_history_enabled = false where id = '${userA}' returning id`
+  );
+  check(
+    "accepted guardian G cannot flip A's location_history_enabled (zero rows, not an error)",
+    updated.rows.length === 0
+  );
+});
+
+// Points: the owner records their own; nobody else can.
+await asUser(userA, async () => {
+  const ins = await db.query(
+    `insert into public.location_history_points (user_id, lat, lng) values
+       ('${userA}', 23.75, 90.39),
+       ('${userA}', 23.76, 90.40)
+     returning id`
+  );
+  check('A can record their own location history points', ins.rows.length === 2);
+});
+await asUser(userX, async () => {
+  try {
+    await db.query(
+      `insert into public.location_history_points (user_id, lat, lng) values ('${userA}', 0, 0)`
+    );
+    check('X cannot record points on behalf of A (should have thrown)', false);
+  } catch (err) {
+    check(
+      'X cannot record points on behalf of A',
+      /row-level security|violates/i.test(String(err.message ?? err))
+    );
+  }
+});
+
+// No client DELETE grant at all — only purge_expired_location_history().
+await asUser(userA, async () => {
+  try {
+    await db.query(`delete from public.location_history_points where user_id = '${userA}'`);
+    check('A cannot DELETE location history points directly (should have thrown)', false);
+  } catch (err) {
+    check(
+      'A cannot DELETE location history points directly',
+      /permission denied/i.test(String(err.message ?? err))
+    );
+  }
+});
+
+// Two more points with explicit ages — one just outside the default
+// window, one well outside it — to exercise the per-link retention gate.
+await asUser(userA, async () => {
+  await db.query(
+    `insert into public.location_history_points (user_id, lat, lng, recorded_at) values
+       ('${userA}', 23.70, 90.30, now() - interval '50 hours'),
+       ('${userA}', 23.71, 90.31, now() - interval '2 hours')`
+  );
+});
+
+// No retention row yet -> the guardian window defaults to 24h.
+await asUser(userG, async () => {
+  const pts = await db.query(
+    `select recorded_at from public.location_history_points where user_id = '${userA}'`
+  );
+  check(
+    'accepted guardian G sees A history points within the default 24h window, not the 50h-old one',
+    pts.rows.length === 3
+  );
+});
+
+// Either party may set the retention. Guardian first.
+await asUser(userG, async () => {
+  const up = await db.query(
+    `insert into public.location_history_retention (user_id, guardian_id, retention_hours)
+     values ('${userA}', '${userG}', 72)
+     on conflict (user_id, guardian_id) do update set retention_hours = excluded.retention_hours
+     returning retention_hours, updated_by`
+  );
+  check(
+    'guardian G can set the A–G link retention; the trigger stamps updated_by = G',
+    up.rows.length === 1 && up.rows[0].retention_hours === 72 && up.rows[0].updated_by === userG
+  );
+});
+await asUser(userG, async () => {
+  const pts = await db.query(
+    `select id from public.location_history_points where user_id = '${userA}'`
+  );
+  check(
+    'widening the retention to 72h lets guardian G see the 50h-old point too',
+    pts.rows.length === 4
+  );
+});
+
+// The student can edit the same row.
+await asUser(userA, async () => {
+  const up = await db.query(
+    `insert into public.location_history_retention (user_id, guardian_id, retention_hours)
+     values ('${userA}', '${userG}', 1)
+     on conflict (user_id, guardian_id) do update set retention_hours = excluded.retention_hours
+     returning retention_hours, updated_by`
+  );
+  check(
+    "student A can edit the same link's retention; updated_by flips to A",
+    up.rows.length === 1 && up.rows[0].retention_hours === 1 && up.rows[0].updated_by === userA
+  );
+});
+await asUser(userG, async () => {
+  const pts = await db.query(
+    `select id from public.location_history_points where user_id = '${userA}'`
+  );
+  check(
+    'narrowing the retention to 1h hides even the 2h-old point from guardian G',
+    pts.rows.length === 2
+  );
+});
+await asUser(userA, async () => {
+  const pts = await db.query(
+    `select id from public.location_history_points where user_id = '${userA}'`
+  );
+  check(
+    'owner A still sees all four of their own points regardless of retention',
+    pts.rows.length === 4
+  );
+});
+
+// retention_hours is bounded (1..168) and the pair columns are immutable.
+await asUser(userA, async () => {
+  try {
+    await db.query(
+      `update public.location_history_retention set retention_hours = 1000
+       where user_id = '${userA}' and guardian_id = '${userG}'`
+    );
+    check('retention_hours above 168 is rejected (should have thrown)', false);
+  } catch (err) {
+    check(
+      'retention_hours above 168 is rejected',
+      /check constraint|violates/i.test(String(err.message ?? err))
+    );
+  }
+});
+await asUser(userA, async () => {
+  try {
+    await db.query(
+      `update public.location_history_retention set user_id = '${userX}'
+       where user_id = '${userA}' and guardian_id = '${userG}'`
+    );
+    check('a retention row cannot be reassigned to another user (should have thrown)', false);
+  } catch (err) {
+    check(
+      'a retention row cannot be reassigned to another user',
+      /cannot be changed/i.test(String(err.message ?? err))
+    );
+  }
+});
+
+// A third party — G2 (never accepted) — can neither see nor write the
+// A–G retention row, nor read any of A's points. Each expected-throw goes
+// in its own asUser call (a failed statement aborts the surrounding
+// transaction for the rest of that block).
+await asUser(userG2, async () => {
+  const r = await db.query(
+    `select retention_hours from public.location_history_retention where user_id = '${userA}'`
+  );
+  check('G2 cannot see the A–G retention row', r.rows.length === 0);
+
+  const pts = await db.query(
+    `select id from public.location_history_points where user_id = '${userA}'`
+  );
+  check('G2 cannot read any of A history points', pts.rows.length === 0);
+});
+await asUser(userG2, async () => {
+  try {
+    await db.query(
+      `insert into public.location_history_retention (user_id, guardian_id, retention_hours)
+       values ('${userA}', '${userG2}', 48)`
+    );
+    check(
+      "G2 cannot create a retention row for a link they don't have (should have thrown)",
+      false
+    );
+  } catch (err) {
+    check(
+      "G2 cannot create a retention row for a link they don't have",
+      /row-level security|violates/i.test(String(err.message ?? err))
+    );
+  }
+});
+await asUser(userX, async () => {
+  const pts = await db.query(
+    `select id from public.location_history_points where user_id = '${userA}'`
+  );
+  check('unrelated X cannot read any of A history points', pts.rows.length === 0);
+});
+
+console.log('\n--- purge_expired_location_history() (pg_cron cleanup job) ---');
+// Keeps points within the per-user MAXIMUM retention across all links
+// (default 24h with no rows) — the tighter per-guardian window is the
+// SELECT policy's job, not the purge's. pglite has no pg_cron, so
+// cron.schedule() in the migration silently skipped (confirmed below);
+// this invokes the worker directly.
+await asUser(userA, async () => {
+  await db.query(
+    `insert into public.location_history_retention (user_id, guardian_id, retention_hours)
+     values ('${userA}', '${userG}', 24)
+     on conflict (user_id, guardian_id) do update set retention_hours = excluded.retention_hours`
+  );
+});
+
+await db.query(`select public.purge_expired_location_history();`);
+
+const remainingHistory = await db.query(
+  `select recorded_at from public.location_history_points where user_id = '${userA}' order by recorded_at`
+);
+check(
+  'purge_expired_location_history() deleted the 50h-old point and kept the three within 24h',
+  remainingHistory.rows.length === 3
+);
+
+const historyPurgeCatalog = await db.query(`
+  select
+    (select count(*) from pg_proc where proname = 'purge_expired_location_history') as fn_count,
+    (select count(*) from pg_extension where extname = 'pg_cron') as cron_count
+`);
+check(
+  'purge_expired_location_history() exists and (as with journeys / live sharing) pg_cron is absent in pglite — schedule degraded gracefully',
+  Number(historyPurgeCatalog.rows[0].fn_count) === 1 &&
+    Number(historyPurgeCatalog.rows[0].cron_count) === 0
+);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;

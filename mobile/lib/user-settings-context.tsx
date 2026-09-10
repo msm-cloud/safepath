@@ -16,6 +16,12 @@ type UserSettingsContextValue = {
   // accounts; see the migration comment for why this isn't the at-risk
   // user's own setting. Defaults to true — see setter below.
   alarmSoundEnabled: boolean;
+  // Whether this device records a ~5-minute location-history trail (the
+  // "Recorded Live Location" feature). Account-level like the others so it
+  // survives reinstall; the toggle itself lives on the Home screen and is
+  // driven through use-location-history.ts, which also reconciles the
+  // background task. Off by default.
+  locationHistoryEnabled: boolean;
   // null means "use the app's translated default" — see the
   // fake_call_caller_name column comment in the migration.
   fakeCallCallerName: string | null;
@@ -39,6 +45,13 @@ type UserSettingsContextValue = {
   setShakeSosEnabled: (value: boolean) => void;
   setFakeCallEnabled: (value: boolean) => void;
   setAlarmSoundEnabled: (value: boolean) => void;
+  // Unlike the fire-and-forget setters above, this one awaits the write and
+  // resolves to whether it persisted. Location history drives an OS
+  // background task and a guardian-visible "recording" state, so a silently
+  // dropped write (toggle stuck ON while the DB stays OFF) is a real
+  // failure the caller needs to surface — see use-location-history.ts. On
+  // failure the optimistic local flip is rolled back before it resolves.
+  setLocationHistoryEnabled: (value: boolean) => Promise<boolean>;
   setFakeCallCallerName: (value: string | null) => void;
   // Updates only the in-memory value, once SettingsScreen has confirmed
   // its own write actually succeeded.
@@ -64,6 +77,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
   const [shakeSosEnabled, setShakeSosEnabledState] = useState(false);
   const [fakeCallEnabled, setFakeCallEnabledState] = useState(true);
   const [alarmSoundEnabled, setAlarmSoundEnabledState] = useState(true);
+  const [locationHistoryEnabled, setLocationHistoryEnabledState] = useState(false);
   const [fakeCallCallerName, setFakeCallCallerNameState] = useState<string | null>(null);
   const [phone, setPhoneState] = useState<string | null>(null);
   const [fullName, setFullNameState] = useState<string | null>(null);
@@ -77,7 +91,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
     supabase
       .from('profiles')
       .select(
-        'shake_sos_enabled, fake_call_enabled, fake_call_caller_name, alarm_sound_enabled, phone, full_name, avatar_url'
+        'shake_sos_enabled, fake_call_enabled, fake_call_caller_name, alarm_sound_enabled, location_history_enabled, phone, full_name, avatar_url'
       )
       .eq('id', userId)
       .single()
@@ -88,6 +102,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
           setFakeCallEnabledState(data.fake_call_enabled);
           setFakeCallCallerNameState(data.fake_call_caller_name);
           setAlarmSoundEnabledState(data.alarm_sound_enabled);
+          setLocationHistoryEnabledState(data.location_history_enabled);
           setPhoneState(data.phone);
           setFullNameState(data.full_name);
           setAvatarPathState(data.avatar_url);
@@ -140,6 +155,27 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
     [userId]
   );
 
+  const setLocationHistoryEnabled = useCallback(
+    async (value: boolean): Promise<boolean> => {
+      setLocationHistoryEnabledState(value);
+      if (!userId) return true;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ location_history_enabled: value })
+        .eq('id', userId);
+
+      if (error) {
+        // Roll the optimistic flip back — but only if nothing else changed
+        // the value in the meantime (a concurrent toggle / reconcile).
+        setLocationHistoryEnabledState((current) => (current === value ? !value : current));
+        return false;
+      }
+      return true;
+    },
+    [userId]
+  );
+
   return (
     <UserSettingsContext.Provider
       value={{
@@ -148,6 +184,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
         fakeCallEnabled,
         fakeCallCallerName,
         alarmSoundEnabled,
+        locationHistoryEnabled,
         phone,
         fullName,
         avatarPath,
@@ -155,6 +192,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
         setFakeCallEnabled,
         setFakeCallCallerName,
         setAlarmSoundEnabled,
+        setLocationHistoryEnabled,
         setPhoneLocal: setPhoneState,
         setAvatarPathLocal: setAvatarPathState,
       }}

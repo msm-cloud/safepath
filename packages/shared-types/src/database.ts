@@ -284,6 +284,87 @@ export type Database = {
           },
         ]
       }
+      location_history_points: {
+        Row: {
+          id: string
+          lat: number
+          lng: number
+          recorded_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          lat: number
+          lng: number
+          recorded_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          lat?: number
+          lng?: number
+          recorded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_history_points_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      location_history_retention: {
+        Row: {
+          created_at: string
+          guardian_id: string
+          retention_hours: number
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          guardian_id: string
+          retention_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          guardian_id?: string
+          retention_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_history_retention_guardian_id_fkey"
+            columns: ["guardian_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_history_retention_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_history_retention_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           alarm_sound_enabled: boolean
@@ -293,6 +374,7 @@ export type Database = {
           fake_call_enabled: boolean
           full_name: string
           id: string
+          location_history_enabled: boolean
           phone: string | null
           preferred_language: Database["public"]["Enums"]["preferred_language"]
           role: Database["public"]["Enums"]["profile_role"]
@@ -306,6 +388,7 @@ export type Database = {
           fake_call_enabled?: boolean
           full_name: string
           id: string
+          location_history_enabled?: boolean
           phone?: string | null
           preferred_language?: Database["public"]["Enums"]["preferred_language"]
           role: Database["public"]["Enums"]["profile_role"]
@@ -319,6 +402,7 @@ export type Database = {
           fake_call_enabled?: boolean
           full_name?: string
           id?: string
+          location_history_enabled?: boolean
           phone?: string | null
           preferred_language?: Database["public"]["Enums"]["preferred_language"]
           role?: Database["public"]["Enums"]["profile_role"]
@@ -372,6 +456,7 @@ export type Database = {
       check_overdue_journeys: { Args: never; Returns: undefined }
       generate_invite_code: { Args: never; Returns: string }
       normalize_phone: { Args: { p_phone: string }; Returns: string }
+      purge_expired_location_history: { Args: never; Returns: undefined }
       purge_old_live_locations: { Args: never; Returns: undefined }
       redeem_guardian_invite: { Args: { p_invite_code: string }; Returns: Json }
       resolve_login_identifier: {
@@ -541,3 +626,5 @@ export type GuardianLink = Database['public']['Tables']['guardian_links']['Row']
 export type EmergencyContact = Database['public']['Tables']['emergency_contacts']['Row'];
 export type LiveSharingSession = Database['public']['Tables']['live_sharing_sessions']['Row'];
 export type LiveLocation = Database['public']['Tables']['live_locations']['Row'];
+export type LocationHistoryPoint = Database['public']['Tables']['location_history_points']['Row'];
+export type LocationHistoryRetention = Database['public']['Tables']['location_history_retention']['Row'];
