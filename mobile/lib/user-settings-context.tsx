@@ -16,6 +16,12 @@ type UserSettingsContextValue = {
   // accounts; see the migration comment for why this isn't the at-risk
   // user's own setting. Defaults to true — see setter below.
   alarmSoundEnabled: boolean;
+  // Whether this device records a ~5-minute location-history trail (the
+  // "Recorded Live Location" feature). Account-level like the others so it
+  // survives reinstall; the toggle itself lives on the Home screen and is
+  // driven through use-location-history.ts, which also reconciles the
+  // background task. Off by default.
+  locationHistoryEnabled: boolean;
   // null means "use the app's translated default" — see the
   // fake_call_caller_name column comment in the migration.
   fakeCallCallerName: string | null;
@@ -39,6 +45,7 @@ type UserSettingsContextValue = {
   setShakeSosEnabled: (value: boolean) => void;
   setFakeCallEnabled: (value: boolean) => void;
   setAlarmSoundEnabled: (value: boolean) => void;
+  setLocationHistoryEnabled: (value: boolean) => void;
   setFakeCallCallerName: (value: string | null) => void;
   // Updates only the in-memory value, once SettingsScreen has confirmed
   // its own write actually succeeded.
@@ -64,6 +71,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
   const [shakeSosEnabled, setShakeSosEnabledState] = useState(false);
   const [fakeCallEnabled, setFakeCallEnabledState] = useState(true);
   const [alarmSoundEnabled, setAlarmSoundEnabledState] = useState(true);
+  const [locationHistoryEnabled, setLocationHistoryEnabledState] = useState(false);
   const [fakeCallCallerName, setFakeCallCallerNameState] = useState<string | null>(null);
   const [phone, setPhoneState] = useState<string | null>(null);
   const [fullName, setFullNameState] = useState<string | null>(null);
@@ -77,7 +85,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
     supabase
       .from('profiles')
       .select(
-        'shake_sos_enabled, fake_call_enabled, fake_call_caller_name, alarm_sound_enabled, phone, full_name, avatar_url'
+        'shake_sos_enabled, fake_call_enabled, fake_call_caller_name, alarm_sound_enabled, location_history_enabled, phone, full_name, avatar_url'
       )
       .eq('id', userId)
       .single()
@@ -88,6 +96,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
           setFakeCallEnabledState(data.fake_call_enabled);
           setFakeCallCallerNameState(data.fake_call_caller_name);
           setAlarmSoundEnabledState(data.alarm_sound_enabled);
+          setLocationHistoryEnabledState(data.location_history_enabled);
           setPhoneState(data.phone);
           setFullNameState(data.full_name);
           setAvatarPathState(data.avatar_url);
@@ -140,6 +149,16 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
     [userId]
   );
 
+  const setLocationHistoryEnabled = useCallback(
+    (value: boolean) => {
+      setLocationHistoryEnabledState(value);
+      if (userId) {
+        supabase.from('profiles').update({ location_history_enabled: value }).eq('id', userId);
+      }
+    },
+    [userId]
+  );
+
   return (
     <UserSettingsContext.Provider
       value={{
@@ -148,6 +167,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
         fakeCallEnabled,
         fakeCallCallerName,
         alarmSoundEnabled,
+        locationHistoryEnabled,
         phone,
         fullName,
         avatarPath,
@@ -155,6 +175,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
         setFakeCallEnabled,
         setFakeCallCallerName,
         setAlarmSoundEnabled,
+        setLocationHistoryEnabled,
         setPhoneLocal: setPhoneState,
         setAvatarPathLocal: setAvatarPathState,
       }}

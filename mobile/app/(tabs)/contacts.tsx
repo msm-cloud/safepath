@@ -14,6 +14,11 @@ import {
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
+import {
+  DEFAULT_RETENTION_HOURS,
+  RETENTION_PRESETS_HOURS,
+  retentionLabelKey,
+} from '@/lib/location-history-retention';
 import { supabase } from '@/lib/supabase';
 import type { TranslationKey } from '@/lib/translations';
 
@@ -26,8 +31,15 @@ type GuardianLinkRow = {
   invite_code: string;
   created_at: string;
   accepted_at: string | null;
+  guardian_id: string | null;
   guardian: { full_name: string; avatar_url: string | null } | null;
 };
+
+// retention_hours per guardian_id, for the "how long each guardian keeps
+// my recorded location history" control shown under accepted links. Either
+// party can change this (see location_history_retention RLS); a guardian
+// changing it shows up here on the student's next refresh.
+type RetentionRow = { guardian_id: string; retention_hours: number };
 
 export default function GuardiansScreen() {
   const { session } = useAuth();
@@ -35,6 +47,7 @@ export default function GuardiansScreen() {
   const userId = session?.user.id;
 
   const [links, setLinks] = useState<GuardianLinkRow[]>([]);
+  const [retentionByGuardian, setRetentionByGuardian] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -49,7 +62,7 @@ export default function GuardiansScreen() {
     const { data, error } = await supabase
       .from('guardian_links')
       .select(
-        'id, status, invite_code, created_at, accepted_at, guardian:profiles!guardian_links_guardian_id_fkey(full_name, avatar_url)'
+        'id, status, invite_code, created_at, accepted_at, guardian_id, guardian:profiles!guardian_links_guardian_id_fkey(full_name, avatar_url)'
       )
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -60,7 +73,32 @@ export default function GuardiansScreen() {
     }
     setListError(null);
     setLinks((data ?? []) as GuardianLinkRow[]);
+
+    const { data: retention } = await supabase
+      .from('location_history_retention')
+      .select('guardian_id, retention_hours')
+      .eq('user_id', userId);
+    setRetentionByGuardian(
+      Object.fromEntries(
+        ((retention ?? []) as RetentionRow[]).map((r) => [r.guardian_id, r.retention_hours])
+      )
+    );
   }, [userId]);
+
+  const setRetention = useCallback(
+    async (guardianId: string, hours: number) => {
+      if (!userId) return;
+      // Optimistic, same fire-and-forget pattern the settings toggles use.
+      setRetentionByGuardian((prev) => ({ ...prev, [guardianId]: hours }));
+      await supabase
+        .from('location_history_retention')
+        .upsert(
+          { user_id: userId, guardian_id: guardianId, retention_hours: hours },
+          { onConflict: 'user_id,guardian_id' }
+        );
+    },
+    [userId]
+  );
 
   useEffect(() => {
     // react-hooks/set-state-in-effect (the React Compiler-era strict rule)
@@ -171,32 +209,73 @@ export default function GuardiansScreen() {
             )}
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={styles.linkRow}>
-            {item.status === 'accepted' && (
-              <Avatar
-                name={item.guardian?.full_name ?? null}
-                url={item.guardian?.avatar_url ?? null}
-                size={40}
-              />
-            )}
-            <View style={styles.linkRowText}>
-              <Text style={styles.linkName}>
-                {item.status === 'accepted' && item.guardian
-                  ? item.guardian.full_name || t('unnamedGuardian')
-                  : item.invite_code}
-              </Text>
-              <Text style={styles.linkMeta}>
-                {item.status === 'accepted'
-                  ? t('acceptedOn', {
-                      date: item.accepted_at ? new Date(item.accepted_at).toLocaleDateString() : '',
-                    })
-                  : t('createdOn', { date: new Date(item.created_at).toLocaleDateString() })}
-              </Text>
+        renderItem={({ item }) => {
+          const guardianId = item.status === 'accepted' ? item.guardian_id : null;
+          const retentionHours = guardianId
+            ? (retentionByGuardian[guardianId] ?? DEFAULT_RETENTION_HOURS)
+            : DEFAULT_RETENTION_HOURS;
+
+          return (
+            <View style={styles.linkItem}>
+              <View style={styles.linkRow}>
+                {item.status === 'accepted' && (
+                  <Avatar
+                    name={item.guardian?.full_name ?? null}
+                    url={item.guardian?.avatar_url ?? null}
+                    size={40}
+                  />
+                )}
+                <View style={styles.linkRowText}>
+                  <Text style={styles.linkName}>
+                    {item.status === 'accepted' && item.guardian
+                      ? item.guardian.full_name || t('unnamedGuardian')
+                      : item.invite_code}
+                  </Text>
+                  <Text style={styles.linkMeta}>
+                    {item.status === 'accepted'
+                      ? t('acceptedOn', {
+                          date: item.accepted_at
+                            ? new Date(item.accepted_at).toLocaleDateString()
+                            : '',
+                        })
+                      : t('createdOn', { date: new Date(item.created_at).toLocaleDateString() })}
+                  </Text>
+                </View>
+                <StatusBadge status={item.status} />
+              </View>
+
+              {/* How long this guardian keeps my recorded location history.
+                  Either party can change it (see location_history_retention
+                  RLS); only shown for accepted links. */}
+              {guardianId && (
+                <View style={styles.retentionSection}>
+                  <Text style={styles.retentionLabel}>{t('locationHistoryRetentionLabel')}</Text>
+                  <View style={styles.retentionRow}>
+                    {RETENTION_PRESETS_HOURS.map((hours) => {
+                      const active = retentionHours === hours;
+                      return (
+                        <Pressable
+                          key={hours}
+                          style={[styles.retentionOption, active && styles.retentionOptionActive]}
+                          onPress={() => setRetention(guardianId, hours)}
+                        >
+                          <Text
+                            style={[
+                              styles.retentionOptionText,
+                              active && styles.retentionOptionTextActive,
+                            ]}
+                          >
+                            {t(retentionLabelKey(hours))}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
             </View>
-            <StatusBadge status={item.status} />
-          </View>
-        )}
+          );
+        }}
       />
     </View>
   );
@@ -304,6 +383,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  linkItem: {
+    gap: 8,
+  },
   linkRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -313,6 +395,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 10,
     backgroundColor: '#f5f5f5',
+  },
+  retentionSection: {
+    paddingHorizontal: 14,
+    paddingBottom: 4,
+    gap: 6,
+  },
+  retentionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  retentionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  retentionOption: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  retentionOptionActive: {
+    backgroundColor: '#2f95dc',
+    borderColor: '#2f95dc',
+  },
+  retentionOptionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#444',
+  },
+  retentionOptionTextActive: {
+    color: '#fff',
   },
   linkRowText: {
     flex: 1,

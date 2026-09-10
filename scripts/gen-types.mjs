@@ -68,6 +68,8 @@ export type GuardianLink = Database['public']['Tables']['guardian_links']['Row']
 export type EmergencyContact = Database['public']['Tables']['emergency_contacts']['Row'];
 export type LiveSharingSession = Database['public']['Tables']['live_sharing_sessions']['Row'];
 export type LiveLocation = Database['public']['Tables']['live_locations']['Row'];
+export type LocationHistoryPoint = Database['public']['Tables']['location_history_points']['Row'];
+export type LocationHistoryRetention = Database['public']['Tables']['location_history_retention']['Row'];
 `;
 
 fs.writeFileSync(outFile, `${header}\n${generated}\n${aliases}`);

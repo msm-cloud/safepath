@@ -147,6 +147,38 @@ export const translations = {
   },
   viewOnMap: { en: 'View on map', bn: 'ম্যাপে দেখুন' },
 
+  // --- Recorded live location card ---
+  // The saved location-history trail for each linked person who has
+  // recording turned on. Plain page-load fetch (no Realtime) — a
+  // 5-minute breadcrumb trail isn't time-critical. The retention window
+  // is settable here or by the student, per link.
+  recordedLocationTitle: { en: 'Recorded Live Location', bn: 'রেকর্ড করা লাইভ অবস্থান' },
+  recordedLocationSubtitle: {
+    en: 'The saved location trail for each person you support who has recording turned on.',
+    bn: 'আপনি যাদের সহায়তা করেন এবং যাদের রেকর্ডিং চালু আছে, তাদের প্রত্যেকের সংরক্ষিত অবস্থানের পথ।',
+  },
+  recordedLocationNoLinks: {
+    en: "You're not linked to anyone yet.",
+    bn: 'আপনি এখনো কারো সাথে যুক্ত নন।',
+  },
+  recordedLocationRecordingOn: { en: 'Recording on', bn: 'রেকর্ডিং চালু' },
+  recordedLocationRecordingOff: { en: 'Recording off', bn: 'রেকর্ডিং বন্ধ' },
+  recordedLocationRetentionLabel: { en: 'Keep history for', bn: 'ইতিহাস রাখুন' },
+  recordedLocationRetention6h: { en: '6 hours', bn: '৬ ঘণ্টা' },
+  recordedLocationRetention24h: { en: '24 hours', bn: '২৪ ঘণ্টা' },
+  recordedLocationRetention3d: { en: '3 days', bn: '৩ দিন' },
+  recordedLocationRetention7d: { en: '7 days', bn: '৭ দিন' },
+  recordedLocationNoPoints: {
+    en: 'No recorded points in the last {window}.',
+    bn: 'গত {window} সময়ে কোনো রেকর্ড করা অবস্থান নেই।',
+  },
+  recordedLocationPointCount: {
+    en: '{n} points in the last {window}',
+    bn: 'গত {window} সময়ে {n}টি অবস্থান',
+  },
+  recordedLocationViewTrail: { en: 'View trail', bn: 'পথ দেখুন' },
+  recordedLocationHideTrail: { en: 'Hide trail', bn: 'পথ লুকান' },
+
   // --- Past alerts section ---
   pastAlertsTitle: { en: 'Past Alerts', bn: 'পূর্ববর্তী অ্যালার্ট' },
   noResolvedAlertsYet: {

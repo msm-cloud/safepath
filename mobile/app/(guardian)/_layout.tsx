@@ -62,6 +62,19 @@ export default function GuardianTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="location-history"
+        options={{
+          title: t('guardianLocationHistoryTitle'),
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'location.fill', android: 'location_on', web: 'location_on' }}
+              tintColor={color}
+              size={26}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: t('settingsTitle'),
