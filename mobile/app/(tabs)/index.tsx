@@ -560,6 +560,14 @@ export default function HomeScreen() {
             </View>
           )}
 
+          {locationHistory.enabled && locationHistory.mode === 'foreground' && (
+            <Pressable style={styles.liveSharingWarnBanner} onPress={() => Linking.openSettings()}>
+              <Text style={styles.liveSharingWarnBannerText}>
+                {t('locationHistoryForegroundWarning')}
+              </Text>
+            </Pressable>
+          )}
+
           {locationHistory.error === 'permission-denied' && (
             <View style={styles.liveSharingWarnBanner}>
               <Text style={styles.liveSharingWarnBannerText}>
@@ -576,6 +584,9 @@ export default function HomeScreen() {
           )}
           {locationHistory.error === 'stop-failed' && (
             <Text style={styles.error}>{t('locationHistoryStopError')}</Text>
+          )}
+          {locationHistory.error === 'save-failed' && (
+            <Text style={styles.error}>{t('locationHistorySaveError')}</Text>
           )}
         </View>
 

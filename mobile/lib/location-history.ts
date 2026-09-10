@@ -13,9 +13,19 @@ import { supabase } from '@/lib/supabase';
 // the Home card shows a standing banner.
 //
 // Two write paths, never both feeding a foreground service at once:
-//   * Standalone — this module's own expo-task-manager task plus a
-//     5-minute Location.startLocationUpdatesAsync foreground service. Used
-//     whenever live sharing is NOT also running.
+//   * Standalone — this module's own tracking, used whenever live sharing
+//     is NOT also running. Two sub-modes, chosen by the permission the
+//     student granted (same split as live-sharing.ts):
+//       - 'background' ("Allow all the time"): an expo-task-manager task
+//         plus a 5-minute Location.startLocationUpdatesAsync foreground
+//         service, so snapshots keep coming while the app is closed or the
+//         phone is locked.
+//       - 'foreground' (only "While using the app"):
+//         Location.watchPositionAsync in the app's own JS context, no
+//         background task and no notification. Snapshots are taken only
+//         while SafePath is open; the Home card shows a warning. This is
+//         what keeps a background-permission downgrade (routine on Android
+//         11+) from silently killing the whole feature.
 //   * Piggyback — while live sharing IS running it already holds a
 //     foreground service and streams fixes every ~12s; live-sharing.ts
 //     calls maybeRecordHistoryPoint() on each of those, throttled to one
@@ -55,12 +65,30 @@ const HISTORY_ACCURACY = Location.Accuracy.Balanced;
 const MAX_FIX_AGE_MS = 10 * 60 * 1000;
 const MAX_FIX_FUTURE_SKEW_MS = 60 * 1000;
 
+export type LocationHistoryMode = 'background' | 'foreground';
+
 // Whether startLocationHistory() has run in THIS JS process. The native
 // hasStartedLocationUpdatesAsync() flag is persisted and survives process
 // death, so after an OEM battery-kill it can read `true` while nothing is
 // actually running — treat tracking as not active until we've re-issued
 // the request ourselves, same as live-sharing.ts.
 let trackingStartedThisProcess = false;
+
+// Which sub-mode the standalone path is currently running in (null when
+// stopped). Lets isLocationHistoryActive() tell the reconciler when the
+// running mode no longer matches the permission the user now has, so it
+// can hand over (e.g. background -> foreground after a permission
+// downgrade) instead of leaving a dead task in place.
+let activeMode: LocationHistoryMode | null = null;
+
+// Foreground-mode watcher subscription (null unless a foreground-mode
+// standalone recording is running in this JS context). Background mode
+// uses the OS task instead and leaves this null. Same generation-counter
+// guard as live-sharing.ts: watchPositionAsync is async, so a stop() that
+// runs while a start() is still resolving would otherwise install an
+// orphaned watcher that keeps firing.
+let foregroundSubscription: Location.LocationSubscription | null = null;
+let foregroundWatchGeneration = 0;
 
 async function getEnabledFlag(): Promise<boolean> {
   try {
@@ -174,9 +202,20 @@ TaskManager.defineTask(LOCATION_HISTORY_TASK, async ({ data, error }) => {
   await recordThrottled(locations[locations.length - 1]);
 });
 
-export async function isLocationHistoryActive(): Promise<boolean> {
-  if (!trackingStartedThisProcess) return false;
-  return Location.hasStartedLocationUpdatesAsync(LOCATION_HISTORY_TASK);
+// Active only if a delivery path is genuinely running in THIS process — a
+// foreground watcher we hold a handle to, or an OS task we started (and
+// that the native side still reports as started). Pass `mode` to also
+// require that running path to be the mode the caller now wants: a
+// mismatch (permission downgraded/upgraded since we started) reads as not
+// active, so the reconciler re-establishes tracking in the right mode.
+export async function isLocationHistoryActive(mode?: LocationHistoryMode): Promise<boolean> {
+  const running = foregroundSubscription
+    ? true
+    : trackingStartedThisProcess &&
+      (await Location.hasStartedLocationUpdatesAsync(LOCATION_HISTORY_TASK));
+  if (!running) return false;
+  if (mode && activeMode !== mode) return false;
+  return true;
 }
 
 type ForegroundServiceText = {
@@ -184,30 +223,85 @@ type ForegroundServiceText = {
   notificationBody: string;
 };
 
-export async function startLocationHistory(text: ForegroundServiceText): Promise<void> {
-  await stopLocationHistory();
-  await Location.startLocationUpdatesAsync(LOCATION_HISTORY_TASK, {
-    accuracy: HISTORY_ACCURACY,
-    timeInterval: SNAPSHOT_INTERVAL_MS,
-    // Time-based only — a stationary person still needs a periodic
-    // breadcrumb. 0 disables the distance filter.
-    distanceInterval: 0,
-    // Android: let the OS batch deliveries to cut wake-ups; a few minutes
-    // of slack on a 5-minute cadence is fine.
-    deferredUpdatesInterval: SNAPSHOT_INTERVAL_MS,
-    pausesUpdatesAutomatically: false,
-    showsBackgroundLocationIndicator: true,
-    foregroundService: {
-      notificationTitle: text.notificationTitle,
-      notificationBody: text.notificationBody,
-      notificationColor: '#2f95dc',
+async function stopForegroundHistoryWatch(): Promise<void> {
+  // Invalidate any startForegroundHistoryWatch still in flight, as well as
+  // the subscription we currently hold.
+  foregroundWatchGeneration += 1;
+  if (foregroundSubscription) {
+    foregroundSubscription.remove();
+    foregroundSubscription = null;
+  }
+}
+
+async function startForegroundHistoryWatch(): Promise<void> {
+  await stopForegroundHistoryWatch();
+  const generation = foregroundWatchGeneration;
+  const subscription = await Location.watchPositionAsync(
+    {
+      accuracy: HISTORY_ACCURACY,
+      timeInterval: SNAPSHOT_INTERVAL_MS,
+      // Time-based only — a stationary person still needs a periodic
+      // breadcrumb. 0 disables the distance filter.
+      distanceInterval: 0,
     },
-  });
+    (location) => {
+      void recordThrottled(location);
+    }
+  );
+
+  if (generation !== foregroundWatchGeneration) {
+    // stopForegroundHistoryWatch (or another start) ran while
+    // watchPositionAsync was resolving — this subscription is already
+    // orphaned, drop it instead of installing it.
+    subscription.remove();
+    console.log('[location-history] foreground watcher discarded (superseded before it resolved)');
+    return;
+  }
+  foregroundSubscription = subscription;
+  console.log('[location-history] foreground watcher subscribed');
+}
+
+// Starts whichever delivery path `mode` calls for. Clears the other path
+// first, so switching modes (the user grants "Allow all the time" later,
+// or Android downgrades it) is a clean handover.
+export async function startLocationHistory(
+  mode: LocationHistoryMode,
+  text: ForegroundServiceText
+): Promise<void> {
+  await stopLocationHistory();
+
+  if (mode === 'background') {
+    await Location.startLocationUpdatesAsync(LOCATION_HISTORY_TASK, {
+      accuracy: HISTORY_ACCURACY,
+      timeInterval: SNAPSHOT_INTERVAL_MS,
+      // Time-based only — a stationary person still needs a periodic
+      // breadcrumb. 0 disables the distance filter.
+      distanceInterval: 0,
+      // Android: let the OS batch deliveries to cut wake-ups; a few minutes
+      // of slack on a 5-minute cadence is fine.
+      deferredUpdatesInterval: SNAPSHOT_INTERVAL_MS,
+      pausesUpdatesAutomatically: false,
+      showsBackgroundLocationIndicator: true,
+      foregroundService: {
+        notificationTitle: text.notificationTitle,
+        notificationBody: text.notificationBody,
+        notificationColor: '#2f95dc',
+      },
+    });
+  } else {
+    // No background permission — startLocationUpdatesAsync would throw.
+    // Watch from the app's own JS context instead; snapshots stop when the
+    // app is backgrounded, which the Home card warns about.
+    await startForegroundHistoryWatch();
+  }
+
   trackingStartedThisProcess = true;
-  console.log('[location-history] standalone tracking started');
+  activeMode = mode;
+  console.log(`[location-history] standalone tracking started (${mode})`);
 }
 
 export async function stopLocationHistory(): Promise<void> {
+  await stopForegroundHistoryWatch();
   if (await Location.hasStartedLocationUpdatesAsync(LOCATION_HISTORY_TASK)) {
     try {
       await Location.stopLocationUpdatesAsync(LOCATION_HISTORY_TASK);
@@ -216,4 +310,5 @@ export async function stopLocationHistory(): Promise<void> {
     }
   }
   trackingStartedThisProcess = false;
+  activeMode = null;
 }

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -28,11 +29,13 @@ import { supabase } from '@/lib/supabase';
 // Google Maps deep links (the same prior art as the SOS / live-sharing
 // cards; there is no embedded map anywhere in this app).
 //
-// Plain fetch-on-mount + pull-to-refresh, not Realtime — a 5-minute
-// breadcrumb trail has no real-time value, same call as
-// (guardian)/past-alerts.tsx. The retention window is enforced server-side
-// by the location_history_points SELECT policy, so the trail query needs
-// no explicit time filter.
+// Fetch-on-focus + pull-to-refresh, not Realtime — a 5-minute breadcrumb
+// trail has no real-time value, but the list still needs to catch a
+// student toggling recording on/off (or a retention change) while this tab
+// sits open in the background, so the refetch runs on every focus rather
+// than once on mount. The retention window is enforced server-side by the
+// location_history_points SELECT policy, so the trail query needs no
+// explicit time filter.
 
 const TRAIL_LIMIT = 200;
 
@@ -126,10 +129,21 @@ export default function GuardianLocationHistoryScreen() {
     );
   }, [guardianId, t]);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount, same deliberate pattern as (guardian)/past-alerts.tsx.
-    fetchLinks().finally(() => setLoading(false));
-  }, [fetchLinks]);
+  // Refetch every time this tab regains focus, not just on first mount. The
+  // tab stays mounted once visited, so a plain useEffect would never pick
+  // up a student toggling recording on/off (or a retention change) while
+  // the guardian has this tab open — they'd have to pull-to-refresh.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      fetchLinks().finally(() => {
+        if (active) setLoading(false);
+      });
+      return () => {
+        active = false;
+      };
+    }, [fetchLinks])
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
