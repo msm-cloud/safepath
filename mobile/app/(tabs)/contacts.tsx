@@ -93,8 +93,8 @@ export default function GuardiansScreen() {
       await supabase
         .from('location_history_retention')
         .upsert(
-          { user_id: userId, guardian_id: guardianId, retention_hours: hours },
-          { onConflict: 'user_id,guardian_id' }
+          { user_id: userId, guardian_id: guardianId, retention_hours: hours, recorded_by_role: 'user' },
+          { onConflict: 'user_id,guardian_id,recorded_by_role' }
         );
     },
     [userId]

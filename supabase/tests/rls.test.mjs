@@ -1325,9 +1325,9 @@ await asUser(userG, async () => {
 // Either party may set the retention. Guardian first.
 await asUser(userG, async () => {
   const up = await db.query(
-    `insert into public.location_history_retention (user_id, guardian_id, retention_hours)
-     values ('${userA}', '${userG}', 72)
-     on conflict (user_id, guardian_id) do update set retention_hours = excluded.retention_hours
+    `insert into public.location_history_retention (user_id, guardian_id, retention_hours, recorded_by_role)
+     values ('${userA}', '${userG}', 72, 'user')
+     on conflict (user_id, guardian_id, recorded_by_role) do update set retention_hours = excluded.retention_hours
      returning retention_hours, updated_by`
   );
   check(
@@ -1348,9 +1348,9 @@ await asUser(userG, async () => {
 // The student can edit the same row.
 await asUser(userA, async () => {
   const up = await db.query(
-    `insert into public.location_history_retention (user_id, guardian_id, retention_hours)
-     values ('${userA}', '${userG}', 1)
-     on conflict (user_id, guardian_id) do update set retention_hours = excluded.retention_hours
+    `insert into public.location_history_retention (user_id, guardian_id, retention_hours, recorded_by_role)
+     values ('${userA}', '${userG}', 1, 'user')
+     on conflict (user_id, guardian_id, recorded_by_role) do update set retention_hours = excluded.retention_hours
      returning retention_hours, updated_by`
   );
   check(
@@ -1374,6 +1374,50 @@ await asUser(userA, async () => {
   check(
     'owner A still sees all four of their own points regardless of retention',
     pts.rows.length === 4
+  );
+});
+
+// A 'guardian'-role row can coexist with the existing 'user'-role row for
+// the same (user_id, guardian_id) pair — the widened PK from #55 holds one
+// retention setting per direction, and upserting one must not touch the
+// other.
+await asUser(userA, async () => {
+  const up = await db.query(
+    `insert into public.location_history_retention (user_id, guardian_id, retention_hours, recorded_by_role)
+     values ('${userA}', '${userG}', 48, 'guardian')
+     on conflict (user_id, guardian_id, recorded_by_role) do update set retention_hours = excluded.retention_hours
+     returning retention_hours`
+  );
+  check(
+    "a 'guardian'-role row for the same A-G pair can be created alongside the existing 'user'-role row",
+    up.rows.length === 1 && up.rows[0].retention_hours === 48
+  );
+});
+await asUser(userA, async () => {
+  const all = await db.query(
+    `select recorded_by_role, retention_hours from public.location_history_retention
+     where user_id = '${userA}' and guardian_id = '${userG}'`
+  );
+  const userRow = all.rows.find((r) => r.recorded_by_role === 'user');
+  const guardianRow = all.rows.find((r) => r.recorded_by_role === 'guardian');
+  check(
+    "both directions coexist as separate rows under the widened PK: 'user' role still at 1h (from the earlier edit), 'guardian' role at 48h",
+    all.rows.length === 2 && userRow?.retention_hours === 1 && guardianRow?.retention_hours === 48
+  );
+});
+await asUser(userA, async () => {
+  await db.query(
+    `insert into public.location_history_retention (user_id, guardian_id, retention_hours, recorded_by_role)
+     values ('${userA}', '${userG}', 5, 'user')
+     on conflict (user_id, guardian_id, recorded_by_role) do update set retention_hours = excluded.retention_hours`
+  );
+  const guardianRow = await db.query(
+    `select retention_hours from public.location_history_retention
+     where user_id = '${userA}' and guardian_id = '${userG}' and recorded_by_role = 'guardian'`
+  );
+  check(
+    "upserting the 'user'-role row leaves the 'guardian'-role row untouched (still 48h, not overwritten)",
+    guardianRow.rows.length === 1 && guardianRow.rows[0].retention_hours === 48
   );
 });
 
@@ -1454,9 +1498,9 @@ console.log('\n--- purge_expired_location_history() (pg_cron cleanup job) ---');
 // this invokes the worker directly.
 await asUser(userA, async () => {
   await db.query(
-    `insert into public.location_history_retention (user_id, guardian_id, retention_hours)
-     values ('${userA}', '${userG}', 24)
-     on conflict (user_id, guardian_id) do update set retention_hours = excluded.retention_hours`
+    `insert into public.location_history_retention (user_id, guardian_id, retention_hours, recorded_by_role)
+     values ('${userA}', '${userG}', 24, 'user')
+     on conflict (user_id, guardian_id, recorded_by_role) do update set retention_hours = excluded.retention_hours`
   );
 });
 
