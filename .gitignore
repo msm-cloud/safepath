@@ -39,6 +39,12 @@ pnpm-debug.log*
 *.key
 *.mobileprovision
 
+# Firebase / FCM credentials — never commit (see mobile/.gitignore too)
+google-services.json
+GoogleService-Info.plist
+*-firebase-adminsdk-*.json
+*service-account*.json
+
 # Supabase CLI local state
 supabase/.temp/
 supabase/.branches/

@@ -329,20 +329,29 @@ export type Database = {
       push_tokens: {
         Row: {
           created_at: string
-          expo_push_token: string
+          device_id: string
           id: string
+          token: string
+          token_type: string
+          updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          expo_push_token: string
+          device_id: string
           id?: string
+          token: string
+          token_type?: string
+          updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          expo_push_token?: string
+          device_id?: string
           id?: string
+          token?: string
+          token_type?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
