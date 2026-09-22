@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["SafepathPushModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.safepathpush.SafepathPushModule"]
+  }
+}
