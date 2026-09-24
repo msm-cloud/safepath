@@ -1,4 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -44,6 +45,7 @@ type RetentionRow = { guardian_id: string; retention_hours: number };
 export default function GuardiansScreen() {
   const { session } = useAuth();
   const { t } = useLanguage();
+  const router = useRouter();
   const userId = session?.user.id;
 
   const [links, setLinks] = useState<GuardianLinkRow[]>([]);
@@ -166,6 +168,10 @@ export default function GuardiansScreen() {
         ListHeaderComponent={
           <View>
             <Text style={styles.title}>{t('guardiansTitle')}</Text>
+
+            <Pressable onPress={() => router.push('/guardian-location')}>
+              <Text style={styles.guardianLocationLink}>{t('guardianLocationLink')}</Text>
+            </Pressable>
 
             <Pressable
               style={[styles.button, inviting && styles.buttonDisabled]}
@@ -314,6 +320,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  guardianLocationLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2f95dc',
+    marginTop: -8,
     marginBottom: 16,
   },
   subtitle: {

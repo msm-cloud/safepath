@@ -74,6 +74,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="guardian-location"
+        options={{
+          title: t('studentGuardianLocationTitle'),
+          // Reachable from the Guardians tab, not its own tab — same
+          // href: null reasoning as emergency-contacts below.
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="emergency-contacts"
         options={{
           title: t('emergencyContactsTitle'),

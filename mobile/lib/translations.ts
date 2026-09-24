@@ -285,6 +285,79 @@ export const translations = {
   locationHistoryRetention7d: { en: '7 days', bn: '৭ দিন' },
   locationHistoryRetentionLabel: { en: 'Keep history for', bn: 'ইতিহাস রাখুন' },
 
+  // --- Guardian: share my location (reciprocal to the student's own
+  // Location History Recording above) — a guardian's own recording
+  // toggle, reachable from Settings since the guardian tab bar has no
+  // Home-screen card equivalent to put it on directly. Writes to the same
+  // profiles.location_history_enabled / location_history_points as the
+  // student side; only who can read it back differs (see
+  // location_history_points_select_user_reads_guardian_in_window RLS).
+  guardianShareLocationLink: { en: 'Share My Location', bn: 'আমার অবস্থান শেয়ার করুন' },
+  guardianShareLocationTitle: { en: 'Share My Location', bn: 'আমার অবস্থান শেয়ার করুন' },
+  guardianShareLocationSubtitle: {
+    en: "Save a location snapshot every few minutes so the people you support can look back over where you've been. Turn it off anytime.",
+    bn: 'প্রতি কয়েক মিনিট অন্তর আপনার অবস্থান সংরক্ষণ করুন, যাতে আপনি যাদের সহায়তা করেন তারা আপনি কোথায় ছিলেন তা দেখতে পারে। যেকোনো সময় বন্ধ করুন।',
+  },
+  guardianShareLocationOnStatus: {
+    en: "You're sharing your location history. The people you support can see the saved trail.",
+    bn: 'আপনি আপনার অবস্থানের ইতিহাস শেয়ার করছেন। আপনি যাদের সহায়তা করেন তারা সংরক্ষিত পথটি দেখতে পারবে।',
+  },
+  guardianShareLocationForegroundWarning: {
+    en: '"Allow all the time" is off, so nothing is saved while your phone is locked or SafePath is closed. Tap to fix this in Settings.',
+    bn: '"সব সময় অনুমতি দিন" বন্ধ আছে, তাই আপনার ফোন লক থাকলে বা সেফপাথ বন্ধ থাকলে কিছুই সংরক্ষণ হয় না। সেটিংসে ঠিক করতে ট্যাপ করুন।',
+  },
+  guardianShareLocationPermissionDenied: {
+    en: 'Sharing your location needs "Allow all the time" location access. Turn it on in Settings.',
+    bn: 'আপনার অবস্থান শেয়ার করতে "সব সময় অনুমতি দিন" লোকেশন অ্যাক্সেস প্রয়োজন। সেটিংসে এটি চালু করুন।',
+  },
+  guardianShareLocationStartError: {
+    en: "Couldn't start sharing your location. Try again.",
+    bn: 'অবস্থান শেয়ার করা শুরু করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  guardianShareLocationStopError: {
+    en: "Couldn't stop sharing your location. Try again.",
+    bn: 'অবস্থান শেয়ার করা বন্ধ করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  guardianShareLocationSaveError: {
+    en: "Couldn't save that change. Check your connection and try again.",
+    bn: 'পরিবর্তনটি সংরক্ষণ করা যায়নি। আপনার সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
+  },
+
+  // --- Student: my guardian's shared location (reciprocal to the
+  // guardian's own "Recorded Location" screen) — reached from the
+  // Guardians tab, since that's where the student already manages the
+  // link and its retention. Mirrors guardianLocationHistory* below with
+  // the roles reversed.
+  guardianLocationLink: { en: 'View shared location', bn: 'শেয়ার করা অবস্থান দেখুন' },
+  studentGuardianLocationTitle: {
+    en: "Guardian's Shared Location",
+    bn: 'অভিভাবকের শেয়ার করা অবস্থান',
+  },
+  studentGuardianLocationHeading: {
+    en: "Your Guardians' Shared Location",
+    bn: 'আপনার অভিভাবকদের শেয়ার করা অবস্থান',
+  },
+  studentGuardianLocationSubtitle: {
+    en: 'The saved location trail for each guardian who has location sharing turned on.',
+    bn: 'যে অভিভাবকদের অবস্থান শেয়ারিং চালু আছে, তাদের প্রত্যেকের সংরক্ষিত অবস্থানের পথ।',
+  },
+  studentGuardianLocationNoLinks: {
+    en: "You don't have any guardians linked yet.",
+    bn: 'আপনার সাথে এখনও কোনো অভিভাবক যুক্ত নেই।',
+  },
+  studentGuardianLocationSharingOn: { en: 'Sharing on', bn: 'শেয়ারিং চালু' },
+  studentGuardianLocationSharingOff: { en: 'Sharing off', bn: 'শেয়ারিং বন্ধ' },
+  studentGuardianLocationNoPoints: {
+    en: 'No points recorded in the last {window}.',
+    bn: 'গত {window}-এ কোনো পয়েন্ট রেকর্ড করা হয়নি।',
+  },
+  studentGuardianLocationPointCount: {
+    en: '{n} points in the last {window}',
+    bn: 'গত {window}-এ {n}টি পয়েন্ট',
+  },
+  studentGuardianLocationViewTrail: { en: 'View trail', bn: 'পথ দেখুন' },
+  studentGuardianLocationHideTrail: { en: 'Hide trail', bn: 'পথ লুকান' },
+
   // --- SOS ---
   // "SOS" itself is left as the Latin acronym in both languages — it's an
   // internationally recognized distress signal, and translating/

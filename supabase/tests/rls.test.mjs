@@ -1525,5 +1525,120 @@ check(
     Number(historyPurgeCatalog.rows[0].cron_count) === 0
 );
 
+console.log(
+  '\n--- reciprocal location history: guardian-originated points (reverse direction) ---'
+);
+// Same A–G accepted link as above, reversed: G records their own points,
+// and A (the student side of the link) reads them back via the new
+// location_history_points_select_user_reads_guardian_in_window policy.
+// The pre-existing forward policy is untouched and not exercised here.
+
+await asUser(userG, async () => {
+  const ins = await db.query(
+    `insert into public.location_history_points (user_id, lat, lng) values
+       ('${userG}', 23.80, 90.41)
+     returning id`
+  );
+  check('guardian G can record their own location history points', ins.rows.length === 1);
+});
+
+await asUser(userG, async () => {
+  await db.query(
+    `insert into public.location_history_points (user_id, lat, lng, recorded_at) values
+       ('${userG}', 23.81, 90.42, now() - interval '50 hours'),
+       ('${userG}', 23.82, 90.43, now() - interval '2 hours')`
+  );
+});
+
+// No 'guardian'-direction retention row yet -> defaults to 24h, same as
+// the forward direction's default.
+await asUser(userA, async () => {
+  const pts = await db.query(
+    `select recorded_at from public.location_history_points where user_id = '${userG}'`
+  );
+  check(
+    'student A sees guardian G history points within the default 24h window, not the 50h-old one',
+    pts.rows.length === 2
+  );
+});
+
+await asUser(userG2, async () => {
+  const pts = await db.query(
+    `select id from public.location_history_points where user_id = '${userG}'`
+  );
+  check('G2 (never accepted with G) cannot read any of G history points', pts.rows.length === 0);
+});
+await asUser(userX, async () => {
+  const pts = await db.query(
+    `select id from public.location_history_points where user_id = '${userG}'`
+  );
+  check('unrelated X cannot read any of G history points', pts.rows.length === 0);
+});
+
+// The forward-direction ('user') retention row for this same A–G pair
+// must be a separate row from anything written above, not silently
+// reused — confirm it still holds the value the earlier forward-direction
+// block left it at (24h, from the purge setup step).
+await asUser(userG, async () => {
+  const forward = await db.query(
+    `select retention_hours from public.location_history_retention
+      where user_id = '${userA}' and guardian_id = '${userG}' and recorded_by_role = 'user'`
+  );
+  check(
+    "the pre-existing forward-direction ('user') retention row for A–G is untouched",
+    forward.rows.length === 1 && forward.rows[0].retention_hours === 24
+  );
+});
+
+// Widen the 'guardian'-direction retention for this pair; either party may
+// set it, same as forward. This is a distinct row from the ('user') one
+// above — the widened PK is (user_id, guardian_id, recorded_by_role).
+await asUser(userA, async () => {
+  const up = await db.query(
+    `insert into public.location_history_retention
+       (user_id, guardian_id, recorded_by_role, retention_hours)
+     values ('${userA}', '${userG}', 'guardian', 72)
+     on conflict (user_id, guardian_id, recorded_by_role)
+       do update set retention_hours = excluded.retention_hours
+     returning retention_hours, updated_by`
+  );
+  check(
+    "student A can set the 'guardian'-direction retention for the A–G link",
+    up.rows.length === 1 && up.rows[0].retention_hours === 72 && up.rows[0].updated_by === userA
+  );
+});
+await asUser(userA, async () => {
+  const pts = await db.query(
+    `select id from public.location_history_points where user_id = '${userG}'`
+  );
+  check(
+    "widening the 'guardian'-direction retention to 72h lets A see the 50h-old point too",
+    pts.rows.length === 3
+  );
+});
+
+console.log('\n--- purge_expired_location_history() also purges guardian-owned points ---');
+// Narrow it back down so the purge below actually removes the 50h-old
+// point instead of keeping it.
+await asUser(userA, async () => {
+  await db.query(
+    `insert into public.location_history_retention
+       (user_id, guardian_id, recorded_by_role, retention_hours)
+     values ('${userA}', '${userG}', 'guardian', 24)
+     on conflict (user_id, guardian_id, recorded_by_role)
+       do update set retention_hours = excluded.retention_hours`
+  );
+});
+
+await db.query(`select public.purge_expired_location_history();`);
+
+const remainingGuardianHistory = await db.query(
+  `select recorded_at from public.location_history_points where user_id = '${userG}' order by recorded_at`
+);
+check(
+  "purge_expired_location_history() also deletes an expired guardian-owned point using the 'guardian'-direction retention, not just the 24h fallback",
+  remainingGuardianHistory.rows.length === 2
+);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;

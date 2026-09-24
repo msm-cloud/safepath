@@ -216,6 +216,15 @@ export default function SettingsScreen() {
             onPress={() => router.push('/emergency-contacts')}
           />
         )}
+        {role === 'guardian' && (
+          <SettingsRow
+            icon={{ ios: 'location.fill', android: 'location_on', web: 'location_on' }}
+            iconColor="#2f95dc"
+            iconBackgroundColor="#e8f4fc"
+            label={t('guardianShareLocationLink')}
+            onPress={() => router.push('/share-location')}
+          />
+        )}
         <SettingsRow
           icon={{ ios: 'shield.fill', android: 'security', web: 'security' }}
           iconColor="#af52de"
