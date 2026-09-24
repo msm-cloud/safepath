@@ -77,7 +77,8 @@ export default function GuardiansScreen() {
     const { data: retention } = await supabase
       .from('location_history_retention')
       .select('guardian_id, retention_hours')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('recorded_by_role', 'user');
     setRetentionByGuardian(
       Object.fromEntries(
         ((retention ?? []) as RetentionRow[]).map((r) => [r.guardian_id, r.retention_hours])

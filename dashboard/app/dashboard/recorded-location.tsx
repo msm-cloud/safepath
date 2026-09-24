@@ -111,7 +111,8 @@ export default function RecordedLocation() {
       const { data: retention } = await supabase
         .from('location_history_retention')
         .select('user_id, retention_hours')
-        .eq('guardian_id', user.id);
+        .eq('guardian_id', user.id)
+        .eq('recorded_by_role', 'user');
       if (cancelled) return;
       setRetentionByUser(
         Object.fromEntries(
