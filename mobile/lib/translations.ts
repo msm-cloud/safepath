@@ -234,6 +234,57 @@ export const translations = {
     bn: 'আপনি ইতিমধ্যে অন্য একটি ডিভাইস থেকে আপনার অবস্থান শেয়ার করছেন। প্রথমে সেখানে বন্ধ করুন।',
   },
 
+  // --- Recorded live location / location history (Home screen + Android
+  // recording notification) ---
+  // Separate feature from live sharing above: a slower breadcrumb trail a
+  // guardian can look back over, not a real-time stream. Same non-covert
+  // principle — a persistent notification runs the whole time it's on, and
+  // the Home card shows a standing "recording is on" banner.
+  locationHistoryNotificationTitle: {
+    en: 'Recording your location history',
+    bn: 'আপনার লোকেশন ইতিহাস রেকর্ড করা হচ্ছে',
+  },
+  locationHistoryNotificationBody: {
+    en: 'You turned this on. Turn it off anytime from the Home screen.',
+    bn: 'আপনি এটি চালু করেছেন। হোম স্ক্রিন থেকে যেকোনো সময় বন্ধ করতে পারেন।',
+  },
+  locationHistoryTitle: { en: 'Location History Recording', bn: 'লোকেশন ইতিহাস রেকর্ডিং' },
+  locationHistorySubtitle: {
+    en: "Save a location snapshot every few minutes so your guardians can look back over where you've been. Separate from live sharing — turn it off whenever you want.",
+    bn: 'প্রতি কয়েক মিনিট অন্তর আপনার অবস্থান সংরক্ষণ করুন, যাতে আপনার অভিভাবকরা আপনি কোথায় ছিলেন তা দেখতে পারেন। লাইভ শেয়ারিং থেকে আলাদা — যখন খুশি বন্ধ করুন।',
+  },
+  locationHistoryOnStatus: {
+    en: "You're recording your location history. Your guardians can see the saved trail.",
+    bn: 'আপনি আপনার লোকেশন ইতিহাস রেকর্ড করছেন। আপনার অভিভাবকরা সংরক্ষিত পথটি দেখতে পারবেন।',
+  },
+  locationHistoryForegroundWarning: {
+    en: '"Allow all the time" is off, so nothing is saved while your phone is locked or SafePath is closed. Tap to fix this in Settings.',
+    bn: '"সব সময় অনুমতি দিন" বন্ধ আছে, তাই আপনার ফোন লক থাকলে বা সেফপাথ বন্ধ থাকলে কিছুই সংরক্ষণ হয় না। সেটিংসে ঠিক করতে ট্যাপ করুন।',
+  },
+  locationHistoryPermissionDenied: {
+    en: 'Location history needs "Allow all the time" location access. Turn it on in Settings.',
+    bn: 'লোকেশন ইতিহাসের জন্য "সব সময় অনুমতি দিন" লোকেশন অ্যাক্সেস প্রয়োজন। সেটিংসে এটি চালু করুন।',
+  },
+  locationHistoryStartError: {
+    en: "Couldn't start location history recording. Try again.",
+    bn: 'লোকেশন ইতিহাস রেকর্ডিং শুরু করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  locationHistoryStopError: {
+    en: "Couldn't stop location history recording. Try again.",
+    bn: 'লোকেশন ইতিহাস রেকর্ডিং বন্ধ করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  locationHistorySaveError: {
+    en: "Couldn't save that change. Check your connection and try again.",
+    bn: 'পরিবর্তনটি সংরক্ষণ করা যায়নি। আপনার সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
+  },
+  // Retention presets — shared by the student's per-guardian control
+  // (Guardians screen) and the guardian's own screen.
+  locationHistoryRetention6h: { en: '6 hours', bn: '৬ ঘণ্টা' },
+  locationHistoryRetention24h: { en: '24 hours', bn: '২৪ ঘণ্টা' },
+  locationHistoryRetention3d: { en: '3 days', bn: '৩ দিন' },
+  locationHistoryRetention7d: { en: '7 days', bn: '৭ দিন' },
+  locationHistoryRetentionLabel: { en: 'Keep history for', bn: 'ইতিহাস রাখুন' },
+
   // --- SOS ---
   // "SOS" itself is left as the Latin acronym in both languages — it's an
   // internationally recognized distress signal, and translating/
@@ -504,6 +555,31 @@ export const translations = {
     bn: '{ago} ধরে কোনো আপডেট নেই — ফোনটি অফলাইন থাকতে পারে। এটি তাদের বর্তমান অবস্থান নয়।',
   },
   viewOnMapLink: { en: 'View on map', bn: 'ম্যাপে দেখুন' },
+
+  // --- Guardian: recorded live location (its own tab, between "Link to
+  // Someone" and "Settings") ---
+  guardianLocationHistoryTitle: { en: 'Recorded Location', bn: 'রেকর্ড করা অবস্থান' },
+  guardianLocationHistoryHeading: { en: 'Recorded Live Location', bn: 'রেকর্ড করা লাইভ অবস্থান' },
+  guardianLocationHistorySubtitle: {
+    en: 'The saved location trail for each person you support who has recording turned on.',
+    bn: 'আপনি যাদের সহায়তা করেন এবং যাদের রেকর্ডিং চালু আছে, তাদের প্রত্যেকের সংরক্ষিত অবস্থানের পথ।',
+  },
+  guardianLocationHistoryNoLinks: {
+    en: "You're not linked to anyone yet.",
+    bn: 'আপনি এখনো কারো সাথে যুক্ত নন।',
+  },
+  guardianLocationHistoryRecordingOn: { en: 'Recording on', bn: 'রেকর্ডিং চালু' },
+  guardianLocationHistoryRecordingOff: { en: 'Recording off', bn: 'রেকর্ডিং বন্ধ' },
+  guardianLocationHistoryNoPoints: {
+    en: 'No recorded points in the last {window}.',
+    bn: 'গত {window} সময়ে কোনো রেকর্ড করা অবস্থান নেই।',
+  },
+  guardianLocationHistoryPointCount: {
+    en: '{n} points in the last {window}',
+    bn: 'গত {window} সময়ে {n}টি অবস্থান',
+  },
+  guardianLocationHistoryViewTrail: { en: 'View trail', bn: 'পথ দেখুন' },
+  guardianLocationHistoryHideTrail: { en: 'Hide trail', bn: 'পথ লুকান' },
   viewLastKnownLocationLink: {
     en: 'View last known location',
     bn: 'সর্বশেষ জানা অবস্থান দেখুন',

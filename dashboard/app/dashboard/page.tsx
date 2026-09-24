@@ -6,6 +6,7 @@ import { t, type Language } from '@/lib/translations';
 import ActiveAlerts from './active-alerts';
 import LiveSharing from './live-sharing';
 import PastAlerts from './past-alerts';
+import RecordedLocation from './recorded-location';
 import RedeemInviteForm from './redeem-invite-form';
 
 type LinkedUserRow = {
@@ -66,6 +67,11 @@ export default async function DashboardPage() {
       <section>
         <RedeemInviteForm />
       </section>
+
+      {/* Own client-side fetch — renders nothing until this guardian has
+          at least one linked person. Sits between "link to someone" above
+          and the linked-users list / header Settings link. */}
+      <RecordedLocation />
 
       <section className="flex flex-col gap-3">
         {error && <p className="text-sm text-red-600">{error.message}</p>}

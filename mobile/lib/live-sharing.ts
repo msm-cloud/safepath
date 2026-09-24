@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
+import { maybeRecordHistoryPoint } from '@/lib/location-history';
 import { supabase } from '@/lib/supabase';
 
 // Consent-based live location sharing — the device half. The student
@@ -162,6 +163,13 @@ async function writeLocationPoint(
     );
     return;
   }
+
+  // Piggyback the recorded-location-history feature off this fix — no-op
+  // unless history is enabled, and throttled to one write per 5 min. Lets
+  // location-history.ts keep its own foreground-service task stopped while
+  // live sharing already holds one, so there's never a second persistent
+  // notification.
+  void maybeRecordHistoryPoint(location);
 
   const insertStartedAt = Date.now();
   const { data, error } = await supabase

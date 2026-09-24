@@ -27,6 +27,7 @@ import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { useLiveSharing } from '@/lib/use-live-sharing';
+import { useLocationHistory } from '@/lib/use-location-history';
 import { usePendingOnboarding } from '@/lib/use-pending-onboarding';
 import { useUserSettings } from '@/lib/user-settings-context';
 
@@ -74,6 +75,7 @@ export default function HomeScreen() {
   } = usePendingOnboarding(userId);
 
   const liveSharing = useLiveSharing();
+  const locationHistory = useLocationHistory();
 
   const [journey, setJourney] = useState<Journey | null>(null);
   const [loading, setLoading] = useState(true);
@@ -324,6 +326,15 @@ export default function HomeScreen() {
     }
   };
 
+  const handleLocationHistoryToggle = (next: boolean) => {
+    if (locationHistory.busy || locationHistory.loading) return;
+    if (next) {
+      locationHistory.start();
+    } else {
+      locationHistory.stop();
+    }
+  };
+
   const minutesUntil = journey
     ? Math.round((new Date(journey.expected_arrival_at).getTime() - now) / 60000)
     : 0;
@@ -519,6 +530,63 @@ export default function HomeScreen() {
           )}
           {liveSharing.error === 'stop-failed' && (
             <Text style={styles.error}>{t('liveSharingStopError')}</Text>
+          )}
+        </View>
+
+        {/* Location history recording — independent of live sharing above.
+            The DB flag (via useLocationHistory) is the source of truth, and
+            an Android foreground-service notification runs the whole time
+            it's on, so this is never covert. */}
+        <View style={styles.liveSharingCard}>
+          <View style={styles.liveSharingHeader}>
+            <View style={styles.liveSharingHeaderText}>
+              <Text style={styles.cardTitle}>{t('locationHistoryTitle')}</Text>
+              <Text style={styles.cardSubtitle}>{t('locationHistorySubtitle')}</Text>
+            </View>
+            {locationHistory.busy ? (
+              <ActivityIndicator />
+            ) : (
+              <Switch
+                value={locationHistory.enabled}
+                onValueChange={handleLocationHistoryToggle}
+                disabled={locationHistory.loading}
+              />
+            )}
+          </View>
+
+          {locationHistory.enabled && (
+            <View style={styles.liveSharingOnBanner}>
+              <Text style={styles.liveSharingOnBannerText}>{t('locationHistoryOnStatus')}</Text>
+            </View>
+          )}
+
+          {locationHistory.enabled && locationHistory.mode === 'foreground' && (
+            <Pressable style={styles.liveSharingWarnBanner} onPress={() => Linking.openSettings()}>
+              <Text style={styles.liveSharingWarnBannerText}>
+                {t('locationHistoryForegroundWarning')}
+              </Text>
+            </Pressable>
+          )}
+
+          {locationHistory.error === 'permission-denied' && (
+            <View style={styles.liveSharingWarnBanner}>
+              <Text style={styles.liveSharingWarnBannerText}>
+                {t('locationHistoryPermissionDenied')}
+              </Text>
+              <Pressable onPress={() => Linking.openSettings()}>
+                <Text style={styles.liveSharingSettingsLink}>{t('openSettings')}</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {locationHistory.error === 'start-failed' && (
+            <Text style={styles.error}>{t('locationHistoryStartError')}</Text>
+          )}
+          {locationHistory.error === 'stop-failed' && (
+            <Text style={styles.error}>{t('locationHistoryStopError')}</Text>
+          )}
+          {locationHistory.error === 'save-failed' && (
+            <Text style={styles.error}>{t('locationHistorySaveError')}</Text>
           )}
         </View>
 
