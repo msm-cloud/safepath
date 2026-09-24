@@ -1542,23 +1542,42 @@ await asUser(userG, async () => {
   check('guardian G can record their own location history points', ins.rows.length === 1);
 });
 
+// 23h55m and 24h05m bracket the 24h default closely, so the window check
+// below fails if the default is off by more than a few minutes either way.
 await asUser(userG, async () => {
   await db.query(
     `insert into public.location_history_points (user_id, lat, lng, recorded_at) values
        ('${userG}', 23.81, 90.42, now() - interval '50 hours'),
-       ('${userG}', 23.82, 90.43, now() - interval '2 hours')`
+       ('${userG}', 23.82, 90.43, now() - interval '2 hours'),
+       ('${userG}', 23.83, 90.44, now() - interval '23 hours 55 minutes'),
+       ('${userG}', 23.84, 90.45, now() - interval '24 hours 5 minutes')`
   );
 });
 
-// No 'guardian'-direction retention row yet -> defaults to 24h, same as
-// the forward direction's default.
+// The coexistence test above leaves a 48h 'guardian'-direction row for
+// this A–G pair. Remove it (as superuser — there is no delete policy on
+// location_history_retention) so the next check exercises the 24h
+// default rather than that explicit row.
+await db.query(
+  `delete from public.location_history_retention
+    where user_id = '${userA}' and guardian_id = '${userG}' and recorded_by_role = 'guardian'`
+);
+await asUser(userA, async () => {
+  const rows = await db.query(
+    `select 1 from public.location_history_retention
+      where user_id = '${userA}' and guardian_id = '${userG}' and recorded_by_role = 'guardian'`
+  );
+  check("no 'guardian'-direction retention row remains for A–G", rows.rows.length === 0);
+});
+
 await asUser(userA, async () => {
   const pts = await db.query(
-    `select recorded_at from public.location_history_points where user_id = '${userG}'`
+    `select lat from public.location_history_points where user_id = '${userG}' order by lat`
   );
+  const lats = pts.rows.map((r) => r.lat).join(',');
   check(
-    'student A sees guardian G history points within the default 24h window, not the 50h-old one',
-    pts.rows.length === 2
+    'student A sees guardian G history points within the default 24h window (23h55m-old visible; 24h05m- and 50h-old hidden)',
+    lats === '23.8,23.82,23.83'
   );
 });
 
@@ -1612,14 +1631,14 @@ await asUser(userA, async () => {
     `select id from public.location_history_points where user_id = '${userG}'`
   );
   check(
-    "widening the 'guardian'-direction retention to 72h lets A see the 50h-old point too",
-    pts.rows.length === 3
+    "widening the 'guardian'-direction retention to 72h lets A see the 24h05m- and 50h-old points too",
+    pts.rows.length === 5
   );
 });
 
 console.log('\n--- purge_expired_location_history() also purges guardian-owned points ---');
-// Narrow it back down so the purge below actually removes the 50h-old
-// point instead of keeping it.
+// Narrow it back down so the purge below actually removes the 24h05m- and
+// 50h-old points instead of keeping them.
 await asUser(userA, async () => {
   await db.query(
     `insert into public.location_history_retention
@@ -1637,7 +1656,7 @@ const remainingGuardianHistory = await db.query(
 );
 check(
   "purge_expired_location_history() also deletes an expired guardian-owned point using the 'guardian'-direction retention, not just the 24h fallback",
-  remainingGuardianHistory.rows.length === 2
+  remainingGuardianHistory.rows.length === 3
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);
