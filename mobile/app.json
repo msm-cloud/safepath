@@ -23,6 +23,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.msmcloud.safepath",
       "googleServicesFile": "./google-services.json",
