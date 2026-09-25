@@ -1,6 +1,8 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 
+import { stopLiveSharing, stopLiveSharingOnDevice } from '@/lib/live-sharing';
+import { resetLocationHistoryOnDevice } from '@/lib/location-history';
 import { supabase } from '@/lib/supabase';
 
 export type ProfileRole = 'user' | 'guardian';
@@ -85,7 +87,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Location tasks and their AsyncStorage state are per-device, not
+  // per-account, and outlive the auth session — left running, they carry
+  // on under whoever signs in next (a guardian then keeps writing to a
+  // student's live-sharing session and gets every insert rejected by RLS).
+  // Tear them down first, while still signed in as the owner so the
+  // live-sharing session can be closed. Best-effort: nothing here may
+  // block the sign-out itself.
   const signOut = async () => {
+    try {
+      const { ok } = await stopLiveSharing();
+      // Couldn't close the session (e.g. offline) — still stop the device.
+      if (!ok) await stopLiveSharingOnDevice();
+    } catch (err) {
+      console.warn('[auth] live-sharing teardown on sign-out failed:', err);
+    }
+    try {
+      await resetLocationHistoryOnDevice();
+    } catch (err) {
+      console.warn('[auth] location-history teardown on sign-out failed:', err);
+    }
     await supabase.auth.signOut();
   };
 
