@@ -1421,6 +1421,26 @@ await asUser(userA, async () => {
   );
 });
 
+// With both directions' rows present for the A-G pair, the guardian's read
+// of A's points must still resolve to the single 'user'-role retention
+// (5h) instead of failing with "more than one row returned by a subquery".
+await asUser(userG, async () => {
+  try {
+    const pts = await db.query(
+      `select id from public.location_history_points where user_id = '${userA}'`
+    );
+    check(
+      "guardian G still reads A's points within the 'user'-role 5h window while a 'guardian'-role row exists for the same pair",
+      pts.rows.length === 3
+    );
+  } catch (err) {
+    check(
+      `guardian G still reads A's points while both retention rows exist (threw: ${err.message ?? err})`,
+      false
+    );
+  }
+});
+
 // retention_hours is bounded (1..168) and the pair columns are immutable.
 await asUser(userA, async () => {
   try {
