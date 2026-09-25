@@ -468,19 +468,27 @@ export async function stopLiveSharing(sessionId?: string | null): Promise<{ ok: 
     }
   }
 
+  // DB is now inactive (or there was no session at all) — safe to stop the
+  // device.
+  await stopLiveSharingOnDevice();
+  return { ok: true };
+}
+
+// Device-only teardown: clears the stored session id and stops both
+// delivery paths without touching live_sharing_sessions. For when the
+// signed-in account can't (or shouldn't) close the session — a sign-out
+// whose DB update failed, or a guardian on a device that still holds a
+// task left behind by a previously signed-in student.
+export async function stopLiveSharingOnDevice(): Promise<void> {
   // Clear the stored id BEFORE tearing the watchers down: a location fix
   // that fires during the awaits below then resolves to "no session" and
   // is dropped in writeCurrentSessionPoint, rather than racing an insert
-  // against the row we just made inactive (RLS rejects it, but that's the
-  // log noise we're removing).
+  // against a session that is no longer ours to write to (RLS rejects it,
+  // but that's the log noise we're removing).
   await setStoredSessionId(null);
-
-  // DB is now inactive (or there was no session at all) — safe to stop the
-  // device.
   await stopForegroundWatch();
   await stopBackgroundTask();
   trackingStartedThisProcess = false;
-  return { ok: true };
 }
 
 // Re-attach tracking to a session the DB still reports as active (app was

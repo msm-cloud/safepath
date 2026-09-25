@@ -318,3 +318,18 @@ export async function stopLocationHistory(): Promise<void> {
   trackingStartedThisProcess = false;
   activeMode = null;
 }
+
+// Sign-out teardown: stops recording and forgets this account's headless
+// state, so the next account signed in on this device doesn't inherit an
+// "enabled" flag (and a recording it never opted into) or a throttle
+// timestamp. profiles.location_history_enabled is left alone — it's the
+// account's own preference and resumes wherever that account signs in.
+export async function resetLocationHistoryOnDevice(): Promise<void> {
+  await stopLocationHistory();
+  try {
+    await AsyncStorage.multiRemove([ENABLED_KEY, LAST_WRITE_KEY]);
+  } catch {
+    // Non-fatal — the next account's hook re-syncs the enabled flag from
+    // its own profile on first focus.
+  }
+}
