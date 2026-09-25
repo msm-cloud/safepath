@@ -75,6 +75,16 @@ export default function GuardianTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="share-location"
+        options={{
+          title: t('guardianShareLocationTitle'),
+          // Reachable from Settings via router.push(), not its own tab —
+          // same href: null reasoning as change-password/language/etc.
+          // below.
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: t('settingsTitle'),
