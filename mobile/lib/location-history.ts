@@ -54,6 +54,12 @@ const LAST_WRITE_KEY = 'safepath.locationHistory.lastWriteAt';
 // One snapshot per 5 minutes, from either write path.
 const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000;
 
+// Slack on the throttle check. The OS delivers the 5-minute task updates
+// with a few ms of jitter either way, so a strict `< SNAPSHOT_INTERVAL_MS`
+// check drops any fix that lands just early and the next write waits for
+// the following update — a 10-minute gap instead of 5.
+const SNAPSHOT_THROTTLE_SLACK_MS = 30 * 1000;
+
 // Coarser than live sharing's High — a breadcrumb trail doesn't need a hot
 // GPS fix, and Balanced leans on the fused/network provider, which is far
 // lighter on the battery for a recording that can run for hours.
@@ -174,7 +180,7 @@ async function insertHistoryPoint(location: Location.LocationObject): Promise<vo
 // for a breadcrumb trail.
 async function recordThrottled(location: Location.LocationObject): Promise<void> {
   const last = await getLastWriteAt();
-  if (Date.now() - last < SNAPSHOT_INTERVAL_MS) return;
+  if (Date.now() - last < SNAPSHOT_INTERVAL_MS - SNAPSHOT_THROTTLE_SLACK_MS) return;
   await setLastWriteAt(Date.now());
   await insertHistoryPoint(location);
 }
