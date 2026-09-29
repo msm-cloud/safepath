@@ -1659,5 +1659,270 @@ check(
   remainingGuardianHistory.rows.length === 3
 );
 
+// Security hardening (20260929200021). Fresh users so the redeem checks
+// don't depend on the A–G link state built up above.
+console.log('\n--- security hardening: guardian_links INSERT is pending-only ---');
+const userS = await mkUser('S', 'user');
+const userS2 = await mkUser('S2', 'user');
+const userG3 = await mkUser('G3', 'guardian');
+
+async function expectError(label, sql, pattern) {
+  try {
+    await db.query(sql);
+    check(`${label} (should have thrown)`, false);
+  } catch (err) {
+    check(label, pattern.test(String(err.message ?? err)));
+  }
+}
+
+await asUser(userS, async () => {
+  await expectError(
+    'S cannot insert a link that is already accepted by G3',
+    `insert into public.guardian_links (user_id, guardian_id, status)
+     values ('${userS}', '${userG3}', 'accepted')`,
+    /permission denied/
+  );
+});
+await asUser(userS, async () => {
+  await expectError(
+    "S cannot insert status 'accepted' even without a guardian_id",
+    `insert into public.guardian_links (user_id, status) values ('${userS}', 'accepted')`,
+    /row-level security/
+  );
+});
+await asUser(userS, async () => {
+  await expectError(
+    'S cannot supply their own invite_code',
+    `insert into public.guardian_links (user_id, status, invite_code)
+     values ('${userS}', 'pending', 'AAAAAAAA')`,
+    /permission denied/
+  );
+});
+await asUser(userS, async () => {
+  await expectError(
+    'S cannot supply accepted_at',
+    `insert into public.guardian_links (user_id, status, accepted_at)
+     values ('${userS}', 'pending', now())`,
+    /permission denied/
+  );
+});
+
+let hardenedCode;
+await asUser(userS, async () => {
+  const ins = await db.query(
+    `insert into public.guardian_links (user_id, status) values ('${userS}', 'pending') returning invite_code`
+  );
+  hardenedCode = ins.rows[0]?.invite_code;
+  check(
+    'plain {user_id, status: pending} insert passes and returns an 8-char code from the alphabet',
+    /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/.test(hardenedCode ?? '')
+  );
+});
+
+console.log('\n--- security hardening: redeem_guardian_invite() self-redeem and role checks ---');
+await asUser(userS, async () => {
+  const result = await redeem(db, hardenedCode);
+  check(
+    'S cannot redeem their own invite (generic invalid_or_used_code)',
+    result.success === false && result.error === 'invalid_or_used_code'
+  );
+});
+await asUser(userS2, async () => {
+  const result = await redeem(db, hardenedCode);
+  check(
+    'a user-role account cannot redeem (generic invalid_or_used_code)',
+    result.success === false && result.error === 'invalid_or_used_code'
+  );
+});
+await asUser(userG3, async () => {
+  const result = await redeem(db, hardenedCode);
+  check(
+    'a real guardian can still redeem after the failed attempts',
+    result.success === true && result.user_id === userS && result.user_name === 'S'
+  );
+});
+
+console.log('\n--- security hardening: profiles.role is locked ---');
+await asUser(userS, async () => {
+  try {
+    await db.query(`update public.profiles set role = 'guardian' where id = '${userS}'`);
+    check('owner updating their own role fails with 42501 (should have thrown)', false);
+  } catch (err) {
+    check('owner updating their own role fails with 42501', err.code === '42501');
+  }
+});
+await asUser(userS, async () => {
+  const updated = await db.query(
+    `update public.profiles set role = 'user', full_name = 'S renamed', phone = '+1 777-000-1111'
+     where id = '${userS}' returning role, full_name, phone`
+  );
+  check(
+    'a same-value role update (as the sign-up flows send) passes along with other columns',
+    updated.rows.length === 1 &&
+      updated.rows[0].role === 'user' &&
+      updated.rows[0].full_name === 'S renamed' &&
+      updated.rows[0].phone === '+1 777-000-1111'
+  );
+});
+await asUser(userS, async () => {
+  const updated = await db.query(
+    `update public.profiles set preferred_language = 'en' where id = '${userS}' returning preferred_language`
+  );
+  check(
+    'other profile columns still update without touching role',
+    updated.rows.length === 1 && updated.rows[0].preferred_language === 'en'
+  );
+});
+{
+  const roles = await db.query(
+    `select (select role from public.profiles where id = $1) as s_role,
+            (select role from public.profiles where id = $2) as g3_role`,
+    [userS, userG3]
+  );
+  check(
+    'handle_new_user() still sets role from signup metadata',
+    roles.rows[0].s_role === 'user' && roles.rows[0].g3_role === 'guardian'
+  );
+}
+
+console.log('\n--- security hardening: cron workers and trigger functions are not callable ---');
+for (const fn of [
+  'check_overdue_journeys',
+  'purge_old_live_locations',
+  'purge_expired_location_history',
+]) {
+  await asAnon(async () => {
+    await expectError(`anon cannot execute ${fn}()`, `select public.${fn}()`, /permission denied/);
+  });
+  await asUser(userS, async () => {
+    await expectError(
+      `authenticated cannot execute ${fn}()`,
+      `select public.${fn}()`,
+      /permission denied/
+    );
+  });
+}
+
+{
+  const privileges = await db.query(`
+    select has_function_privilege('anon', p.oid, 'execute') as anon_exec,
+           has_function_privilege('authenticated', p.oid, 'execute') as auth_exec
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname in (
+         'handle_new_user', 'enforce_guardian_link_update', 'enforce_alert_update_permissions',
+         'notify_guardians_on_alert', 'enforce_live_sharing_session_write',
+         'enforce_location_history_retention_write', 'prevent_profile_role_change'
+       )
+  `);
+  check(
+    'none of the 7 trigger functions is executable by anon or authenticated',
+    privileges.rows.length === 7 && privileges.rows.every((r) => !r.anon_exec && !r.auth_exec)
+  );
+}
+
+// Postgres checks EXECUTE when a trigger is created, not when it fires.
+// Each write below has an outcome only its trigger function can produce.
+console.log('\n--- security hardening: triggers still fire for authenticated callers ---');
+await asUser(userS, async () => {
+  const ins = await db.query(
+    `insert into public.alerts (user_id, last_lat, last_lng) values ('${userS}', 23.7, 90.5) returning id`
+  );
+  check(
+    'alert insert with notify_guardians_on_alert attached still succeeds',
+    ins.rows.length === 1
+  );
+
+  const upd = await db.query(
+    `update public.alerts set status = 'resolved' where id = '${ins.rows[0].id}' returning resolved_at`
+  );
+  check(
+    'enforce_alert_update_permissions still fires (resolved_at stamped)',
+    upd.rows.length === 1 && upd.rows[0].resolved_at !== null
+  );
+});
+await asUser(userS, async () => {
+  const ins = await db.query(
+    `insert into public.live_sharing_sessions (user_id, is_active) values ('${userS}', true) returning started_at`
+  );
+  check(
+    'enforce_live_sharing_session_write still fires (started_at stamped)',
+    ins.rows.length === 1 && ins.rows[0].started_at !== null
+  );
+});
+await asUser(userS, async () => {
+  const ins = await db.query(
+    `insert into public.location_history_retention (user_id, guardian_id, retention_hours, recorded_by_role)
+     values ('${userS}', '${userG3}', 48, 'user') returning updated_by`
+  );
+  check(
+    'enforce_location_history_retention_write still fires (updated_by stamped)',
+    ins.rows.length === 1 && ins.rows[0].updated_by === userS
+  );
+});
+{
+  const link = await db.query(
+    `select accepted_at from public.guardian_links where invite_code = $1`,
+    [hardenedCode]
+  );
+  check(
+    'enforce_guardian_link_update still fires on redeem (accepted_at stamped)',
+    link.rows.length === 1 && link.rows[0].accepted_at !== null
+  );
+}
+
+console.log('\n--- security hardening: anon has no access to guardian_links or redeem ---');
+await asAnon(async () => {
+  await expectError(
+    'anon cannot execute redeem_guardian_invite()',
+    `select public.redeem_guardian_invite('${hardenedCode}')`,
+    /permission denied/
+  );
+});
+await asAnon(async () => {
+  await expectError(
+    'anon cannot select from guardian_links',
+    `select * from public.guardian_links`,
+    /permission denied/
+  );
+});
+await asAnon(async () => {
+  await expectError(
+    'anon cannot insert into guardian_links',
+    `insert into public.guardian_links (user_id, status) values ('${userS}', 'pending')`,
+    /permission denied/
+  );
+});
+{
+  const privileges = await db.query(`
+    select has_table_privilege('anon', 'public.guardian_links',
+             'select, insert, update, delete, truncate, references, trigger') as table_any,
+           has_function_privilege('anon', 'public.redeem_guardian_invite(text)', 'execute') as redeem_exec,
+           has_function_privilege('authenticated', 'public.redeem_guardian_invite(text)', 'execute') as auth_redeem_exec
+  `);
+  check(
+    'anon holds no privilege on guardian_links or redeem_guardian_invite; authenticated can still redeem',
+    privileges.rows[0].table_any === false &&
+      privileges.rows[0].redeem_exec === false &&
+      privileges.rows[0].auth_redeem_exec === true
+  );
+}
+
+console.log('\n--- security hardening: normalize_phone search_path ---');
+{
+  const cfg = await db.query(`
+    select p.proconfig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'normalize_phone'
+  `);
+  check(
+    'normalize_phone has a fixed, empty search_path',
+    Array.isArray(cfg.rows[0].proconfig) &&
+      cfg.rows[0].proconfig.some((c) => /^search_path=("")?$/.test(c))
+  );
+  const normalized = await db.query(`select public.normalize_phone('+1 555-000 1234') as v`);
+  check('normalize_phone still normalizes', normalized.rows[0].v === '+15550001234');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;
