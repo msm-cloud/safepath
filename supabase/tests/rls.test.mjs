@@ -31,6 +31,9 @@ begin
   if not exists (select 1 from pg_roles where rolname = 'anon') then
     create role anon;
   end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then
+    create role service_role;
+  end if;
 end
 $$;
 
@@ -103,6 +106,7 @@ console.log(`applied ${files.length} migrations.\n`);
 // starts from a blank slate, so this test harness has to do it itself.
 await db.exec(`grant usage on schema public to authenticated;`);
 await db.exec(`grant usage on schema public to anon;`);
+await db.exec(`grant usage on schema public to service_role;`);
 
 // Same idea for the storage stubs: a real Supabase project grants the
 // authenticated role table-level DML on storage.objects (RLS then does
@@ -145,6 +149,17 @@ async function asUser(userId, fn) {
 async function asAnon(fn) {
   await db.exec('begin;');
   await db.exec(`set local role anon;`);
+  try {
+    return await fn();
+  } finally {
+    await db.exec('commit;');
+  }
+}
+
+// The role the auth-identifier edge function connects as.
+async function asServiceRole(fn) {
+  await db.exec('begin;');
+  await db.exec(`set local role service_role;`);
   try {
     return await fn();
   } finally {
@@ -1922,6 +1937,172 @@ console.log('\n--- security hardening: normalize_phone search_path ---');
   );
   const normalized = await db.query(`select public.normalize_phone('+1 555-000 1234') as v`);
   check('normalize_phone still normalizes', normalized.rows[0].v === '+15550001234');
+}
+
+console.log('\n--- auth rate limit: no access for anon/authenticated ---');
+{
+  const privileges = await db.query(`
+    select r.role,
+           has_table_privilege(r.role, 'public.auth_rate_limit_events',
+             'select, insert, update, delete, truncate, references, trigger') as table_any,
+           has_function_privilege(r.role, 'public.auth_rate_limit_hit(text, text, integer, integer)', 'execute') as hit_exec,
+           has_function_privilege(r.role, 'public.auth_identifier_email_for_phone(text)', 'execute') as lookup_exec,
+           has_function_privilege(r.role, 'public.purge_auth_rate_limit_events()', 'execute') as purge_exec
+      from (values ('anon'), ('authenticated'), ('service_role')) as r(role)
+  `);
+  const byRole = Object.fromEntries(privileges.rows.map((r) => [r.role, r]));
+  check(
+    'anon and authenticated hold no privilege on the table or any of the three functions',
+    ['anon', 'authenticated'].every(
+      (role) =>
+        !byRole[role].table_any &&
+        !byRole[role].hit_exec &&
+        !byRole[role].lookup_exec &&
+        !byRole[role].purge_exec
+    )
+  );
+  check(
+    'service_role can execute the limiter and the lookup, but not the purge',
+    byRole.service_role.hit_exec &&
+      byRole.service_role.lookup_exec &&
+      !byRole.service_role.purge_exec
+  );
+
+  const rls = await db.query(
+    `select relrowsecurity from pg_class where oid = 'public.auth_rate_limit_events'::regclass`
+  );
+  check('auth_rate_limit_events has RLS enabled', rls.rows[0].relrowsecurity === true);
+}
+await asAnon(async () => {
+  await expectError(
+    'anon cannot select from auth_rate_limit_events',
+    `select * from public.auth_rate_limit_events`,
+    /permission denied/
+  );
+});
+await asAnon(async () => {
+  await expectError(
+    'anon cannot execute auth_rate_limit_hit()',
+    `select public.auth_rate_limit_hit('ip', 'x', 60, 5)`,
+    /permission denied/
+  );
+});
+await asAnon(async () => {
+  await expectError(
+    'anon cannot execute auth_identifier_email_for_phone()',
+    `select public.auth_identifier_email_for_phone('+8801711000999')`,
+    /permission denied/
+  );
+});
+await asUser(userA, async () => {
+  await expectError(
+    'authenticated cannot insert into auth_rate_limit_events',
+    `insert into public.auth_rate_limit_events (bucket, key_hash) values ('ip', 'x')`,
+    /permission denied/
+  );
+});
+await asUser(userA, async () => {
+  await expectError(
+    'authenticated cannot execute auth_rate_limit_hit()',
+    `select public.auth_rate_limit_hit('ip', 'x', 60, 5)`,
+    /permission denied/
+  );
+});
+
+console.log('\n--- auth rate limit: auth_rate_limit_hit() ---');
+{
+  const hit = async (bucket, key, windowSecs, max) =>
+    asServiceRole(async () => {
+      const r = await db.query(`select public.auth_rate_limit_hit($1, $2, $3, $4) as wait`, [
+        bucket,
+        key,
+        windowSecs,
+        max,
+      ]);
+      return r.rows[0].wait;
+    });
+
+  // PGlite has a single connection, so these calls can't overlap here; the
+  // advisory lock is what serializes them on a real database.
+  const results = [];
+  for (let i = 0; i < 6; i++) results.push(await hit('signin', 'phone-a', 900, 5));
+  check(
+    'N+1 attempts on one key: first N allowed, exactly one blocked',
+    results.slice(0, 5).every((w) => w === 0) && results.filter((w) => w > 0).length === 1
+  );
+  check(
+    'blocked attempt returns a Retry-After within the window',
+    results[5] > 0 && results[5] <= 900
+  );
+
+  const stored = await db.query(
+    `select count(*)::int as n from public.auth_rate_limit_events where bucket = 'signin' and key_hash = 'phone-a'`
+  );
+  check('blocked attempts are not recorded', stored.rows[0].n === 5);
+
+  check(
+    'another key in the same bucket is unaffected',
+    (await hit('signin', 'phone-b', 900, 5)) === 0
+  );
+  check(
+    'the same key in another bucket is unaffected',
+    (await hit('reset', 'phone-a', 3600, 3)) === 0
+  );
+
+  await db.query(
+    `insert into public.auth_rate_limit_events (bucket, key_hash, created_at)
+     select 'ip', 'ip-old', now() - interval '20 minutes' from generate_series(1, 30)`
+  );
+  check(
+    'attempts older than the window are not counted',
+    (await hit('ip', 'ip-old', 900, 30)) === 0
+  );
+
+  await asServiceRole(async () => {
+    await expectError(
+      'an unknown bucket is rejected',
+      `select public.auth_rate_limit_hit('other', 'x', 60, 5)`,
+      /auth_rate_limit_events_bucket_check/
+    );
+  });
+}
+
+console.log('\n--- auth rate limit: auth_identifier_email_for_phone() ---');
+{
+  const userR = await mkUser('R', 'guardian');
+  await db.query(`update public.profiles set phone = '+880 1711-000999' where id = $1`, [userR]);
+  const lookup = async (phone) =>
+    asServiceRole(async () => {
+      const r = await db.query(`select public.auth_identifier_email_for_phone($1) as email`, [
+        phone,
+      ]);
+      return r.rows[0].email;
+    });
+  check(
+    'a formatted variant of a stored phone resolves to its email',
+    (await lookup('+8801711000999')) === 'r@example.com'
+  );
+  check('an unknown phone resolves to null', (await lookup('+8801711000000')) === null);
+  check(
+    'an email-shaped identifier is not passed through',
+    (await lookup('r@example.com')) === null
+  );
+}
+
+console.log('\n--- auth rate limit: purge_auth_rate_limit_events() ---');
+{
+  await db.query(`delete from public.auth_rate_limit_events`);
+  await db.query(
+    `insert into public.auth_rate_limit_events (bucket, key_hash, created_at) values
+       ('ip', 'purge-old', now() - interval '25 hours'),
+       ('ip', 'purge-new', now() - interval '1 hour')`
+  );
+  await db.query(`select public.purge_auth_rate_limit_events()`);
+  const left = await db.query(`select key_hash from public.auth_rate_limit_events`);
+  check(
+    'purge deletes rows older than 24 h and keeps newer ones',
+    left.rows.length === 1 && left.rows[0].key_hash === 'purge-new'
+  );
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

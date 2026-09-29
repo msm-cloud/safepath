@@ -165,6 +165,32 @@ live project. Both need these repo secrets set under
   `::error::` annotation, not just a buried CLI log) if the push fails, so a
   broken migration can't merge silently.
 
+### Edge functions
+
+Functions live in [`supabase/functions/`](supabase/functions/). There's no
+deploy workflow; each one is deployed by hand after its PR merges.
+
+- **`send-alert-email`** — emails guardians when an alert is raised
+  (called by a database trigger). Needs the `RESEND_API_KEY` secret.
+- **`auth-identifier`** — phone-number sign-in and password reset that
+  never returns the account's email, with per-IP and per-phone rate limits
+  (`auth_rate_limit_events`, see
+  [`20260929204605_auth_rate_limit.sql`](supabase/migrations/20260929204605_auth_rate_limit.sql)).
+  Email sign-in stays a direct `signInWithPassword` call. Deployed with JWT
+  verification on, which relies on clients sending the legacy anon key.
+  Secrets, set under **Edge Functions → Secrets** in the Supabase dashboard:
+
+  | Secret                     | Used for                                                                          |
+  | -------------------------- | --------------------------------------------------------------------------------- |
+  | `AUTH_RATE_LIMIT_SALT`     | HMAC key for the stored phone/IP hashes; the function returns 503 until it's set  |
+  | `DASHBOARD_FORWARD_SECRET` | lets the dashboard server pass the end user's IP; same value in the dashboard env |
+
+  Its request handling is tested under Node with the Supabase calls faked:
+
+  ```bash
+  pnpm test:auth-identifier
+  ```
+
 ## Tooling
 
 - **pnpm workspaces** link `mobile`, `dashboard`, and `packages/shared-types`

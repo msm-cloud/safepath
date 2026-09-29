@@ -25,8 +25,8 @@ export const translations = {
   // --- Sign in ---
   signInTitle: { en: 'Sign in to SafePath', bn: 'সেফপাথে সাইন ইন করুন' },
   emailPlaceholder: { en: 'Email', bn: 'ইমেইল' },
-  // Sign-in accepts either an email or a phone number (resolved server-
-  // side via resolve_login_identifier — see lib/auth-actions.ts);
+  // Sign-in accepts either an email or a phone number (phone sign-in goes
+  // through the auth-identifier edge function — see lib/auth-actions.ts);
   // sign-up still asks for email and phone as two separate required
   // fields, so emailPlaceholder above is still used there unchanged.
   emailOrPhonePlaceholder: { en: 'Email or Phone Number', bn: 'ইমেইল অথবা ফোন নম্বর' },
@@ -69,11 +69,15 @@ export const translations = {
   sendResetLinkButton: { en: 'Send Reset Link', bn: 'রিসেট লিংক পাঠান' },
   sendingResetLinkButton: { en: 'Sending…', bn: 'পাঠানো হচ্ছে…' },
   // Shown identically whether or not the identifier actually resolved to
-  // an account — see app/forgot-password/page.tsx. Never reveal which is
-  // true.
+  // an account — see forgotPasswordAction in lib/auth-actions.ts. Never
+  // reveal which is true.
   resetLinkSentMessage: {
     en: "If an account exists for that email or phone number, we've sent a link to reset your password.",
     bn: 'যদি সেই ইমেইল অথবা ফোন নম্বরের জন্য কোনো অ্যাকাউন্ট থাকে, আমরা পাসওয়ার্ড পুনরায় সেট করার একটি লিংক পাঠিয়েছি।',
+  },
+  tooManyAttemptsMessage: {
+    en: 'Too many attempts, try later.',
+    bn: 'অনেকবার চেষ্টা করা হয়েছে, পরে আবার চেষ্টা করুন।',
   },
   backToSignInLink: { en: 'Back to Sign In', bn: 'সাইন ইনে ফিরে যান' },
   resetPasswordTitle: { en: 'Set a new password', bn: 'একটি নতুন পাসওয়ার্ড সেট করুন' },
@@ -95,6 +99,13 @@ export const translations = {
   termsOfServiceLink: { en: 'Terms of Service', bn: 'সেবার শর্তাবলী' },
   agreeToTermsAnd: { en: 'and', bn: 'এবং' },
   privacyPolicyLink: { en: 'Privacy Policy', bn: 'গোপনীয়তা নীতি' },
+
+  // --- Phone not saved at sign-up (dashboard/layout.tsx) ---
+  phoneNotSavedMessage: {
+    en: "The phone number you signed up with wasn't saved. It may already be linked to another account. Add a phone number in Settings to sign in with it.",
+    bn: 'সাইন আপের সময় দেওয়া ফোন নম্বরটি সংরক্ষণ করা যায়নি। এটি হয়তো অন্য কোনো অ্যাকাউন্টের সাথে যুক্ত। ফোন নম্বর দিয়ে সাইন ইন করতে সেটিংসে একটি ফোন নম্বর যোগ করুন।',
+  },
+  phoneNotSavedSettingsLink: { en: 'Go to Settings', bn: 'সেটিংসে যান' },
 
   // --- Dashboard home ---
   dashboardTitle: { en: 'Dashboard', bn: 'ড্যাশবোর্ড' },

@@ -9,7 +9,8 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r --if-present run typecheck",
     "gen:types": "node scripts/gen-types.mjs",
-    "test:rls": "node supabase/tests/rls.test.mjs"
+    "test:rls": "node supabase/tests/rls.test.mjs",
+    "test:auth-identifier": "node --test supabase/tests/auth-identifier.test.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.5",
