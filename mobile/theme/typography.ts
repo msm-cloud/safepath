@@ -45,10 +45,16 @@ export function fontFamily(script: Script, role: FontRole, weight: FontWeight): 
   return (role === 'display' ? display[weight] : undefined) ?? body[weight];
 }
 
-const BENGALI = /[ঀ-৿]/;
+// Bengali Unicode block (U+0980 to U+09FF).
+const BENGALI_FIRST = 0x0980;
+const BENGALI_LAST = 0x09ff;
 
 export function hasBengali(text: string): boolean {
-  return BENGALI.test(text);
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code >= BENGALI_FIRST && code <= BENGALI_LAST) return true;
+  }
+  return false;
 }
 
 export type TextVariant =

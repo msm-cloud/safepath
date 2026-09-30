@@ -8,6 +8,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { LanguageProvider } from '@/lib/language-context';
 import { UserSettingsProvider } from '@/lib/user-settings-context';
+import { useBrandFonts } from '@/theme/fonts';
 
 // NOTE: the live-location-sharing background task (TaskManager.defineTask)
 // is registered from the custom entry point mobile/index.js, NOT here.
@@ -22,7 +23,8 @@ export {
 
 // Prevent the splash screen from auto-hiding until we know whether there's
 // an existing session — otherwise the app would flash the wrong stack
-// (tabs vs. sign-in) before Stack.Protected below can redirect.
+// (tabs vs. sign-in) before Stack.Protected below can redirect. It also
+// waits for the brand fonts so text doesn't re-flow after first paint.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -40,14 +42,16 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { session, role, loading } = useAuth();
+  const fontsReady = useBrandFonts();
+  const ready = !loading && fontsReady;
 
   useEffect(() => {
-    if (!loading) {
+    if (ready) {
       SplashScreen.hideAsync();
     }
-  }, [loading]);
+  }, [ready]);
 
-  if (loading) {
+  if (!ready) {
     return null;
   }
 
