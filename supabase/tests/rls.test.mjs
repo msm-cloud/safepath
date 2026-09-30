@@ -1128,7 +1128,10 @@ await asUser(userA, async () => {
   const set = await db.query(
     `update public.profiles set phone = '+1 555-123-4567' where id = '${userA}' returning phone`
   );
-  check('A can set their own phone number', set.rows[0].phone === '+1 555-123-4567');
+  check(
+    'A can set their own phone number, stored without formatting',
+    set.rows[0].phone === '+15551234567'
+  );
 });
 await asUser(userG, async () => {
   try {
@@ -1167,7 +1170,7 @@ const phoneMetaOkProfile = await db.query(`select phone from public.profiles whe
 ]);
 check(
   'handle_new_user() sets phone from signup metadata (no session needed, unlike the app-side profiles UPDATE)',
-  phoneMetaOkProfile.rows[0].phone === '+1 222-333-4444'
+  phoneMetaOkProfile.rows[0].phone === '+12223334444'
 );
 
 // userA already has '+1 555-123-4567' set above (a different formatting
@@ -1194,6 +1197,66 @@ check(
   phoneMetaConflictProfile.rows[0].phone === null
 );
 
+console.log('\n--- profiles.phone: one format for Bangladesh numbers ---');
+const bdForms = await db.query(
+  `select array_agg(public.normalize_phone(p) order by p) as v
+     from unnest(array['01711000555', '8801711000555', '+8801711000555',
+                       '008801711000555', '+880 1711-000555', '(01711) 000 555']) as p`
+);
+check(
+  'normalize_phone() maps local, 880, +880 and 00880 forms (with any formatting) to +8801XXXXXXXXX',
+  bdForms.rows[0].v.every((v) => v === '+8801711000555')
+);
+const otherForms = await db.query(
+  `select public.normalize_phone('+1 (555) 123-4567') as intl,
+          public.normalize_phone('01211000555') as not_mobile`
+);
+check(
+  'normalize_phone() leaves non-Bangladesh and non-mobile numbers alone apart from formatting',
+  otherForms.rows[0].intl === '+15551234567' && otherForms.rows[0].not_mobile === '01211000555'
+);
+
+await asUser(userX, async () => {
+  const set = await db.query(
+    `update public.profiles set phone = '01711-000555' where id = '${userX}' returning phone`
+  );
+  check('a local-format phone is stored as +8801XXXXXXXXX', set.rows[0].phone === '+8801711000555');
+});
+
+const bdConflict = await db.query(
+  `insert into auth.users (email, raw_user_meta_data) values ($1, $2::jsonb) returning id`,
+  [
+    'phonemeta3@example.com',
+    JSON.stringify({ role: 'user', full_name: 'PhoneMeta3', phone: '+8801711000555' }),
+  ]
+);
+const bdConflictProfile = await db.query(`select phone from public.profiles where id = $1`, [
+  bdConflict.rows[0].id,
+]);
+check(
+  "signing up with the +880 form of X's local-format number is treated as a duplicate (phone left NULL)",
+  bdConflictProfile.rows[0].phone === null
+);
+
+await asAnon(async () => {
+  const byLocal = await db.query(`select public.resolve_login_identifier('01711000555') as v`);
+  const byIntl = await db.query(`select public.resolve_login_identifier('+8801711000555') as v`);
+  check(
+    'resolve_login_identifier() finds the same account from the local and +880 forms',
+    byLocal.rows[0].v === 'x@example.com' && byIntl.rows[0].v === 'x@example.com'
+  );
+});
+
+await asUser(userX, async () => {
+  const cleared = await db.query(
+    `update public.profiles set phone = ' - ' where id = '${userX}' returning phone`
+  );
+  check(
+    'a phone that normalizes to an empty string is stored as NULL',
+    cleared.rows[0].phone === null
+  );
+});
+
 console.log('\n--- resolve_login_identifier() ---');
 await asAnon(async () => {
   const email = await db.query(`select public.resolve_login_identifier('A@EXAMPLE.COM') as v`);
@@ -1206,10 +1269,8 @@ await asAnon(async () => {
     email.rows[0].v === 'A@EXAMPLE.COM'
   );
 
-  // A's stored number is '+1 555-123-4567'; this uses a space instead of
-  // the dashes — normalize_phone strips both whitespace and dashes (not
-  // the leading "+"), so this still has to normalize to the same string
-  // as what's stored to prove the lookup actually normalizes rather than
+  // A set '+1 555-123-4567' (stored as '+15551234567'); this uses spaces
+  // instead, to prove the lookup normalizes its input rather than
   // requiring an exact match.
   const byPhone = await db.query(`select public.resolve_login_identifier('+1 555 123 4567') as v`);
   check(
@@ -1776,7 +1837,7 @@ await asUser(userS, async () => {
     updated.rows.length === 1 &&
       updated.rows[0].role === 'user' &&
       updated.rows[0].full_name === 'S renamed' &&
-      updated.rows[0].phone === '+1 777-000-1111'
+      updated.rows[0].phone === '+17770001111'
   );
 });
 await asUser(userS, async () => {

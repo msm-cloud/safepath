@@ -183,10 +183,20 @@ function isBoundedString(value: unknown, maxLength: number): value is string {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength;
 }
 
+const BD_LOCAL_RE = /^01[3-9]\d{8}$/;
+const BD_NO_PLUS_RE = /^8801[3-9]\d{8}$/;
+const BD_DOUBLE_ZERO_RE = /^008801[3-9]\d{8}$/;
+
 // Same rule as public.normalize_phone(), so lookups and rate-limit keys
-// agree with the unique index on profiles.phone.
+// agree with the unique index on profiles.phone. Bangladesh mobile numbers
+// become +8801XXXXXXXXX whichever way they were typed; anything else only
+// loses its formatting characters.
 export function normalizePhone(phone: string): string {
-  return phone.replace(/[\s-]/g, '');
+  const digits = phone.replace(/[\s()-]/g, '');
+  if (BD_LOCAL_RE.test(digits)) return `+88${digits}`;
+  if (BD_NO_PLUS_RE.test(digits)) return `+${digits}`;
+  if (BD_DOUBLE_ZERO_RE.test(digits)) return `+${digits.slice(2)}`;
+  return digits;
 }
 
 // x-sp-client-ip is only trusted from the dashboard server, which proves

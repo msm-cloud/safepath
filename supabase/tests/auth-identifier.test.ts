@@ -9,6 +9,7 @@ import {
   createHandler,
   DUMMY_EMAIL,
   LIMITS,
+  normalizePhone,
   RESET_MESSAGE,
   secretsMatch,
   type Bucket,
@@ -200,6 +201,22 @@ describe('sign-in', () => {
       (await send(fake.deps, signIn('+880 1711-000 999', 'wrong-password'))).status,
       429
     );
+  });
+
+  it('treats local, 880 and 00880 forms as the same phone', async () => {
+    const fake = makeFake();
+    const formats = [
+      '01711000999',
+      '8801711000999',
+      '00880 1711-000999',
+      '(+880) 1711 000999',
+      '01711-000999',
+    ];
+    assert.equal(formats.length, LIMITS.signin.max);
+    for (const phone of formats) {
+      assert.equal((await send(fake.deps, signIn(phone, PASSWORD))).status, 200);
+    }
+    assert.equal((await send(fake.deps, signIn(KNOWN_PHONE, PASSWORD))).status, 429);
   });
 
   it('returns 429 with Retry-After for an IP over its limit', async () => {
@@ -447,6 +464,27 @@ describe('client IP', () => {
 
     assert.equal(sameUser.status, 429);
     assert.equal(otherUser.status, 400);
+  });
+});
+
+describe('normalizePhone', () => {
+  it('converts Bangladesh mobile numbers to +8801XXXXXXXXX', () => {
+    for (const input of [
+      '01711000555',
+      '8801711000555',
+      '+8801711000555',
+      '008801711000555',
+      '+880 1711-000555',
+      '(0171) 100 0555',
+    ]) {
+      assert.equal(normalizePhone(input), '+8801711000555', input);
+    }
+  });
+
+  it('only strips formatting from other numbers', () => {
+    assert.equal(normalizePhone('+1 (555) 123-4567'), '+15551234567');
+    assert.equal(normalizePhone('0171100055'), '0171100055');
+    assert.equal(normalizePhone('01211000555'), '01211000555');
   });
 });
 
