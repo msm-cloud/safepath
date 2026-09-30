@@ -30,8 +30,8 @@ export const translations = {
   // --- Sign in ---
   signInTitle: { en: 'Sign in to SafePath', bn: 'সেফপাথে সাইন ইন করুন' },
   emailPlaceholder: { en: 'Email', bn: 'ইমেইল' },
-  // Sign-in accepts either an email or a phone number (see
-  // lib/resolve-login-identifier.ts) — sign-up still asks for email and
+  // Sign-in accepts either an email or a phone number (phone goes through
+  // lib/auth-identifier.ts) — sign-up still asks for email and
   // phone as two separate required fields, so emailPlaceholder above is
   // still used there unchanged.
   emailOrPhonePlaceholder: { en: 'Email or Phone Number', bn: 'ইমেইল অথবা ফোন নম্বর' },
@@ -49,13 +49,21 @@ export const translations = {
   },
   showPasswordLabel: { en: 'Show password', bn: 'পাসওয়ার্ড দেখান' },
   hidePasswordLabel: { en: 'Hide password', bn: 'পাসওয়ার্ড লুকান' },
-  // Same fixed string Supabase's own API returns for a wrong password
-  // (error.code === 'invalid_credentials') — used verbatim (not passed
-  // through from the API) for BOTH that case and an unresolved email/
-  // phone identifier, so the two are guaranteed byte-identical rather
-  // than just coincidentally the same today. That's what actually makes
-  // this un-enumerable — see sign-in.tsx.
+  // Shown for a wrong password and for a phone with no account alike, so
+  // the two can't be told apart — see sign-in.tsx.
   invalidCredentials: { en: 'Invalid login credentials', bn: 'সাইন ইন তথ্য সঠিক নয়।' },
+  emailNotConfirmed: {
+    en: 'Confirm your email address first, then sign in.',
+    bn: 'প্রথমে আপনার ইমেইল ঠিকানা নিশ্চিত করুন, তারপর সাইন ইন করুন।',
+  },
+  tooManyAttempts: {
+    en: 'Too many attempts. Please try again later.',
+    bn: 'অনেকবার চেষ্টা করা হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।',
+  },
+  signInUnavailable: {
+    en: "Couldn't sign in right now. Check your connection and try again.",
+    bn: 'এই মুহূর্তে সাইন ইন করা যাচ্ছে না। আপনার ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
+  },
   forgotPasswordLink: { en: 'Forgot Password?', bn: 'পাসওয়ার্ড ভুলে গেছেন?' },
   userManualLink: {
     en: 'Need help? View the user guide',
@@ -83,6 +91,12 @@ export const translations = {
     en: 'That phone number is already registered to another account.',
     bn: 'এই ফোন নম্বরটি ইতিমধ্যে অন্য একটি অ্যাকাউন্টে নিবন্ধিত।',
   },
+  // components/PhoneNotSavedNotice.tsx
+  phoneNotSavedMessage: {
+    en: "The phone number you signed up with wasn't saved. It may already be linked to another account. Add a phone number to sign in with it.",
+    bn: 'সাইন আপের সময় দেওয়া ফোন নম্বরটি সংরক্ষণ করা যায়নি। এটি হয়তো অন্য কোনো অ্যাকাউন্টের সাথে যুক্ত। ফোন নম্বর দিয়ে সাইন ইন করতে একটি ফোন নম্বর যোগ করুন।',
+  },
+  phoneNotSavedAction: { en: 'Add phone number', bn: 'ফোন নম্বর যোগ করুন' },
 
   // --- Forgot / reset password ---
   forgotPasswordTitle: { en: 'Reset your password', bn: 'আপনার পাসওয়ার্ড পুনরায় সেট করুন' },

@@ -9,11 +9,17 @@
       "channel": "preview",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_FUNCTION_REGION": "ap-southeast-1"
       }
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_FUNCTION_REGION": "ap-southeast-1"
+      }
     }
   },
   "submit": {

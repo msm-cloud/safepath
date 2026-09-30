@@ -201,7 +201,16 @@ deploy workflow; each one is deployed by hand after its PR merges.
   otherwise it runs in the region nearest the caller and every database
   round trip crosses regions. The dashboard reads the region from
   `SUPABASE_FUNCTION_REGION` in `dashboard/.env.local` (and from the hosting
-  environment's variables if the dashboard is deployed).
+  environment's variables if the dashboard is deployed). The mobile app
+  reads `EXPO_PUBLIC_SUPABASE_FUNCTION_REGION` from `mobile/.env` locally
+  and from `mobile/eas.json` for EAS builds.
+
+  `public.resolve_login_identifier()` is the older phone lookup, still
+  anon-callable because app 1.1.0 uses it for sign-in, reset and the
+  sign-up phone check. Later app versions and the dashboard no longer call
+  it, so any remaining calls to `/rest/v1/rpc/resolve_login_identifier`
+  come from old installs (or scripts); revoke anonymous access once those
+  are negligible.
 
   Its request handling is tested under Node with the Supabase calls faked:
 
