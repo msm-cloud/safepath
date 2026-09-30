@@ -20,7 +20,11 @@ safepath/
 │   ├── config.toml        # local Supabase CLI project config
 │   └── migrations/        # schema + RLS, applied in filename order
 ├── scripts/
-│   └── gen-types.mjs      # regenerates packages/shared-types/src/database.ts
+│   ├── gen-types.mjs      # regenerates packages/shared-types/src/database.ts
+│   └── check-contrast.ts  # WCAG contrast check for the mobile theme colours
+├── docs/
+│   ├── ARCHITECTURE.md    # how the mobile theme and UI components fit together
+│   └── design/            # exported design boards (reference only)
 ├── package.json          # root workspace config
 ├── pnpm-workspace.yaml    # pnpm workspace definition
 ├── eslint.config.mjs      # shared base ESLint config, extended by both apps
@@ -100,6 +104,7 @@ pnpm lint          # lint mobile, dashboard, and shared-types
 pnpm typecheck      # tsc --noEmit across every package
 pnpm format         # format the whole repo with Prettier
 pnpm format:check   # check formatting without writing
+pnpm check:contrast # WCAG contrast table for every theme colour pair
 ```
 
 Or scope any script to a single package with `--filter`, e.g.
@@ -217,6 +222,30 @@ deploy workflow; each one is deployed by hand after its PR merges.
   ```bash
   pnpm test:auth-identifier
   ```
+
+## Design system (mobile)
+
+Colours, spacing, radius, type and shadows live in
+[`mobile/theme/`](mobile/theme/) and are read through `useTheme()`. Base
+components (`Text`, `Button`, `Input`, `PasswordInput`, `Card`, `Screen`,
+`Banner`, `SegmentedControl`, `IconTile`) live in
+[`mobile/components/ui/`](mobile/components/ui/). New and reworked screens
+use these instead of inline colours and styles; the older
+`mobile/constants/Colors.ts` stays only until every screen has moved over.
+
+- **Fonts**: Sora (headings), Figtree (body) and Hind Siliguri (Bangla), all
+  under the SIL Open Font License 1.1, loaded at startup from the
+  `@expo-google-fonts/*` packages.
+- **Contrast**: after changing a colour, run `pnpm check:contrast`; it fails
+  if any text/background pair drops below WCAG AA in either theme.
+- **Background photos**: only on welcome, auth, onboarding and empty-state
+  screens. Each file must be listed in
+  [`mobile/assets/backgrounds/CREDITS.md`](mobile/assets/backgrounds/CREDITS.md).
+- **Component gallery**: in a development build, open
+  `safepath://dev/ui-gallery` to see every component in the current theme and
+  language. Other builds redirect away from it.
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the details.
 
 ## Tooling
 
