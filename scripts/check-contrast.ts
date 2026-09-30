@@ -86,7 +86,7 @@ const PAIRS: Pair[] = [
 
   {
     group: 'Banner',
-    label: 'info (primary)',
+    label: 'primary',
     fg: 'onPrimarySoft',
     bg: 'primarySoft',
     level: 'text',
@@ -94,7 +94,7 @@ const PAIRS: Pair[] = [
   { group: 'Banner', label: 'success', fg: 'onSuccessSoft', bg: 'successSoft', level: 'text' },
   { group: 'Banner', label: 'warning', fg: 'onWarningSoft', bg: 'warningSoft', level: 'text' },
   { group: 'Banner', label: 'danger', fg: 'onDangerSoft', bg: 'dangerSoft', level: 'text' },
-  { group: 'Banner', label: 'teal note', fg: 'onInfoSoft', bg: 'infoSoft', level: 'text' },
+  { group: 'Banner', label: 'info', fg: 'onInfoSoft', bg: 'infoSoft', level: 'text' },
 
   // Worst case for background images: a pure white pixel under the overlay.
   {
