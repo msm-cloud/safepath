@@ -1,8 +1,10 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import { signOutAction } from '@/lib/auth-actions';
 import { createClient } from '@/lib/supabase/server';
+import { t, type Language } from '@/lib/translations';
 
 import DashboardHeader from './dashboard-header';
 
@@ -26,7 +28,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, phone, preferred_language')
     .eq('id', user.id)
     .single();
 
@@ -34,9 +36,24 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     redirect('/guardian-only');
   }
 
+  // Sign-up doesn't check whether a phone is already taken (that would let
+  // anyone look up registered numbers), so handle_new_user() drops a
+  // duplicate one silently. The account owner finds out here instead.
+  const signedUpWithPhone = typeof user.user_metadata?.phone === 'string';
+  const phoneNotSaved = signedUpWithPhone && !profile.phone;
+  const language: Language = profile.preferred_language ?? 'bn';
+
   return (
     <div className="flex flex-1 flex-col">
       <DashboardHeader email={user.email} signOutAction={signOutAction} />
+      {phoneNotSaved && (
+        <div className="border-b border-amber-200 bg-amber-50 px-6 py-3 text-sm text-amber-900">
+          {t(language, 'phoneNotSavedMessage')}{' '}
+          <Link href="/dashboard/settings" className="font-medium underline">
+            {t(language, 'phoneNotSavedSettingsLink')}
+          </Link>
+        </div>
+      )}
       <div className="flex flex-1 flex-col">{children}</div>
     </div>
   );

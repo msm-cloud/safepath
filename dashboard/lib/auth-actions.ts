@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 
+import { phoneReset, phoneSignIn } from '@/lib/auth-identifier';
 import { isValidPhone } from '@/lib/validation';
 import { createClient } from '@/lib/supabase/server';
 
@@ -24,6 +25,10 @@ const PHONE_UNIQUE_VIOLATION = '23505';
 // actually prevents someone from telling "wrong password" apart from
 // "that email/phone has no account" by the error text.
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid login credentials';
+// Matches GoTrue's own message, which the email path passes through.
+const EMAIL_NOT_CONFIRMED_MESSAGE = 'Email not confirmed';
+const TOO_MANY_ATTEMPTS_MESSAGE = 'Too many attempts, try later.';
+const SIGN_IN_UNAVAILABLE_MESSAGE = 'Sign-in is temporarily unavailable. Try again later.';
 
 export type AuthActionState = {
   error: string | null;
@@ -46,31 +51,66 @@ export async function signInAction(
 
   const supabase = await createClient();
 
-  // Turns a phone number into the account's real email first (a no-op,
-  // no-lookup pass-through if `identifier` is already an email — see
-  // resolve_login_identifier in the migration above) — signInWithPassword
-  // itself only understands email.
-  const { data: resolvedEmail } = await supabase.rpc('resolve_login_identifier', {
-    identifier,
-  });
-  if (!resolvedEmail) {
-    // Deliberately not even attempting signInWithPassword with the raw
-    // (unresolved) identifier — Supabase's own email-format validation
-    // would reject a phone-shaped string differently than it rejects a
-    // wrong password for a real email, which would itself be a giveaway.
-    return { error: INVALID_CREDENTIALS_MESSAGE, info: null };
+  if (EMAIL_RE.test(identifier)) {
+    const { error } = await supabase.auth.signInWithPassword({ email: identifier, password });
+    if (error) {
+      return {
+        error: error.code === 'invalid_credentials' ? INVALID_CREDENTIALS_MESSAGE : error.message,
+        info: null,
+      };
+    }
+    redirect('/dashboard');
   }
 
-  const { error } = await supabase.auth.signInWithPassword({ email: resolvedEmail, password });
+  // Phone sign-in goes through the edge function so the email behind the
+  // number never reaches this server or the browser.
+  const result = await phoneSignIn(identifier, password);
+  switch (result.kind) {
+    case 'ok': {
+      const { error } = await supabase.auth.setSession(result.session);
+      if (error) return { error: SIGN_IN_UNAVAILABLE_MESSAGE, info: null };
+      redirect('/dashboard');
+    }
+    case 'invalid_credentials':
+      return { error: INVALID_CREDENTIALS_MESSAGE, info: null };
+    case 'email_not_confirmed':
+      return { error: EMAIL_NOT_CONFIRMED_MESSAGE, info: null };
+    case 'rate_limited':
+      return { error: TOO_MANY_ATTEMPTS_MESSAGE, info: null };
+    case 'error':
+      return { error: SIGN_IN_UNAVAILABLE_MESSAGE, info: null };
+  }
+}
 
-  if (error) {
-    return {
-      error: error.code === 'invalid_credentials' ? INVALID_CREDENTIALS_MESSAGE : error.message,
-      info: null,
-    };
+export type ForgotPasswordState = {
+  status: 'idle' | 'invalid' | 'rate_limited' | 'sent';
+};
+
+export async function forgotPasswordAction(
+  _prevState: ForgotPasswordState,
+  formData: FormData
+): Promise<ForgotPasswordState> {
+  const identifier = String(formData.get('identifier') ?? '').trim();
+  const isEmail = EMAIL_RE.test(identifier);
+  if (!isEmail && !isValidPhone(identifier)) {
+    return { status: 'invalid' };
   }
 
-  redirect('/dashboard');
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+  const redirectTo = `${siteUrl}/reset-password`;
+
+  // The outcome is 'sent' whether or not an account exists, and failures
+  // are not surfaced, so this can't be used to find registered emails or
+  // phones. The phone rate limit counts unknown numbers too, so reporting
+  // it reveals nothing either.
+  if (isEmail) {
+    const supabase = await createClient();
+    await supabase.auth.resetPasswordForEmail(identifier, { redirectTo });
+    return { status: 'sent' };
+  }
+
+  const result = await phoneReset(identifier, redirectTo);
+  return { status: result.kind === 'rate_limited' ? 'rate_limited' : 'sent' };
 }
 
 export async function signUpAction(
@@ -97,24 +137,10 @@ export async function signUpAction(
 
   const supabase = await createClient();
 
-  // Pre-check phone availability before ever creating an account. This
-  // project requires email confirmation, so by the time the DB-level
-  // unique constraint could otherwise reject a duplicate phone, the
-  // account would already exist and the guardian would see "check your
-  // email" with no idea their phone silently wasn't saved (see
-  // handle_new_user()'s own comment on why a conflict there doesn't fail
-  // signup). This has its own small race — someone else could register
-  // the same phone between this check and the signUp() call below —
-  // which is exactly what that trigger-level handling is the real safety
-  // net for, not this; this is purely a same-request UX improvement for
-  // the common (non-racing) case.
-  const { data: existingEmailForPhone } = await supabase.rpc('resolve_login_identifier', {
-    identifier: phone,
-  });
-  if (existingEmailForPhone) {
-    return { error: 'That phone number is already registered to another account.', info: null };
-  }
-
+  // No phone-availability check here: an anonymous "is this number taken?"
+  // answer would let anyone enumerate registered phones. If the number is
+  // already in use, handle_new_user() creates the account without it, and
+  // the dashboard layout tells the guardian after their first sign-in.
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
