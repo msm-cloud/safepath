@@ -197,6 +197,12 @@ deploy workflow; each one is deployed by hand after its PR merges.
   | `AUTH_RATE_LIMIT_SALT`     | HMAC key for the stored phone/IP hashes; the function returns 503 until it's set  |
   | `DASHBOARD_FORWARD_SECRET` | lets the dashboard server pass the end user's IP; same value in the dashboard env |
 
+  Callers pin it to the database's region with the `x-region` header;
+  otherwise it runs in the region nearest the caller and every database
+  round trip crosses regions. The dashboard reads the region from
+  `SUPABASE_FUNCTION_REGION` in `dashboard/.env.local` (and from the hosting
+  environment's variables if the dashboard is deployed).
+
   Its request handling is tested under Node with the Supabase calls faked:
 
   ```bash
