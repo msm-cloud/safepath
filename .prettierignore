@@ -18,3 +18,7 @@ mobile/expo-env.d.ts
 # header says so — so Prettier shouldn't reformat it and create a diff
 # against what the generator actually produces on the next `pnpm gen:types`.
 packages/shared-types/src/database.ts
+
+# Verbatim design tool export (see docs/design/README.md). Reformatting it
+# would turn every future re-export into a full-file diff.
+docs/design/safepath-ui/
