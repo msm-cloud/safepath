@@ -48,6 +48,7 @@ async function callAuthIdentifier(body: Record<string, string>): Promise<Respons
     Authorization: `Bearer ${anonKey}`,
     apikey: anonKey,
     'Content-Type': 'application/json',
+    ...regionHeader(),
     ...(await forwardingHeaders()),
   };
 
@@ -61,6 +62,14 @@ async function callAuthIdentifier(body: Record<string, string>): Promise<Respons
   } catch {
     return null;
   }
+}
+
+// The function makes several sequential database and GoTrue calls, so it
+// runs in the database's region rather than the one nearest this server.
+// Pinned requests aren't rerouted during a regional outage.
+function regionHeader(): Record<string, string> {
+  const region = process.env.SUPABASE_FUNCTION_REGION?.trim();
+  return region ? { 'x-region': region } : {};
 }
 
 // Every call reaches the function from this server's IP, so the end user's
