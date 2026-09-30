@@ -36,10 +36,10 @@ export default function PrivacyPolicyPage() {
         <li>
           <strong>Location History (optional, off by default):</strong> if you choose to enable it
           from the &ldquo;Location History Recording&rdquo; card on the Home tab, SafePath
-          periodically records your device&apos;s location. You choose how long entries are kept —
-          6 hours, 24 hours, 3 days, or 7 days — with 24 hours as the default if you don&apos;t
-          change it. This is separate from the alert-based location above, and no history is
-          recorded unless you turn it on. See Section 5 for full detail.
+          periodically records your device&apos;s location. You choose how long entries are kept — 6
+          hours, 24 hours, 3 days, or 7 days — with 24 hours as the default if you don&apos;t change
+          it. This is separate from the alert-based location above, and no history is recorded
+          unless you turn it on. See Section 5 for full detail.
         </li>
       </ul>
       <p className="mt-3 text-sm leading-relaxed text-zinc-700">
@@ -188,7 +188,9 @@ export default function PrivacyPolicyPage() {
           Location History does not record anything unless you turn it on. It is off by default for
           every user.
         </li>
-        <li>You can enable it from the &ldquo;Location History Recording&rdquo; card on the Home tab.</li>
+        <li>
+          You can enable it from the &ldquo;Location History Recording&rdquo; card on the Home tab.
+        </li>
         <li>
           When enabled, you choose how long entries are kept: 6 hours, 24 hours, 3 days, or 7 days.
           If you don&apos;t change this, entries are kept for 24 hours. Entries older than your

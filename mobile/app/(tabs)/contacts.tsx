@@ -93,12 +93,15 @@ export default function GuardiansScreen() {
       if (!userId) return;
       // Optimistic, same fire-and-forget pattern the settings toggles use.
       setRetentionByGuardian((prev) => ({ ...prev, [guardianId]: hours }));
-      await supabase
-        .from('location_history_retention')
-        .upsert(
-          { user_id: userId, guardian_id: guardianId, retention_hours: hours, recorded_by_role: 'user' },
-          { onConflict: 'user_id,guardian_id,recorded_by_role' }
-        );
+      await supabase.from('location_history_retention').upsert(
+        {
+          user_id: userId,
+          guardian_id: guardianId,
+          retention_hours: hours,
+          recorded_by_role: 'user',
+        },
+        { onConflict: 'user_id,guardian_id,recorded_by_role' }
+      );
     },
     [userId]
   );
