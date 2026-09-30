@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 
 import PasswordInput from '@/components/PasswordInput';
+import { phoneSignIn } from '@/lib/auth-identifier';
 import { useLanguage } from '@/lib/language-context';
-import { resolveLoginIdentifier } from '@/lib/resolve-login-identifier';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
@@ -66,47 +66,48 @@ export default function SignInScreen() {
     }
 
     setSubmitting(true);
+    const errorMessage = isValidEmail(identifier)
+      ? await signInWithEmail(identifier)
+      : await signInWithPhone(identifier);
+    setSubmitting(false);
+    setError(errorMessage);
 
-    // Turns a phone number into the account's real email first (a no-op,
-    // no-lookup pass-through if `identifier` is already an email — see
-    // resolve-login-identifier.ts) — signInWithPassword itself only
-    // understands email.
-    const resolvedEmail = await resolveLoginIdentifier(identifier);
-    if (!resolvedEmail) {
-      // Deliberately the exact same message as a wrong password below,
-      // not a distinct "that identifier isn't registered" message — and
-      // deliberately not even attempting signInWithPassword with the raw
-      // (unresolved) identifier, since Supabase's own email-format
-      // validation would reject a phone-shaped string differently than
-      // it rejects a wrong password for a real email. Either giveaway
-      // would let someone probe which emails/phones have accounts.
-      setSubmitting(false);
-      setError(t('invalidCredentials'));
-      return;
-    }
+    // No navigation call needed on success: the session change is picked
+    // up by AuthProvider, and Stack.Protected in the root layout redirects
+    // to the right tab group (by the real profile.role) automatically.
+  };
 
+  // Each returns the message to show, or null on success.
+  const signInWithEmail = async (emailAddress: string): Promise<string | null> => {
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: resolvedEmail,
+      email: emailAddress,
       password,
     });
-    setSubmitting(false);
+    if (!signInError) return null;
+    // Our own copy for a wrong password, so it matches the phone path
+    // exactly. Anything else (unconfirmed email, network) keeps
+    // Supabase's message.
+    return signInError.code === 'invalid_credentials'
+      ? t('invalidCredentials')
+      : signInError.message;
+  };
 
-    if (signInError) {
-      // 'invalid_credentials' (wrong password against a real email) gets
-      // our own translated copy — same string as the unresolved-identifier
-      // case above, not Supabase's raw message — so the two are
-      // guaranteed byte-identical rather than just coincidentally the
-      // same today. Any other error (e.g. email not confirmed, a network
-      // failure) still surfaces Supabase's own message unchanged.
-      setError(
-        signInError.code === 'invalid_credentials' ? t('invalidCredentials') : signInError.message
-      );
-      return;
+  // The edge function looks up the email server-side, so the app never
+  // learns which email (if any) is behind a phone number.
+  const signInWithPhone = async (phone: string): Promise<string | null> => {
+    const result = await phoneSignIn(phone, password);
+    switch (result.kind) {
+      case 'ok':
+        return null;
+      case 'invalid_credentials':
+        return t('invalidCredentials');
+      case 'email_not_confirmed':
+        return t('emailNotConfirmed');
+      case 'rate_limited':
+        return t('tooManyAttempts');
+      case 'error':
+        return t('signInUnavailable');
     }
-
-    // No navigation call needed: the session change is picked up by
-    // AuthProvider, and Stack.Protected in the root layout redirects to
-    // the right tab group (by the real profile.role) automatically.
   };
 
   return (

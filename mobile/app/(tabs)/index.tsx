@@ -18,6 +18,7 @@ import {
 
 import Avatar from '@/components/Avatar';
 import OnboardingScreen from '@/components/OnboardingScreen';
+import PhoneNotSavedNotice from '@/components/PhoneNotSavedNotice';
 import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
@@ -372,6 +373,7 @@ export default function HomeScreen() {
           <Avatar name={fullName} url={avatarPath} size={36} />
           <Text style={styles.title}>{t('homeTitle')}</Text>
         </View>
+        <PhoneNotSavedNotice />
 
         {loading ? (
           <ActivityIndicator style={styles.loadingIndicator} />

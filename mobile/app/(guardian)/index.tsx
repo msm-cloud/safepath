@@ -16,6 +16,7 @@ import {
 import Avatar from '@/components/Avatar';
 import GuardianLiveSharing from '@/components/GuardianLiveSharing';
 import OnboardingScreen from '@/components/OnboardingScreen';
+import PhoneNotSavedNotice from '@/components/PhoneNotSavedNotice';
 import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
@@ -393,6 +394,7 @@ export default function GuardianActiveAlertsScreen() {
               <Avatar name={fullName} url={avatarPath} size={36} />
               <Text style={styles.title}>{t('guardianActiveAlertsTitle')}</Text>
             </View>
+            <PhoneNotSavedNotice />
             {/* Renders nothing unless a linked person is actively sharing
                 their live location — its own data + Realtime lifecycle. */}
             <GuardianLiveSharing />

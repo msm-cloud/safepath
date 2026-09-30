@@ -11,8 +11,8 @@ import {
   TextInput,
 } from 'react-native';
 
+import { phoneReset } from '@/lib/auth-identifier';
 import { useLanguage } from '@/lib/language-context';
-import { resolveLoginIdentifier } from '@/lib/resolve-login-identifier';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
@@ -45,19 +45,21 @@ export default function ForgotPasswordScreen() {
     }
 
     setSubmitting(true);
-    const resolvedEmail = await resolveLoginIdentifier(trimmed);
 
-    // Only actually send an email if the identifier resolved to a real
-    // account — but show the exact same success state either way (below,
-    // `sent` doesn't distinguish these two branches at all). Calling
-    // resetPasswordForEmail with a fabricated address would risk a
-    // distinguishable error/timing from Supabase's own side; simply not
-    // calling it is the more robust way to guarantee this can't be used
-    // to enumerate which emails/phones have accounts.
-    if (resolvedEmail) {
-      await supabase.auth.resetPasswordForEmail(resolvedEmail, {
+    // Supabase Auth doesn't reveal whether an email has an account, and
+    // the edge function doesn't reveal whether a phone does, so every
+    // outcome except rate limiting shows the same "sent" message.
+    if (isValidEmail(trimmed)) {
+      await supabase.auth.resetPasswordForEmail(trimmed, {
         redirectTo: RESET_PASSWORD_REDIRECT_URL,
       });
+    } else {
+      const result = await phoneReset(trimmed, RESET_PASSWORD_REDIRECT_URL);
+      if (result.kind === 'rate_limited') {
+        setSubmitting(false);
+        setError(t('tooManyAttempts'));
+        return;
+      }
     }
 
     setSubmitting(false);

@@ -15,7 +15,6 @@ import {
 import PasswordInput from '@/components/PasswordInput';
 import { useLanguage } from '@/lib/language-context';
 import { markOnboardingPending } from '@/lib/onboarding-storage';
-import { resolveLoginIdentifier } from '@/lib/resolve-login-identifier';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
@@ -88,24 +87,11 @@ export default function SignUpScreen() {
 
     setSubmitting(true);
 
-    // Pre-check phone availability before ever creating an account. This
-    // project requires email confirmation, so by the time the DB-level
-    // unique constraint could otherwise reject a duplicate phone, the
-    // account would already exist and the person would be looking at a
-    // "check your email" message with no idea their phone silently
-    // wasn't saved (see handle_new_user()'s own comment on why a
-    // conflict there doesn't fail signup). This has its own small race —
-    // someone else could register the same phone between this check and
-    // the signUp() call below — which is exactly what that trigger-level
-    // handling is the real safety net for, not this; this is purely a
-    // same-request UX improvement for the common (non-racing) case.
-    const existingEmailForPhone = await resolveLoginIdentifier(trimmedPhone);
-    if (existingEmailForPhone) {
-      setSubmitting(false);
-      setError(t('duplicatePhoneError'));
-      return;
-    }
-
+    // No phone-availability check here: an anonymous "is this number
+    // taken?" answer would let anyone enumerate registered phones. If the
+    // number is already in use, handle_new_user() creates the account
+    // without it, and PhoneNotSavedNotice tells the owner after their
+    // first sign-in.
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
