@@ -141,6 +141,16 @@ This overwrites [`packages/shared-types/src/database.ts`](packages/shared-types/
 in place, keeping the same `Profile` / `Alert` / `GuardianLink` /
 `EmergencyContact` exports.
 
+### Phone numbers
+
+`profiles.phone` is a sign-in identifier and unique per account. A trigger
+stores it through `public.normalize_phone()`
+([`20260930163050_normalize_bd_phone.sql`](supabase/migrations/20260930163050_normalize_bd_phone.sql)):
+Bangladesh mobile numbers typed as `01…`, `880…`, `+880…` or `00880…` are
+stored as `+8801XXXXXXXXX`; other numbers only lose spaces, dashes and
+parentheses. Lookups normalize their input the same way, so any of those
+forms finds the account. Emergency contact numbers are not normalized.
+
 ### CI: migrations
 
 Two GitHub Actions workflows keep `supabase/migrations/` in sync with the
@@ -178,6 +188,8 @@ deploy workflow; each one is deployed by hand after its PR merges.
   [`20260929204605_auth_rate_limit.sql`](supabase/migrations/20260929204605_auth_rate_limit.sql)).
   Email sign-in stays a direct `signInWithPassword` call. Deployed with JWT
   verification on, which relies on clients sending the legacy anon key.
+  Its `normalizePhone()` must match `public.normalize_phone()` (see
+  [Phone numbers](#phone-numbers)); redeploy it whenever that rule changes.
   Secrets, set under **Edge Functions → Secrets** in the Supabase dashboard:
 
   | Secret                     | Used for                                                                          |
