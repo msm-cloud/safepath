@@ -2,7 +2,7 @@ import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 
 import { useTheme, type ThemeColors } from '@/theme';
-import { useSurfaceTone } from '@/theme/surface-tone';
+import { SurfaceToneContext, useSurfaceTone } from '@/theme/surface-tone';
 
 import Text, { type TextColor } from './Text';
 
@@ -62,9 +62,11 @@ export default function Button({
     key === 'transparent' ? 'transparent' : colors[key];
 
   const labelColor: TextColor = inactive && variant !== 'ghost' ? 'textDisabled' : spec.label;
-  // A ghost button on a photo has no fill of its own, so it follows the
-  // overlay text colour like any other text there.
-  const iconTint = tone === 'image' && variant === 'ghost' ? colors.onOverlay : colors[labelColor];
+  // Only a ghost button has no fill of its own, so only it follows the
+  // overlay text colour on a photo; every other variant draws its label on
+  // its own background and must keep its label colour.
+  const labelTone = variant === 'ghost' ? tone : 'default';
+  const iconTint = labelTone === 'image' ? colors.onOverlay : colors[labelColor];
 
   return (
     <Pressable
@@ -92,18 +94,20 @@ export default function Button({
       {loading ? (
         <ActivityIndicator color={colors[labelColor]} />
       ) : (
-        <View style={[styles.content, { gap: spacing.sm }]}>
-          {icon && <SymbolView name={icon} tintColor={iconTint} size={20} />}
-          <Text
-            variant={size === 'small' ? 'label' : 'button'}
-            color={labelColor}
-            maxFontSizeMultiplier={MAX_LABEL_SCALE}
-            numberOfLines={2}
-            align="center"
-          >
-            {title}
-          </Text>
-        </View>
+        <SurfaceToneContext value={labelTone}>
+          <View style={[styles.content, { gap: spacing.sm }]}>
+            {icon && <SymbolView name={icon} tintColor={iconTint} size={20} />}
+            <Text
+              variant={size === 'small' ? 'label' : 'button'}
+              color={labelColor}
+              maxFontSizeMultiplier={MAX_LABEL_SCALE}
+              numberOfLines={2}
+              align="center"
+            >
+              {title}
+            </Text>
+          </View>
+        </SurfaceToneContext>
       )}
     </Pressable>
   );
