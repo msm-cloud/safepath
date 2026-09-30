@@ -76,6 +76,10 @@ colour on top, and a light status bar.
 `Banner` and `SegmentedControl` reset the tone to `default` because they draw their own
 opaque background.
 
+The overlay defaults to the `overlay` token (opacity 0.55). A photo in
+`theme/backgrounds.ts` may set `overlayOpacity` between 0.55 and 0.65 (values outside are
+clamped); pick the lowest value at which every text pair on that photo passes WCAG AA.
+
 Photos are licensed from Unsplash or Pexels only, stored as WebP and recorded in
 `mobile/assets/backgrounds/CREDITS.md`.
 

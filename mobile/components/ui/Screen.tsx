@@ -14,7 +14,7 @@ import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { colors as palette, useTheme } from '@/theme';
-import { backgroundSources, type ScreenBackground } from '@/theme/backgrounds';
+import { backgroundPhotos, clampOverlayOpacity, type ScreenBackground } from '@/theme/backgrounds';
 import { SurfaceToneContext } from '@/theme/surface-tone';
 
 export type ScreenProps = {
@@ -46,7 +46,13 @@ export default function Screen({
 }: ScreenProps) {
   const { colors, sizes, spacing } = useTheme();
   const keyboardHeight = useKeyboardHeight();
-  const source = background ? backgroundSources[background] : null;
+  const photo = background ? backgroundPhotos[background] : null;
+  // The overlay is the fallback colour at reduced opacity, so a per-photo
+  // value only changes how much of the photo shows through.
+  const overlay: ViewStyle =
+    photo?.overlayOpacity !== undefined
+      ? { backgroundColor: PHOTO_FALLBACK, opacity: clampOverlayOpacity(photo.overlayOpacity) }
+      : { backgroundColor: colors.overlay };
 
   const bottom = padded ? spacing.xl : 0;
   const padding: ViewStyle = padded
@@ -85,16 +91,16 @@ export default function Screen({
     <View style={[styles.flex, { backgroundColor: background ? PHOTO_FALLBACK : colors.bg }]}>
       {background && (
         <>
-          {source && (
+          {photo && (
             <Image
-              source={source}
+              source={photo.source}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
               accessible={false}
               transition={200}
             />
           )}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay }]} />
+          <View style={[StyleSheet.absoluteFill, overlay]} />
           <StatusBar style="light" />
         </>
       )}
