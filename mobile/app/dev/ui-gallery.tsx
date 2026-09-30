@@ -12,7 +12,7 @@ import Screen from '@/components/ui/Screen';
 import SegmentedControl from '@/components/ui/SegmentedControl';
 import Text from '@/components/ui/Text';
 import { useLanguage } from '@/lib/language-context';
-import type { Language } from '@/lib/translations';
+import { translations, type Language } from '@/lib/translations';
 import { spacing, textVariants, useTheme, type TextVariant } from '@/theme';
 
 // Development-only catalogue of the base components, used to check them in
@@ -50,6 +50,9 @@ const SAMPLE = {
   bn: 'আপনি কখনো একা নন।',
 };
 
+// Every Bangla translation, to check glyph coverage and clipping in one place.
+const BANGLA_STRINGS = Object.entries(translations).map(([key, value]) => [key, value.bn] as const);
+
 type Surface = 'plain' | 'photo';
 
 function UiGallery() {
@@ -59,6 +62,7 @@ function UiGallery() {
   const [selectedRole, setSelectedRole] = useState<'student' | 'guardian'>('student');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
+  const [showAllBangla, setShowAllBangla] = useState(false);
 
   return (
     <>
@@ -185,6 +189,23 @@ function UiGallery() {
                 <IconTile key={tone} tone={tone} icon={{ ios: 'shield.fill', android: 'shield' }} />
               ))}
             </View>
+          </Section>
+
+          <Section title="All Bangla strings">
+            <Button
+              title={showAllBangla ? 'Hide' : `Show all ${BANGLA_STRINGS.length}`}
+              variant="secondary"
+              onPress={() => setShowAllBangla((prev) => !prev)}
+            />
+            {showAllBangla &&
+              BANGLA_STRINGS.map(([key, text]) => (
+                <View key={key}>
+                  <Text variant="micro" color="textMuted" script="latin">
+                    {key}
+                  </Text>
+                  <Text>{text}</Text>
+                </View>
+              ))}
           </Section>
         </View>
       </Screen>
