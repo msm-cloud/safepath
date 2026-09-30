@@ -231,6 +231,10 @@ deploy workflow; each one is deployed by hand after its PR merges.
 - **Prettier**: a single [`.prettierrc.json`](.prettierrc.json) at the repo
   root is picked up automatically by both apps (Prettier searches parent
   directories for config).
+- **PR checks**: [`.github/workflows/pr-checks.yml`](.github/workflows/pr-checks.yml)
+  runs `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test:rls`
+  and `pnpm test:auth-identifier` on every pull request. It needs no
+  secrets; neither test suite touches the live project.
 
 ## What's intentionally not here yet
 
