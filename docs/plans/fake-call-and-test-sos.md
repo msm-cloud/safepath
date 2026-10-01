@@ -233,9 +233,14 @@ To be planned on its own. Scope agreed so far:
 - Attempt limits and lockout behaviour.
 - Use on the real SOS screen: "I am safe · end SOS with PIN".
 
-Open questions for that plan: where the PIN is verified (device or server), whether a
-duress PIN that appears to end the SOS but keeps guardians alerted is in scope, and what a
-guardian sees when the PIN is entered wrong.
+Open questions for that plan:
+
+- Where is the PIN verified (device or server)?
+- Is a duress PIN in scope? It would appear to end the SOS but keep guardians alerted.
+  - It could also fake-accept a guardian link: the review screen shows success, but no
+    link is created and the guardian keeps seeing "Waiting to accept" until the code
+    expires. See `guardian-invite-requests.md` (PR 3b).
+- What does a guardian see when the PIN is entered wrong?
 
 Until it exists, Test SOS hides the "End with PIN" row.
 
