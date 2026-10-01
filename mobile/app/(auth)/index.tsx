@@ -1,107 +1,119 @@
 import { useRouter } from 'expo-router';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import { useState } from 'react';
+import { View } from 'react-native';
 
-import LanguageToggle from '@/components/LanguageToggle';
+import AuthHeader from '@/components/AuthHeader';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import IconTile from '@/components/ui/IconTile';
+import Screen from '@/components/ui/Screen';
+import Text from '@/components/ui/Text';
 import { useLanguage } from '@/lib/language-context';
+import {
+  DEFAULT_PERSONA,
+  PERSONA_HINT,
+  PERSONA_LABEL,
+  PERSONAS,
+  type Persona,
+} from '@/lib/personas';
+import { useTheme } from '@/theme';
 
-// Publicly hosted in Supabase Storage (manuals bucket) — opened in the
-// system browser via Linking.openURL, same pattern as the map links in
-// app/(tabs)/index.tsx and app/(guardian)/index.tsx.
-const USER_MANUAL_URL =
-  'https://njeqiynkyjftlfhodqce.supabase.co/storage/v1/object/public/manuals/SafePath_User_Manual.pdf';
+const PERSONA_ICON: Record<Persona, SymbolViewProps['name']> = {
+  student: { ios: 'graduationcap', android: 'school', web: 'school' },
+  working: { ios: 'briefcase', android: 'work', web: 'work' },
+  guardian: { ios: 'heart', android: 'favorite', web: 'favorite' },
+};
 
-// Shown only when there's no active session (see the `!session` guard in
-// app/_layout.tsx) — the very first thing anyone sees before signing in.
-// Which button is tapped only carries a `role` param forward to sign-in/
-// sign-up as UI framing (which heading to show, what role a *new* account
-// gets created with) — it's never trusted to route an existing account;
-// that's always decided by the real profile.role after auth succeeds.
+// The first screen anyone sees without a session (see the `!session` guard
+// in app/_layout.tsx). The persona only frames sign-up wording and picks the
+// role a new account is created with; an existing account is always routed
+// by its stored profile.role after log in.
 export default function WelcomeScreen() {
   const { t } = useLanguage();
+  const { colors, spacing } = useTheme();
   const router = useRouter();
+  const [persona, setPersona] = useState<Persona>(DEFAULT_PERSONA);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t('welcomeTitle')}</Text>
-      <Text style={styles.subtitle}>{t('welcomeSubtitle')}</Text>
+    <Screen background="welcome" contentStyle={{ gap: spacing.lg }}>
+      <AuthHeader leading="brand" />
 
-      <View style={styles.buttonGroup}>
-        <Pressable
-          style={styles.button}
-          onPress={() => router.push({ pathname: '/(auth)/sign-in', params: { role: 'guardian' } })}
-        >
-          <Text style={styles.buttonText}>{t('signInAsGuardianButton')}</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.button, styles.buttonSecondary]}
-          onPress={() => router.push({ pathname: '/(auth)/sign-in', params: { role: 'user' } })}
-        >
-          <Text style={[styles.buttonText, styles.buttonSecondaryText]}>
-            {t('signInAsStudentButton')}
+      <View style={{ gap: spacing.sm }}>
+        <Text variant="display" accessibilityRole="header">
+          {t('welcomeHeadline')}
+        </Text>
+        {/* Decorative: the same line in the other language. */}
+        <Text variant="title" importantForAccessibility="no" accessibilityElementsHidden>
+          {t('welcomeHeadlineAccent')}
+        </Text>
+        <Text>{t('welcomeTagline')}</Text>
+      </View>
+
+      <View accessibilityRole="radiogroup" style={{ gap: spacing.sm }}>
+        <Text variant="label">{t('personaQuestion')}</Text>
+        {PERSONAS.map((option) => {
+          const selected = option === persona;
+          return (
+            <Card
+              key={option}
+              padding="md"
+              selected={selected}
+              onPress={() => setPersona(option)}
+              accessibilityLabel={`${t(PERSONA_LABEL[option])}. ${t(PERSONA_HINT[option])}`}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <IconTile icon={PERSONA_ICON[option]} tone={selected ? 'primary' : 'neutral'} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="title">{t(PERSONA_LABEL[option])}</Text>
+                  <Text variant="bodySm" color="textSecondary">
+                    {t(PERSONA_HINT[option])}
+                  </Text>
+                </View>
+                {selected && (
+                  <SymbolView
+                    name={{
+                      ios: 'checkmark.circle.fill',
+                      android: 'check_circle',
+                      web: 'check_circle',
+                    }}
+                    tintColor={colors.primary}
+                    size={26}
+                  />
+                )}
+              </View>
+            </Card>
+          );
+        })}
+      </View>
+
+      <View style={{ marginTop: 'auto', gap: spacing.md }}>
+        <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+          <SymbolView
+            name={{ ios: 'lock', android: 'lock', web: 'lock' }}
+            tintColor={colors.onOverlay}
+            size={18}
+          />
+          <Text variant="caption" style={{ flex: 1 }}>
+            {t('locationPrivacyNote')}
           </Text>
-        </Pressable>
+        </View>
+        <Button
+          title={t('continueAsPersona', { persona: t(PERSONA_LABEL[persona]) })}
+          onPress={() => router.push({ pathname: '/(auth)/sign-up', params: { persona } })}
+        />
+        <Text align="center">
+          {t('haveAccountPrompt')}{' '}
+          <Text
+            weight="bold"
+            accessibilityRole="link"
+            onPress={() => router.push('/(auth)/sign-in')}
+            style={{ textDecorationLine: 'underline' }}
+          >
+            {t('logInLink')}
+          </Text>
+        </Text>
       </View>
-
-      <View style={styles.languageSectionWrap}>
-        <LanguageToggle />
-      </View>
-
-      <Pressable onPress={() => Linking.openURL(USER_MANUAL_URL)}>
-        <Text style={styles.userManualLink}>{t('userManualLink')}</Text>
-      </Pressable>
-    </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  buttonGroup: {
-    width: '100%',
-    gap: 12,
-  },
-  languageSectionWrap: {
-    marginTop: 32,
-  },
-  userManualLink: {
-    marginTop: 20,
-    color: '#666',
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#2f95dc',
-    borderRadius: 10,
-    paddingVertical: 18,
-    alignItems: 'center',
-  },
-  buttonSecondary: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#2f95dc',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  buttonSecondaryText: {
-    color: '#2f95dc',
-  },
-});

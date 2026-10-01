@@ -240,7 +240,9 @@ use these instead of inline colours and styles; the older
   if any text/background pair drops below WCAG AA in either theme.
 - **Background photos**: only on welcome, auth, onboarding and empty-state
   screens. Each file must be listed in
-  [`mobile/assets/backgrounds/CREDITS.md`](mobile/assets/backgrounds/CREDITS.md).
+  [`mobile/assets/backgrounds/CREDITS.md`](mobile/assets/backgrounds/CREDITS.md),
+  and `pnpm check:contrast` measures it under its overlay (it uses `sharp`,
+  a root dev dependency).
 - **Component gallery**: in a development build, open
   `safepath://dev/ui-gallery` to see every component in the current theme and
   language. Other builds redirect away from it.

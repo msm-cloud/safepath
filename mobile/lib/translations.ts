@@ -14,34 +14,56 @@ export type Language = 'bn' | 'en';
 type Entry = { en: string; bn: string };
 
 export const translations = {
-  // --- Welcome / role selection ---
-  welcomeTitle: { en: 'Welcome to SafePath', bn: 'সেফপাথে স্বাগতম' },
-  welcomeSubtitle: {
-    en: 'Are you signing in as a guardian, or as a student?',
-    bn: 'আপনি কি একজন অভিভাবক নাকি একজন শিক্ষার্থী হিসেবে সাইন ইন করছেন?',
+  // --- Welcome ---
+  // The board pairs the headline with the same line in the other language,
+  // so each language's accent line is the other one's headline.
+  welcomeHeadline: { en: 'You never walk alone.', bn: 'আপনি কখনো একা নন।' },
+  welcomeHeadlineAccent: { en: 'আপনি কখনো একা নন।', bn: 'You never walk alone.' },
+  welcomeTagline: {
+    en: 'One tap alerts the people who care about you, with your location.',
+    bn: 'এক ট্যাপেই আপনার প্রিয়জনেরা আপনার অবস্থানসহ সতর্কবার্তা পান।',
   },
-  signInAsGuardianButton: { en: 'Sign in as a Guardian', bn: 'অভিভাবক হিসেবে সাইন ইন করুন' },
-  signInAsStudentButton: { en: 'Sign in as a Student', bn: 'শিক্ষার্থী হিসেবে সাইন ইন করুন' },
-  guardianSignInHeading: { en: 'Guardian Sign In', bn: 'অভিভাবক সাইন ইন' },
-  studentSignInHeading: { en: 'Student Sign In', bn: 'শিক্ষার্থী সাইন ইন' },
-  guardianSignUpHeading: { en: 'Guardian Sign Up', bn: 'অভিভাবক সাইন আপ' },
-  studentSignUpHeading: { en: 'Student Sign Up', bn: 'শিক্ষার্থী সাইন আপ' },
+  personaQuestion: { en: 'I am a…', bn: 'আমি একজন…' },
+  personaStudent: { en: 'Student', bn: 'শিক্ষার্থী' },
+  personaStudentHint: {
+    en: 'Campus, coaching and the commute home',
+    bn: 'ক্যাম্পাস, কোচিং আর বাড়ি ফেরার পথ',
+  },
+  personaWorking: { en: 'Working woman', bn: 'কর্মজীবী নারী' },
+  personaWorkingHint: {
+    en: 'Late shifts, rides and travel for work',
+    bn: 'দেরির শিফট, রাইড আর কাজের জন্য যাতায়াত',
+  },
+  personaGuardian: { en: 'Guardian', bn: 'অভিভাবক' },
+  personaGuardianHint: {
+    en: 'Parent, sibling or partner looking out',
+    bn: 'বাবা-মা, ভাইবোন বা সঙ্গী, যিনি খেয়াল রাখেন',
+  },
+  locationPrivacyNote: {
+    en: 'Your location is shared only when you choose.',
+    bn: 'আপনি চাইলেই শুধু আপনার অবস্থান শেয়ার হয়।',
+  },
+  continueAsPersona: { en: 'Continue as {persona}', bn: '{persona} হিসেবে এগিয়ে যান' },
+  haveAccountPrompt: { en: 'Already have an account?', bn: 'আগে থেকেই অ্যাকাউন্ট আছে?' },
+  logInLink: { en: 'Log in', bn: 'লগ ইন' },
+  backLabel: { en: 'Back', bn: 'ফিরে যান' },
+  languageSwitchLabel: { en: 'Language', bn: 'ভাষা' },
 
-  // --- Sign in ---
-  signInTitle: { en: 'Sign in to SafePath', bn: 'সেফপাথে সাইন ইন করুন' },
-  emailPlaceholder: { en: 'Email', bn: 'ইমেইল' },
-  // Sign-in accepts either an email or a phone number (phone goes through
-  // lib/auth-identifier.ts) — sign-up still asks for email and
-  // phone as two separate required fields, so emailPlaceholder above is
-  // still used there unchanged.
-  emailOrPhonePlaceholder: { en: 'Email or Phone Number', bn: 'ইমেইল অথবা ফোন নম্বর' },
+  // --- Log in ---
+  logInHeadline: { en: 'Welcome back', bn: 'আবার স্বাগতম' },
+  logInHeadlineAccent: { en: 'আবার স্বাগতম', bn: 'Welcome back' },
+  // Log in accepts either an email or a phone number (phone goes through
+  // lib/auth-identifier.ts); sign-up still asks for both separately.
+  identifierLabel: { en: 'Phone number or email', bn: 'ফোন নম্বর অথবা ইমেইল' },
   invalidEmailOrPhone: {
     en: 'Enter a valid email address or phone number.',
     bn: 'একটি সঠিক ইমেইল ঠিকানা অথবা ফোন নম্বর লিখুন।',
   },
-  passwordPlaceholder: { en: 'Password', bn: 'পাসওয়ার্ড' },
-  signInButton: { en: 'Sign In', bn: 'সাইন ইন' },
-  signUpLink: { en: "Don't have an account? Sign up", bn: 'অ্যাকাউন্ট নেই? সাইন আপ করুন' },
+  passwordLabel: { en: 'Password', bn: 'পাসওয়ার্ড' },
+  logInButton: { en: 'Log in', bn: 'লগ ইন' },
+  loggingInButton: { en: 'Logging in…', bn: 'লগ ইন হচ্ছে…' },
+  newToSafePathPrompt: { en: 'New to SafePath?', bn: 'সেফপাথে নতুন?' },
+  createAccountLink: { en: 'Create an account', bn: 'অ্যাকাউন্ট খুলুন' },
   invalidEmail: { en: 'Enter a valid email address.', bn: 'একটি সঠিক ইমেইল ঠিকানা লিখুন।' },
   passwordTooShort: {
     en: 'Password must be at least {n} characters.',
@@ -64,24 +86,28 @@ export const translations = {
     en: "Couldn't sign in right now. Check your connection and try again.",
     bn: 'এই মুহূর্তে সাইন ইন করা যাচ্ছে না। আপনার ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
   },
-  forgotPasswordLink: { en: 'Forgot Password?', bn: 'পাসওয়ার্ড ভুলে গেছেন?' },
+  forgotPasswordLink: { en: 'Forgot password?', bn: 'পাসওয়ার্ড ভুলে গেছেন?' },
   userManualLink: {
     en: 'Need help? View the user guide',
     bn: 'সাহায্য দরকার? ব্যবহার নির্দেশিকা দেখুন',
   },
+  // Generic busy label for buttons that send something.
+  sendingLabel: { en: 'Sending…', bn: 'পাঠানো হচ্ছে…' },
 
   // --- Sign up ---
-  signUpTitle: { en: 'Create your SafePath account', bn: 'আপনার সেফপাথ অ্যাকাউন্ট তৈরি করুন' },
-  fullNamePlaceholder: { en: 'Full name', bn: 'পূর্ণ নাম' },
-  passwordSignupPlaceholder: {
-    en: 'Password (min 6 characters)',
-    bn: 'পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)',
+  signingUpAs: { en: 'Signing up as {persona}', bn: '{persona} হিসেবে সাইন আপ' },
+  changeLink: { en: 'Change', bn: 'বদলান' },
+  signUpTitle: { en: 'Create your account', bn: 'আপনার অ্যাকাউন্ট খুলুন' },
+  fullNameLabel: { en: 'Full name', bn: 'পূর্ণ নাম' },
+  fullNamePlaceholder: { en: 'Your name', bn: 'আপনার নাম' },
+  phoneLabel: { en: 'Phone number', bn: 'ফোন নম্বর' },
+  emailLabel: { en: 'Email', bn: 'ইমেইল' },
+  passwordSignupHelper: {
+    en: 'At least {n} characters',
+    bn: 'কমপক্ষে {n} অক্ষর',
   },
-  signUpButton: { en: 'Sign Up', bn: 'সাইন আপ' },
-  signInLink: {
-    en: 'Already have an account? Sign in',
-    bn: 'ইতিমধ্যে অ্যাকাউন্ট আছে? সাইন ইন করুন',
-  },
+  createAccountButton: { en: 'Create account', bn: 'অ্যাকাউন্ট খুলুন' },
+  creatingAccountButton: { en: 'Creating account…', bn: 'অ্যাকাউন্ট খোলা হচ্ছে…' },
   enterYourName: { en: 'Enter your name.', bn: 'আপনার নাম লিখুন।' },
   checkEmailConfirm: {
     en: 'Check your email to confirm your account, then sign in.',
@@ -104,18 +130,18 @@ export const translations = {
     en: "Enter the email or phone number on your account, and we'll send you a link to reset your password.",
     bn: 'আপনার অ্যাকাউন্টের ইমেইল অথবা ফোন নম্বর লিখুন, আমরা আপনাকে পাসওয়ার্ড পুনরায় সেট করার একটি লিংক পাঠাবো।',
   },
-  sendResetLinkButton: { en: 'Send Reset Link', bn: 'রিসেট লিংক পাঠান' },
-  sendingResetLinkButton: { en: 'Sending…', bn: 'পাঠানো হচ্ছে…' },
+  sendResetLinkButton: { en: 'Send reset link', bn: 'রিসেট লিংক পাঠান' },
   // Shown identically whether or not the identifier actually resolved to
   // an account — see forgot-password.tsx. Never reveal which is true.
   resetLinkSentMessage: {
     en: "If an account exists for that email or phone number, we've sent a link to reset your password.",
     bn: 'যদি সেই ইমেইল অথবা ফোন নম্বরের জন্য কোনো অ্যাকাউন্ট থাকে, আমরা পাসওয়ার্ড পুনরায় সেট করার একটি লিংক পাঠিয়েছি।',
   },
-  backToSignInLink: { en: 'Back to Sign In', bn: 'সাইন ইনে ফিরে যান' },
+  backToSignInLink: { en: 'Back to log in', bn: 'লগ ইনে ফিরে যান' },
   resetPasswordTitle: { en: 'Set a new password', bn: 'একটি নতুন পাসওয়ার্ড সেট করুন' },
+  newPasswordLabel: { en: 'New password', bn: 'নতুন পাসওয়ার্ড' },
   newPasswordPlaceholder: { en: 'New password', bn: 'নতুন পাসওয়ার্ড' },
-  resetPasswordButton: { en: 'Reset Password', bn: 'পাসওয়ার্ড রিসেট করুন' },
+  resetPasswordButton: { en: 'Reset password', bn: 'পাসওয়ার্ড রিসেট করুন' },
   resettingPasswordButton: { en: 'Resetting…', bn: 'রিসেট করা হচ্ছে…' },
   resetLinkVerifying: { en: 'Verifying your reset link…', bn: 'আপনার রিসেট লিংক যাচাই করা হচ্ছে…' },
   invalidOrExpiredResetLink: {
@@ -467,9 +493,7 @@ export const translations = {
   signedInAs: { en: 'Signed in as {email}', bn: '{email} হিসেবে সাইন ইন করা আছে' },
   // Role badge (components/RoleBadge.tsx) — shown at the top of the first
   // post-sign-in screen (Home for students, Active Alerts for guardians)
-  // and again in Settings next to signedInAs above. Distinct from
-  // guardianSignInHeading/studentSignInHeading, which are pre-auth
-  // framing text on the sign-in form, not a persistent indicator.
+  // and again in Settings next to signedInAs above.
   signedInAsGuardianBadge: { en: 'Signed in as Guardian', bn: 'অভিভাবক হিসেবে সাইন ইন করা আছে' },
   signedInAsStudentBadge: { en: 'Signed in as Student', bn: 'শিক্ষার্থী হিসেবে সাইন ইন করা আছে' },
   emergencyContactsLink: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },
