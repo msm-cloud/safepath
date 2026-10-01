@@ -20,6 +20,7 @@ import {
   retentionLabelKey,
 } from '@/lib/location-history-retention';
 import { supabase } from '@/lib/supabase';
+import { useGuardianLinkRevoked } from '@/lib/use-guardian-link-revoked';
 
 // The guardian-side "Recorded Live Location" screen — its own tab, between
 // "Link to Someone" and "Settings". For each person this guardian
@@ -145,6 +146,14 @@ export default function GuardianLocationHistoryScreen() {
       };
     }, [fetchLinks])
   );
+
+  useGuardianLinkRevoked((userId) => {
+    setUsers((prev) => prev.filter((user) => user.userId !== userId));
+    if (openUserId === userId) {
+      setOpenUserId(null);
+      setTrail([]);
+    }
+  });
 
   const handleRefresh = async () => {
     setRefreshing(true);

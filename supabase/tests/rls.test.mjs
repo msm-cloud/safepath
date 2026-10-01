@@ -2166,5 +2166,178 @@ console.log('\n--- auth rate limit: purge_auth_rate_limit_events() ---');
   );
 }
 
+console.log('\n--- revoke_guardian_link ---');
+{
+  // A fresh student (RS) and guardian (RG) so earlier sections' links
+  // don't affect what's visible here.
+  const userRS = await mkUser('RS', 'user');
+  const userRG = await mkUser('RG', 'guardian');
+  const userRG2 = await mkUser('RG2', 'guardian');
+
+  let code;
+  let linkId;
+  await asUser(userRS, async () => {
+    const ins = await db.query(
+      `insert into public.guardian_links (user_id) values ('${userRS}') returning id, invite_code`
+    );
+    code = ins.rows[0].invite_code;
+    linkId = ins.rows[0].id;
+  });
+  await asUser(userRG, async () => {
+    check('RG redeems RS invite', (await redeem(db, code)).success === true);
+  });
+
+  let alertId;
+  let sessionId;
+  await asUser(userRS, async () => {
+    alertId = (
+      await db.query(
+        `insert into public.alerts (user_id, last_lat, last_lng) values ('${userRS}', 23.8, 90.4) returning id`
+      )
+    ).rows[0].id;
+    await db.query(
+      `insert into public.alert_locations (alert_id, lat, lng) values ('${alertId}', 23.8, 90.4)`
+    );
+    await db.query(
+      `insert into public.journeys (user_id, expected_arrival_at) values ('${userRS}', now() + interval '30 minutes')`
+    );
+    sessionId = (
+      await db.query(
+        `insert into public.live_sharing_sessions (user_id, is_active) values ('${userRS}', true) returning id`
+      )
+    ).rows[0].id;
+    await db.query(
+      `insert into public.live_locations (session_id, lat, lng) values ('${sessionId}', 23.8, 90.4)`
+    );
+    await db.query(
+      `insert into public.location_history_points (user_id, lat, lng) values ('${userRS}', 23.8, 90.4)`
+    );
+  });
+
+  // Everything a guardian can read about the student, one count per table.
+  const guardianView = () =>
+    asUser(userRG, async () => {
+      const count = async (sql) => (await db.query(sql)).rows.length;
+      return {
+        profile: await count(`select id from public.profiles where id = '${userRS}'`),
+        alerts: await count(`select id from public.alerts where user_id = '${userRS}'`),
+        alertLocations: await count(
+          `select id from public.alert_locations where alert_id = '${alertId}'`
+        ),
+        journeys: await count(`select id from public.journeys where user_id = '${userRS}'`),
+        liveSessions: await count(
+          `select id from public.live_sharing_sessions where user_id = '${userRS}'`
+        ),
+        liveLocations: await count(
+          `select id from public.live_locations where session_id = '${sessionId}'`
+        ),
+        history: await count(
+          `select id from public.location_history_points where user_id = '${userRS}'`
+        ),
+      };
+    });
+  const recipients = () =>
+    asServiceRole(async () =>
+      (await db.query(`select public.sos_recipient_guardian_ids($1) as id`, [userRS])).rows.map(
+        (r) => r.id
+      )
+    );
+  const revoke = async (id) => {
+    const r = await db.query(`select public.revoke_guardian_link($1) as result`, [id]);
+    const raw = r.rows[0].result;
+    return typeof raw === 'string' ? JSON.parse(raw) : raw;
+  };
+
+  const before = await guardianView();
+  check(
+    'before revoking, RG can read every kind of RS data',
+    Object.values(before).every((n) => n > 0)
+  );
+  check('before revoking, RG is an SOS recipient for RS', (await recipients()).includes(userRG));
+
+  await asUser(userRG, async () => {
+    check('the guardian cannot revoke the link', (await revoke(linkId)).success === false);
+  });
+  await asUser(userRG2, async () => {
+    check('an unrelated user cannot revoke the link', (await revoke(linkId)).success === false);
+  });
+  {
+    const privileges = await db.query(`
+      select has_function_privilege('anon', 'public.revoke_guardian_link(uuid)', 'execute') as anon_revoke,
+             has_function_privilege('authenticated', 'public.sos_recipient_guardian_ids(uuid)', 'execute') as auth_recipients,
+             has_function_privilege('anon', 'public.sos_recipient_guardian_ids(uuid)', 'execute') as anon_recipients
+    `);
+    const row = privileges.rows[0];
+    check('anon cannot call revoke_guardian_link', row.anon_revoke === false);
+    check(
+      'only the server can call sos_recipient_guardian_ids',
+      row.auth_recipients === false && row.anon_recipients === false
+    );
+  }
+
+  await asUser(userRS, async () => {
+    check('RS revokes their own guardian link', (await revoke(linkId)).success === true);
+    check(
+      'revoking the same link again reports not_found',
+      (await revoke(linkId)).error === 'not_found'
+    );
+  });
+
+  const after = await guardianView();
+  check(
+    'after revoking, RG can read none of RS data',
+    Object.values(after).every((n) => n === 0)
+  );
+  check(
+    'after revoking, RG is no longer an SOS recipient (no SOS email or push)',
+    !(await recipients()).includes(userRG)
+  );
+  await asUser(userRG, async () => {
+    const link = await db.query(`select status from public.guardian_links where id = '${linkId}'`);
+    check(
+      'RG still sees the link row as revoked (drives the live update in the app)',
+      link.rows.length === 1 && link.rows[0].status === 'revoked'
+    );
+  });
+  await asUser(userRS, async () => {
+    const alert = await db.query(
+      `insert into public.alerts (user_id, last_lat, last_lng) values ('${userRS}', 23.8, 90.4) returning id`
+    );
+    check('RS can still raise an SOS after revoking', alert.rows.length === 1);
+  });
+  await asUser(userRG, async () => {
+    const alerts = await db.query(`select id from public.alerts where user_id = '${userRS}'`);
+    check('RG cannot read an SOS raised after the revoke', alerts.rows.length === 0);
+  });
+
+  await expectError(
+    'a revoked link cannot be reactivated, even by the table owner',
+    `update public.guardian_links set status = 'accepted' where id = '${linkId}'`,
+    /cannot be reactivated/
+  );
+  await asUser(userRG2, async () => {
+    check(
+      'the revoked code cannot be redeemed again',
+      (await redeem(db, code)).error === 'invalid_or_used_code'
+    );
+  });
+
+  // Cancelling a code nobody has redeemed yet.
+  let pendingCode;
+  await asUser(userRS, async () => {
+    const ins = await db.query(
+      `insert into public.guardian_links (user_id) values ('${userRS}') returning id, invite_code`
+    );
+    pendingCode = ins.rows[0].invite_code;
+    check('RS can cancel an unused invite code', (await revoke(ins.rows[0].id)).success === true);
+  });
+  await asUser(userRG2, async () => {
+    check(
+      'a cancelled code cannot be redeemed',
+      (await redeem(db, pendingCode)).error === 'invalid_or_used_code'
+    );
+  });
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;

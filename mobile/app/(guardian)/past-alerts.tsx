@@ -13,6 +13,7 @@ import {
 import Avatar from '@/components/Avatar';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
+import { useGuardianLinkRevoked } from '@/lib/use-guardian-link-revoked';
 import type { TranslationKey } from '@/lib/translations';
 
 const PAST_ALERTS_LIMIT = 20;
@@ -86,6 +87,11 @@ export default function GuardianPastAlertsScreen() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- same fetch-on-mount pattern as (tabs)/contacts.tsx and (tabs)/emergency-contacts.tsx; see their comments for why this is deliberate.
     fetchAlerts().finally(() => setLoading(false));
   }, [fetchAlerts]);
+
+  // RLS hides a revoked student's alerts, so a refetch is enough.
+  useGuardianLinkRevoked(() => {
+    void fetchAlerts();
+  });
 
   const handleRefresh = async () => {
     setRefreshing(true);

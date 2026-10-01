@@ -5,6 +5,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Avatar from '@/components/Avatar';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
+import { useGuardianLinkRevoked } from '@/lib/use-guardian-link-revoked';
 import type { TranslationKey } from '@/lib/translations';
 
 // The guardian-side view of a linked person's consent-based live location
@@ -67,6 +68,9 @@ export default function GuardianLiveSharing() {
   }, [t]);
 
   const [shares, setShares] = useState<LiveShare[]>([]);
+  useGuardianLinkRevoked((userId) =>
+    setShares((prev) => prev.filter((share) => share.userId !== userId))
+  );
 
   // Wall-clock time, refreshed every 30s so "Updated Xs ago" stays fresh
   // between Realtime events — captured into state rather than read during

@@ -42,10 +42,6 @@ type ProfileRow = {
   full_name: string;
 };
 
-type GuardianLinkRow = {
-  guardian_id: string | null;
-};
-
 type GuardianNotifyResult = {
   guardian_id: string;
   email: string | null;
@@ -113,20 +109,19 @@ Deno.serve(async (req: Request) => {
   const profile = profileData as ProfileRow;
   const displayName = profile.full_name.trim() || 'Someone';
 
-  const { data: linksData, error: linksError } = await supabase
-    .from('guardian_links')
-    .select('guardian_id')
-    .eq('user_id', alert.user_id)
-    .eq('status', 'accepted');
+  // Shared with every other SOS channel, so a revoked or pending link is
+  // never notified (see the revoke_guardian_link migration).
+  const { data: recipientData, error: recipientError } = await supabase.rpc(
+    'sos_recipient_guardian_ids',
+    { p_user_id: alert.user_id }
+  );
 
-  if (linksError) {
-    console.error('send-alert-email: failed to load guardian_links —', linksError.message);
+  if (recipientError) {
+    console.error('send-alert-email: failed to load SOS recipients —', recipientError.message);
     return jsonResponse({ success: false, error: 'guardian_lookup_failed' }, 500);
   }
 
-  const guardianIds = ((linksData ?? []) as GuardianLinkRow[])
-    .map((link) => link.guardian_id)
-    .filter((id): id is string => !!id);
+  const guardianIds = (recipientData ?? []) as string[];
 
   if (guardianIds.length === 0) {
     return jsonResponse({

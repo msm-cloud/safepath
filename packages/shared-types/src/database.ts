@@ -466,6 +466,11 @@ export type Database = {
         Args: { identifier: string }
         Returns: string
       }
+      revoke_guardian_link: { Args: { p_link_id: string }; Returns: Json }
+      sos_recipient_guardian_ids: {
+        Args: { p_user_id: string }
+        Returns: string[]
+      }
     }
     Enums: {
       alert_status: "active" | "resolved" | "false_alarm"

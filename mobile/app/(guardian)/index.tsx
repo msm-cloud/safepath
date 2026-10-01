@@ -22,6 +22,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import type { TranslationKey } from '@/lib/translations';
+import { useGuardianLinkRevoked } from '@/lib/use-guardian-link-revoked';
 import { usePendingOnboarding } from '@/lib/use-pending-onboarding';
 import { useUserSettings } from '@/lib/user-settings-context';
 
@@ -85,6 +86,7 @@ export default function GuardianActiveAlertsScreen() {
   }, [t]);
 
   const [alerts, setAlerts] = useState<ActiveAlert[]>([]);
+  useGuardianLinkRevoked((userId) => setAlerts((prev) => prev.filter((a) => a.user_id !== userId)));
   const [loading, setLoading] = useState(true);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
 

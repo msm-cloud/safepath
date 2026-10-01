@@ -116,6 +116,8 @@ Screens move to the new components one flow at a time (auth and invites first, t
 and SOS, then the guardian app, then the dashboard). The welcome, log in, sign-up, forgot
 password and reset password screens have moved; they hide the navigation header and draw
 `components/AuthHeader.tsx` (brand or back button, plus the language switch) on the photo.
+The student's Guardians tab, the remove-guardian confirmation and the guardian's "Link to
+someone" screen have moved too.
 
 The welcome screen asks for a persona (student, working woman or guardian, in
 `lib/personas.ts`). Only the role is stored: guardian creates a guardian account and the
@@ -124,3 +126,26 @@ screens. `constants/Colors.ts` and the older
 components it serves (`PasswordInput`, `LanguageToggle`, the settings rows) are removed
 once nothing imports them. The dashboard will get the same values as Tailwind CSS
 variables when it is reworked.
+
+## Guardian links
+
+A `guardian_links` row goes `pending` (the student created an invite code) → `accepted`
+(a guardian redeemed it with `redeem_guardian_invite`) → `revoked`. Every policy that gives
+a guardian access to a student's data (alerts, alert locations, journeys, live sharing,
+location history, profile, avatar) requires `status = 'accepted'`, so revoking ends access
+at the database.
+
+- **Revoking**: `revoke_guardian_link(p_link_id)` can only be called by the student on the
+  link. It ends an accepted link or cancels an unused code. A revoked link can never become
+  pending or accepted again (the update trigger rejects it); linking again needs a new code.
+- **SOS recipients**: `sos_recipient_guardian_ids(p_user_id)` is the only list of who is
+  told about an SOS outside the app. It is callable by the service role only.
+  `send-alert-email` uses it, and the push sender must use it too.
+- **Open guardian apps**: `guardian_links` is in the Realtime publication.
+  `lib/use-guardian-link-revoked.ts` listens for the signed-in guardian's links turning
+  `revoked`, and the active alerts, live sharing, location history and past alerts views
+  drop that student straight away. RLS already stops new data; this clears what is on
+  screen. The guardian is not told who removed them or why.
+
+`supabase/tests/rls.test.mjs` covers access before and after revoking, who may revoke, and
+that a revoked or cancelled code cannot be redeemed or reactivated.

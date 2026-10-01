@@ -1,19 +1,17 @@
 import * as Clipboard from 'expo-clipboard';
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, RefreshControl, Share, View } from 'react-native';
 
 import Avatar from '@/components/Avatar';
+import Banner from '@/components/ui/Banner';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Screen from '@/components/ui/Screen';
+import SegmentedControl from '@/components/ui/SegmentedControl';
+import Text from '@/components/ui/Text';
 import { useAuth } from '@/lib/auth-context';
+import { formatInviteCode, revokeGuardianLink } from '@/lib/guardian-links';
 import { useLanguage } from '@/lib/language-context';
 import {
   DEFAULT_RETENTION_HOURS,
@@ -21,17 +19,13 @@ import {
   retentionLabelKey,
 } from '@/lib/location-history-retention';
 import { supabase } from '@/lib/supabase';
-import type { TranslationKey } from '@/lib/translations';
-
-// This tab currently only covers guardians. Emergency contact management
-// (a separate feature) lands here in a later step.
+import { useTheme } from '@/theme';
 
 type GuardianLinkRow = {
   id: string;
   status: 'pending' | 'accepted' | 'revoked';
   invite_code: string;
   created_at: string;
-  accepted_at: string | null;
   guardian_id: string | null;
   guardian: { full_name: string; avatar_url: string | null } | null;
 };
@@ -45,6 +39,7 @@ type RetentionRow = { guardian_id: string; retention_hours: number };
 export default function GuardiansScreen() {
   const { session } = useAuth();
   const { t } = useLanguage();
+  const { spacing } = useTheme();
   const router = useRouter();
   const userId = session?.user.id;
 
@@ -53,27 +48,29 @@ export default function GuardiansScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [inviting, setInviting] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
-  const [inviteError, setInviteError] = useState<string | null>(null);
-  const [newInviteCode, setNewInviteCode] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [newCode, setNewCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const fetchLinks = useCallback(async () => {
     if (!userId) return;
 
-    const { data, error } = await supabase
+    // Revoked links are history only; nothing on this screen needs them.
+    const { data, error: linksError } = await supabase
       .from('guardian_links')
       .select(
-        'id, status, invite_code, created_at, accepted_at, guardian_id, guardian:profiles!guardian_links_guardian_id_fkey(full_name, avatar_url)'
+        'id, status, invite_code, created_at, guardian_id, guardian:profiles!guardian_links_guardian_id_fkey(full_name, avatar_url)'
       )
       .eq('user_id', userId)
+      .in('status', ['pending', 'accepted'])
       .order('created_at', { ascending: false });
 
-    if (error) {
-      setListError(error.message);
+    if (linksError) {
+      setError(linksError.message);
       return;
     }
-    setListError(null);
+    setError(null);
     setLinks((data ?? []) as GuardianLinkRow[]);
 
     const { data: retention } = await supabase
@@ -88,35 +85,34 @@ export default function GuardiansScreen() {
     );
   }, [userId]);
 
-  const setRetention = useCallback(
-    async (guardianId: string, hours: number) => {
-      if (!userId) return;
-      // Optimistic, same fire-and-forget pattern the settings toggles use.
-      setRetentionByGuardian((prev) => ({ ...prev, [guardianId]: hours }));
-      await supabase.from('location_history_retention').upsert(
-        {
-          user_id: userId,
-          guardian_id: guardianId,
-          retention_hours: hours,
-          recorded_by_role: 'user',
-        },
-        { onConflict: 'user_id,guardian_id,recorded_by_role' }
-      );
-    },
-    [userId]
+  // Refetch on focus so the list is current after removing a guardian on
+  // the confirmation screen.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      fetchLinks().finally(() => {
+        if (active) setLoading(false);
+      });
+      return () => {
+        active = false;
+      };
+    }, [fetchLinks])
   );
 
-  useEffect(() => {
-    // react-hooks/set-state-in-effect (the React Compiler-era strict rule)
-    // flags any setState reachable from an effect, including this
-    // fetch-on-mount-then-stop-loading pattern — there's no data-fetching
-    // library in this project (React Query/SWR) to hand this off to, and
-    // that's a bigger call than this step should make. This is the standard
-    // fetch-on-mount pattern React's own docs used for years; disabling
-    // deliberately rather than fighting the rule with indirection.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchLinks().finally(() => setLoading(false));
-  }, [fetchLinks]);
+  const setRetention = async (guardianId: string, hours: number) => {
+    if (!userId) return;
+    // Optimistic, same fire-and-forget pattern the settings toggles use.
+    setRetentionByGuardian((prev) => ({ ...prev, [guardianId]: hours }));
+    await supabase.from('location_history_retention').upsert(
+      {
+        user_id: userId,
+        guardian_id: guardianId,
+        retention_hours: hours,
+        recorded_by_role: 'user',
+      },
+      { onConflict: 'user_id,guardian_id,recorded_by_role' }
+    );
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -126,11 +122,11 @@ export default function GuardiansScreen() {
 
   const handleInvite = async () => {
     if (!userId) return;
-    setInviteError(null);
+    setError(null);
     setInviting(true);
 
     // invite_code is generated by the column default — don't set it here.
-    const { data, error } = await supabase
+    const { data, error: insertError } = await supabase
       .from('guardian_links')
       .insert({ user_id: userId, status: 'pending' })
       .select('invite_code')
@@ -138,345 +134,206 @@ export default function GuardiansScreen() {
 
     setInviting(false);
 
-    if (error) {
-      setInviteError(error.message);
+    if (insertError) {
+      setError(insertError.message);
       return;
     }
 
-    setNewInviteCode(data.invite_code);
+    setNewCode(data.invite_code);
     setCopied(false);
     await fetchLinks();
   };
 
+  const handleCancelCode = async (link: GuardianLinkRow) => {
+    setCancellingId(link.id);
+    const ok = await revokeGuardianLink(link.id);
+    setCancellingId(null);
+    if (!ok) {
+      setError(t('guardianUpdateFailed'));
+      return;
+    }
+    if (link.invite_code === newCode) setNewCode(null);
+    await fetchLinks();
+  };
+
   const handleCopy = async () => {
-    if (!newInviteCode) return;
-    await Clipboard.setStringAsync(newInviteCode);
+    if (!newCode) return;
+    await Clipboard.setStringAsync(newCode);
     setCopied(true);
   };
 
   const handleShare = async () => {
-    if (!newInviteCode) return;
-    await Share.share({
-      message: t('shareInviteMessage', { code: newInviteCode }),
-    });
+    if (!newCode) return;
+    await Share.share({ message: t('shareInviteMessage', { code: newCode }) });
   };
 
+  const guardians = links.filter((link) => link.status === 'accepted');
+  const unusedCodes = links.filter(
+    (link) => link.status === 'pending' && link.invite_code !== newCode
+  );
+
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={links}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-        ListHeaderComponent={
-          <View>
-            <Text style={styles.title}>{t('guardiansTitle')}</Text>
+    <Screen
+      edges={[]}
+      contentStyle={{ gap: spacing.xl }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+    >
+      {error && <Banner tone="danger" message={error} />}
 
-            <Pressable onPress={() => router.push('/guardian-location')}>
-              <Text style={styles.guardianLocationLink}>{t('guardianLocationLink')}</Text>
-            </Pressable>
-
-            <Pressable
-              style={[styles.button, inviting && styles.buttonDisabled]}
-              onPress={handleInvite}
-              disabled={inviting}
+      {newCode ? (
+        <Card>
+          <View style={{ gap: spacing.md }}>
+            <Text variant="label" color="textSecondary">
+              {t('inviteCodeTitle')}
+            </Text>
+            <Text
+              variant="display"
+              script="latin"
+              selectable
+              accessibilityLabel={newCode.split('').join(' ')}
             >
-              {inviting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>{t('inviteGuardianButton')}</Text>
-              )}
-            </Pressable>
-
-            {inviteError && <Text style={styles.error}>{inviteError}</Text>}
-
-            {newInviteCode && (
-              <View style={styles.inviteCard}>
-                <Text style={styles.inviteCardLabel}>{t('shareCodeLabel')}</Text>
-                <Pressable onPress={handleCopy}>
-                  <Text style={styles.inviteCode}>{newInviteCode}</Text>
-                </Pressable>
-                <View style={styles.inviteCardActions}>
-                  <Pressable style={styles.smallButton} onPress={handleCopy}>
-                    <Text style={styles.smallButtonText}>
-                      {copied ? t('copiedButton') : t('copyButton')}
-                    </Text>
-                  </Pressable>
-                  <Pressable style={styles.smallButton} onPress={handleShare}>
-                    <Text style={styles.smallButtonText}>{t('shareButton')}</Text>
-                  </Pressable>
-                </View>
+              {formatInviteCode(newCode)}
+            </Text>
+            <Text variant="bodySm" color="textSecondary">
+              {t('inviteCodeHint')}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title={t('shareCodeButton')}
+                  variant="primary"
+                  icon={{ ios: 'square.and.arrow.up', android: 'share', web: 'share' }}
+                  onPress={handleShare}
+                />
               </View>
-            )}
-
-            {listError && <Text style={styles.error}>{listError}</Text>}
-
-            <Text style={styles.sectionLabel}>{t('yourGuardiansLabel')}</Text>
-
-            {loading && <ActivityIndicator style={styles.loadingIndicator} />}
-            {!loading && links.length === 0 && (
-              <Text style={styles.subtitle}>{t('noGuardiansYet')}</Text>
-            )}
-          </View>
-        }
-        renderItem={({ item }) => {
-          const guardianId = item.status === 'accepted' ? item.guardian_id : null;
-          const retentionHours = guardianId
-            ? (retentionByGuardian[guardianId] ?? DEFAULT_RETENTION_HOURS)
-            : DEFAULT_RETENTION_HOURS;
-
-          return (
-            <View style={styles.linkItem}>
-              <View style={styles.linkRow}>
-                {item.status === 'accepted' && (
-                  <Avatar
-                    name={item.guardian?.full_name ?? null}
-                    url={item.guardian?.avatar_url ?? null}
-                    size={40}
-                  />
-                )}
-                <View style={styles.linkRowText}>
-                  <Text style={styles.linkName}>
-                    {item.status === 'accepted' && item.guardian
-                      ? item.guardian.full_name || t('unnamedGuardian')
-                      : item.invite_code}
-                  </Text>
-                  <Text style={styles.linkMeta}>
-                    {item.status === 'accepted'
-                      ? t('acceptedOn', {
-                          date: item.accepted_at
-                            ? new Date(item.accepted_at).toLocaleDateString()
-                            : '',
-                        })
-                      : t('createdOn', { date: new Date(item.created_at).toLocaleDateString() })}
-                  </Text>
-                </View>
-                <StatusBadge status={item.status} />
-              </View>
-
-              {/* How long this guardian keeps my recorded location history.
-                  Either party can change it (see location_history_retention
-                  RLS); only shown for accepted links. */}
-              {guardianId && (
-                <View style={styles.retentionSection}>
-                  <Text style={styles.retentionLabel}>{t('locationHistoryRetentionLabel')}</Text>
-                  <View style={styles.retentionRow}>
-                    {RETENTION_PRESETS_HOURS.map((hours) => {
-                      const active = retentionHours === hours;
-                      return (
-                        <Pressable
-                          key={hours}
-                          style={[styles.retentionOption, active && styles.retentionOptionActive]}
-                          onPress={() => setRetention(guardianId, hours)}
-                        >
-                          <Text
-                            style={[
-                              styles.retentionOptionText,
-                              active && styles.retentionOptionTextActive,
-                            ]}
-                          >
-                            {t(retentionLabelKey(hours))}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
+              <Button
+                title={copied ? t('copiedButton') : t('copyButton')}
+                variant="secondary"
+                fullWidth={false}
+                onPress={handleCopy}
+              />
             </View>
+          </View>
+        </Card>
+      ) : (
+        <Button
+          title={t('inviteGuardianButton')}
+          icon={{ ios: 'person.badge.plus', android: 'person_add', web: 'person_add' }}
+          loading={inviting}
+          loadingTitle={t('inviteGuardianButton')}
+          onPress={handleInvite}
+        />
+      )}
+
+      {newCode && (
+        <Card variant="muted">
+          <View style={{ gap: spacing.xs }}>
+            <Text variant="label">{t('howItWorksTitle')}</Text>
+            <Text variant="bodySm" color="textSecondary">
+              {t('howItWorksBody')}
+            </Text>
+          </View>
+        </Card>
+      )}
+
+      {unusedCodes.length > 0 && (
+        <View style={{ gap: spacing.sm }}>
+          <Text variant="label" color="textSecondary">
+            {t('unusedCodesLabel')}
+          </Text>
+          {unusedCodes.map((link) => (
+            <Card key={link.id} padding="md">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <View style={{ flex: 1 }}>
+                  <Text variant="title" script="latin">
+                    {formatInviteCode(link.invite_code)}
+                  </Text>
+                  <Text variant="caption" color="textMuted">
+                    {t('unusedCodeMeta', {
+                      date: new Date(link.created_at).toLocaleDateString(),
+                    })}
+                  </Text>
+                </View>
+                <Button
+                  title={t('cancelCodeButton')}
+                  accessibilityLabel={t('cancelCodeLabel', { code: link.invite_code })}
+                  variant="dangerOutline"
+                  size="small"
+                  fullWidth={false}
+                  loading={cancellingId === link.id}
+                  onPress={() => handleCancelCode(link)}
+                />
+              </View>
+            </Card>
+          ))}
+        </View>
+      )}
+
+      <View style={{ gap: spacing.sm }}>
+        <Text variant="label" color="textSecondary">
+          {t('yourGuardiansCount', { n: guardians.length })}
+        </Text>
+        {loading && <ActivityIndicator />}
+        {!loading && guardians.length === 0 && (
+          <Text color="textSecondary">{t('noGuardiansYet')}</Text>
+        )}
+        {guardians.map((link) => {
+          const guardianId = link.guardian_id;
+          if (!guardianId) return null;
+          const name = link.guardian?.full_name || t('unnamedGuardian');
+          const retentionHours = retentionByGuardian[guardianId] ?? DEFAULT_RETENTION_HOURS;
+          return (
+            <Card key={link.id} padding="md">
+              <View style={{ gap: spacing.md }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                  <Avatar name={name} url={link.guardian?.avatar_url ?? null} size={44} />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="title">{name}</Text>
+                    <Text variant="caption" color="textMuted">
+                      {t('guardianLinkedMeta')}
+                    </Text>
+                  </View>
+                  <Button
+                    title={t('removeGuardianButton')}
+                    accessibilityLabel={t('removeGuardianLabel', { name })}
+                    variant="secondary"
+                    size="small"
+                    fullWidth={false}
+                    onPress={() =>
+                      router.push({ pathname: '/remove-guardian', params: { linkId: link.id } })
+                    }
+                  />
+                </View>
+                {/* How long this guardian keeps my recorded location
+                    history. Either party can change it (see
+                    location_history_retention RLS). */}
+                <View style={{ gap: spacing.xs }}>
+                  <Text variant="caption" color="textSecondary">
+                    {t('locationHistoryRetentionLabel')}
+                  </Text>
+                  <SegmentedControl
+                    accessibilityLabel={t('locationHistoryRetentionLabel')}
+                    value={String(retentionHours)}
+                    onChange={(value) => setRetention(guardianId, Number(value))}
+                    options={RETENTION_PRESETS_HOURS.map((hours) => ({
+                      value: String(hours),
+                      label: t(retentionLabelKey(hours)),
+                    }))}
+                  />
+                </View>
+              </View>
+            </Card>
           );
-        }}
-      />
-    </View>
+        })}
+      </View>
+
+      {guardians.length > 0 && (
+        <Button
+          title={t('guardianLocationLink')}
+          variant="ghost"
+          onPress={() => router.push('/guardian-location')}
+        />
+      )}
+    </Screen>
   );
 }
-
-function StatusBadge({ status }: { status: GuardianLinkRow['status'] }) {
-  const { t } = useLanguage();
-  const statusKey: TranslationKey =
-    status === 'accepted'
-      ? 'statusAccepted'
-      : status === 'revoked'
-        ? 'statusRevoked'
-        : 'statusPending';
-  const style =
-    status === 'accepted'
-      ? styles.badgeAccepted
-      : status === 'revoked'
-        ? styles.badgeRevoked
-        : styles.badgePending;
-  return (
-    <View style={[styles.badge, style]}>
-      <Text style={styles.badgeText}>{t(statusKey)}</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 20,
-    gap: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  guardianLocationLink: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2f95dc',
-    marginTop: -8,
-    marginBottom: 16,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 8,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  button: {
-    backgroundColor: '#2f95dc',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#d33',
-    fontSize: 14,
-    marginTop: 8,
-  },
-  loadingIndicator: {
-    marginTop: 12,
-  },
-  inviteCard: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#eef6fc',
-    alignItems: 'center',
-  },
-  inviteCardLabel: {
-    fontSize: 13,
-    color: '#555',
-    marginBottom: 8,
-  },
-  inviteCode: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    letterSpacing: 4,
-    color: '#2f95dc',
-  },
-  inviteCardActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  smallButton: {
-    backgroundColor: '#2f95dc',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  smallButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  linkItem: {
-    gap: 8,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: '#f5f5f5',
-  },
-  retentionSection: {
-    paddingHorizontal: 14,
-    paddingBottom: 4,
-    gap: 6,
-  },
-  retentionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-  },
-  retentionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  retentionOption: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  retentionOptionActive: {
-    backgroundColor: '#2f95dc',
-    borderColor: '#2f95dc',
-  },
-  retentionOptionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#444',
-  },
-  retentionOptionTextActive: {
-    color: '#fff',
-  },
-  linkRowText: {
-    flex: 1,
-  },
-  linkName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  linkMeta: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-  },
-  badge: {
-    borderRadius: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
-    textTransform: 'capitalize',
-  },
-  badgePending: {
-    backgroundColor: '#e0a800',
-  },
-  badgeAccepted: {
-    backgroundColor: '#1a7f37',
-  },
-  badgeRevoked: {
-    backgroundColor: '#888',
-  },
-});

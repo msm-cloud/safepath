@@ -186,7 +186,9 @@ Functions live in [`supabase/functions/`](supabase/functions/). There's no
 deploy workflow; each one is deployed by hand after its PR merges.
 
 - **`send-alert-email`** — emails guardians when an alert is raised
-  (called by a database trigger). Needs the `RESEND_API_KEY` secret.
+  (called by a database trigger). Recipients come from
+  `sos_recipient_guardian_ids`, so revoked links are never emailed. Needs the
+  `RESEND_API_KEY` secret.
 - **`auth-identifier`** — phone-number sign-in and password reset that
   never returns the account's email, with per-IP and per-phone rate limits
   (`auth_rate_limit_events`, see
