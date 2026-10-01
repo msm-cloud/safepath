@@ -50,9 +50,17 @@ delays do not ring on a locked phone.
 | 30 s, 1 min | `shortService` foreground service that counts down and then posts the call | None (limit about 3 minutes)                |
 | 5 min       | Exact alarm (`setExactAndAllowWhileIdle`)                                  | `SCHEDULE_EXACT_ALARM`, granted by the user |
 
-- The countdown notification ("Call from Ammu in 0:42", with **Cancel**) is posted the
-  moment the call is scheduled; Cancel stops the service or cancels the alarm. For the
-  exact-alarm path this is a plain ongoing notification.
+- The countdown notification is posted the moment the call is scheduled and is discreet:
+  neutral text ("SafePath is running · 0:42", with **Cancel**), no caller name and no
+  mention of a call, so someone glancing at the phone cannot tell a call is coming. It
+  uses `VISIBILITY_SECRET` so nothing shows on the lock screen. Cancel stops the service
+  or cancels the alarm. For the exact-alarm path this is a plain ongoing notification with
+  the same text.
+- The `shortService` foreground service is only ever started from the setup screen, by
+  the user tapping Schedule, while the app is in the foreground. Android's restrictions on
+  starting a foreground service from the background therefore do not apply. Nothing
+  starts it from a broadcast, alarm, push or boot receiver; the 5 min path uses the
+  exact alarm instead.
 - 5 min without exact-alarm access: the setup screen explains why and links to the
   "Alarms & reminders" setting. If the user declines, the 5 min option stays disabled with
   a one-line reason. It never falls back to an inexact alarm, because a call that rings
@@ -69,10 +77,14 @@ delays do not ring on a locked phone.
 - A `CallStyle.forIncomingCall` notification on one of two channels, "Fake call: ring"
   (ringtone, `FLAG_INSISTENT` so it repeats) and "Fake call: vibrate" (vibration only).
   Android fixes a channel's sound when it is created, so ring mode picks the channel.
-- With full-screen intent access, the call screen opens over the lock screen like a real
-  call.
-- Without it, Android shows the same notification as a heads-up that keeps ringing until
-  answered or declined; tapping it opens the call screen after unlock.
+- Two delivery paths, both first-class and both tested on every build:
+  - **Heads-up ringing** (no full-screen intent access): the notification shows as a
+    heads-up that keeps ringing until answered or declined; tapping it opens the call
+    screen after unlock. This is a primary path, not a fallback: Play may reject the
+    full-screen intent declaration, and many users will refuse the permission, so it must
+    be convincing on its own.
+  - **Full-screen** (with access): the call screen opens over the lock screen like a real
+    call.
 - The call screen never shows SafePath. The notification header does show the app name;
   that cannot be hidden.
 
@@ -84,8 +96,21 @@ delays do not ring on a locked phone.
   guardian setup). Check `NotificationManager.canUseFullScreenIntent()`; if false, show a
   short explanation and a button that opens
   `Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT`.
-- If refused: use the heads-up fallback above, note it on the setup screen, and do not ask
+- If refused: use the heads-up path above, note it on the setup screen, and do not ask
   again unless the user taps the note.
+- If Play rejects the declaration, remove `USE_FULL_SCREEN_INTENT` from the manifest and
+  ship with heads-up ringing only; nothing else in the fake call changes.
+
+### Device test matrix
+
+Run on the Galaxy S23 Ultra and the Infinix, on a locked and an unlocked phone, for each
+delay (now, 30 s, 1 min, 5 min) and ring mode:
+
+- Heads-up path (full-screen intent access off): rings until answered or declined, keeps
+  ringing with the screen off, answer and decline both work.
+- Full-screen path (access on): call screen opens over the lock screen.
+- Countdown notification: no caller name or call wording, nothing shown on the lock
+  screen, Cancel stops the call on both the `shortService` and exact-alarm paths.
 
 ### Play Console declarations
 
