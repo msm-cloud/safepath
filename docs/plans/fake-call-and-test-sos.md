@@ -99,7 +99,20 @@ delays do not ring on a locked phone.
 - If refused: use the heads-up path above, note it on the setup screen, and do not ask
   again unless the user taps the note.
 - If Play rejects the declaration, remove `USE_FULL_SCREEN_INTENT` from the manifest and
-  ship with heads-up ringing only; nothing else in the fake call changes.
+  ship with heads-up ringing only (see the open point below).
+
+### Open point: `CallStyle` without full-screen intent
+
+Android only accepts a `CallStyle` notification that belongs to a foreground service or
+carries a full-screen intent. The 30 s and 1 min calls are posted from the `shortService`,
+so they qualify. The "Now" and 5 min calls have no foreground service, so without
+`USE_FULL_SCREEN_INTENT` they fit neither. Options, to decide before building:
+
+- Post every call from a short foreground service. "Now" is started by the user in the
+  foreground, so that is allowed; the 5 min exact alarm grants a brief window to start a
+  foreground service from the alarm receiver, which must be checked on Android 14+.
+- Fall back to a high-priority, insistent notification without `CallStyle` on those paths.
+  It looks less like a real call.
 
 ### Device test matrix
 
