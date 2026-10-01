@@ -1,24 +1,22 @@
-import { Link, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-} from 'react-native';
+import { View, type ScrollView, type TextInput } from 'react-native';
 
-import PasswordInput from '@/components/PasswordInput';
+import AuthHeader from '@/components/AuthHeader';
+import Banner from '@/components/ui/Banner';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import PasswordInput from '@/components/ui/PasswordInput';
+import Screen from '@/components/ui/Screen';
+import Text from '@/components/ui/Text';
 import { useLanguage } from '@/lib/language-context';
 import { markOnboardingPending } from '@/lib/onboarding-storage';
+import { PERSONA_LABEL, parsePersona, personaRole } from '@/lib/personas';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
-import { useKeyboardHeight } from '@/lib/use-keyboard-height';
+import { openUserGuide } from '@/lib/user-guide';
 import { isValidEmail, isValidPhone, MIN_PASSWORD_LENGTH } from '@/lib/validation';
+import { useTheme } from '@/theme';
 
 // profiles.phone's unique index violation — see
 // supabase/migrations/20260828063528_phone_login_and_password_reset.sql.
@@ -31,22 +29,14 @@ const PHONE_UNIQUE_VIOLATION = '23505';
 // allow-listed in Supabase → Authentication → URL Configuration.
 const EMAIL_CONFIRM_REDIRECT_URL = 'safepath://';
 
-// Publicly hosted in Supabase Storage (manuals bucket) — opened in the
-// system browser via Linking.openURL, same pattern as the map links in
-// app/(tabs)/index.tsx and app/(guardian)/index.tsx.
-const USER_MANUAL_URL =
-  'https://njeqiynkyjftlfhodqce.supabase.co/storage/v1/object/public/manuals/SafePath_User_Manual.pdf';
-
 export default function SignUpScreen() {
   const { t, language } = useLanguage();
-  // Carried from the welcome screen (see app/(auth)/index.tsx), via
-  // sign-in if the person tapped through from there. Defaults to 'user'
-  // (student) if missing — e.g. someone linking directly to /sign-up — to
-  // match this screen's pre-existing behavior before roles existed.
-  const { role: roleParam } = useLocalSearchParams<{ role?: string }>();
-  const role: 'user' | 'guardian' = roleParam === 'guardian' ? 'guardian' : 'user';
-
-  const heading = role === 'guardian' ? t('guardianSignUpHeading') : t('studentSignUpHeading');
+  const { colors, radius, spacing } = useTheme();
+  const router = useRouter();
+  // Chosen on the welcome screen. A direct link without one signs up a
+  // student, as before personas existed.
+  const persona = parsePersona(useLocalSearchParams<{ persona?: string }>().persona);
+  const role = personaRole(persona);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -56,12 +46,11 @@ export default function SignUpScreen() {
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const scrollViewRef = useRef<ScrollView>(null);
-  const fullNameInputRef = useRef<TextInput>(null);
-  const emailInputRef = useRef<TextInput>(null);
-  const phoneInputRef = useRef<TextInput>(null);
-  const passwordInputRef = useRef<TextInput>(null);
-  const keyboardHeight = useKeyboardHeight();
+  const scrollRef = useRef<ScrollView>(null);
+  const fullNameRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
 
   const handleSignUp = async () => {
     setError(null);
@@ -71,13 +60,13 @@ export default function SignUpScreen() {
       setError(t('enterYourName'));
       return;
     }
-    if (!isValidEmail(email)) {
-      setError(t('invalidEmail'));
-      return;
-    }
     const trimmedPhone = phone.trim();
     if (!isValidPhone(trimmedPhone)) {
       setError(t('invalidPhone'));
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError(t('invalidEmail'));
       return;
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
@@ -97,19 +86,12 @@ export default function SignUpScreen() {
       password,
       options: {
         emailRedirectTo: EMAIL_CONFIRM_REDIRECT_URL,
-        // Defensive fallback for when this project requires email
-        // confirmation (which it now always does — see the phone-login
-        // migration's follow-up notes): there's no session yet below to
-        // run the profiles UPDATE with, so this is the only way full_name/
-        // role/preferred_language/phone reach the profiles row (via
-        // handle_new_user reading them off signup metadata — see
+        // This project requires email confirmation, so there is no session
+        // yet to update the profile with; handle_new_user() copies these
+        // from the signup metadata instead (see
         // supabase/migrations/20260821190552_profiles.sql and
-        // 20260828091441_phone_survives_email_confirmation.sql) before the
-        // user confirms and signs in for the first time. `language` here
-        // is whatever's currently selected in LanguageContext — including
-        // a pre-auth toggle on the welcome screen (app/(auth)/index.tsx)
-        // — not a hardcoded default, so that choice actually persists
-        // instead of silently reverting to 'bn' once the account exists.
+        // 20260828091441_phone_survives_email_confirmation.sql). `language`
+        // is the current choice, including one made on the welcome screen.
         data: {
           full_name: fullName.trim(),
           role,
@@ -121,29 +103,20 @@ export default function SignUpScreen() {
 
     if (signUpError) {
       setSubmitting(false);
-      // Surface Supabase's own message (e.g. "User already registered")
-      // rather than a generic one.
+      // Supabase's own message (e.g. "User already registered") is more
+      // useful than a generic one.
       setError(signUpError.message);
       return;
     }
 
     // Shows the onboarding carousel once, the first time this account
-    // actually lands in the app — see lib/onboarding-storage.ts for why
-    // that's keyed by user id and persisted rather than an in-memory
-    // flag (this project requires email confirmation, so "immediately
-    // after sign-up" is almost always a separate later sign-in, not this
-    // same request). Marked regardless of whether data.session exists
-    // below, since either way this is a genuinely new account.
+    // lands in the app — see lib/onboarding-storage.ts. With email
+    // confirmation that is usually a later sign-in, not this request.
     if (data.user) {
       markOnboardingPending(data.user.id);
     }
 
     if (!data.session) {
-      // Email confirmation is required by this Supabase project — there's
-      // no authenticated session yet, so the profiles UPDATE below would be
-      // rejected by RLS (profiles_update_own requires auth.uid() = id).
-      // full_name/role/preferred_language/phone were all still captured
-      // via signup metadata above (handle_new_user).
       setSubmitting(false);
       setInfo(t('checkEmailConfirm'));
       return;
@@ -162,169 +135,125 @@ export default function SignUpScreen() {
     setSubmitting(false);
 
     if (profileError) {
-      // profiles_phone_normalized_key (see the phone-login migration)
-      // rejects a phone number already used by another account — give a
-      // specific, actionable message instead of Supabase's raw
-      // constraint-violation text.
       setError(
         profileError.code === PHONE_UNIQUE_VIOLATION
           ? t('duplicatePhoneError')
           : profileError.message
       );
-      return;
     }
 
-    // No navigation call needed: the session change is picked up by
-    // AuthProvider, and Stack.Protected in the root layout redirects to the
-    // (tabs) group automatically.
+    // No navigation on success: AuthProvider picks up the session and the
+    // root layout redirects into the app.
   };
 
-  return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      // See components/SettingsScreen.tsx's comment for the full
-      // investigation: on Android, KeyboardAvoidingView unconditionally
-      // triggers LayoutAnimation on every keyboard show/hide event
-      // regardless of `behavior`, which can knock a focused TextInput out
-      // of focus and cause a show/hide loop. enabled={false} on Android
-      // doesn't change this component's rendered output there at all, so
-      // this is safe everywhere it's used.
-      enabled={Platform.OS === 'ios'}
-    >
-      <ScrollView
-        ref={scrollViewRef}
-        contentContainerStyle={[styles.container, { paddingBottom: keyboardHeight }]}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title}>{heading}</Text>
+  const personaLabel = t(PERSONA_LABEL[persona]);
 
-        <TextInput
-          ref={fullNameInputRef}
-          style={styles.input}
+  return (
+    <Screen background="auth" scrollRef={scrollRef} contentStyle={{ gap: spacing.xl }}>
+      <AuthHeader leading="back" />
+
+      <View style={{ gap: spacing.md }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            alignSelf: 'flex-start',
+            gap: spacing.sm,
+            paddingVertical: spacing.xs,
+            paddingHorizontal: spacing.md,
+            borderRadius: radius.pill,
+            backgroundColor: colors.primarySoft,
+          }}
+        >
+          <Text variant="label" color="onPrimarySoft">
+            {t('signingUpAs', { persona: personaLabel })}
+          </Text>
+          <Text
+            variant="label"
+            color="onPrimarySoft"
+            accessibilityRole="link"
+            accessibilityLabel={`${t('changeLink')}: ${personaLabel}`}
+            onPress={() => router.dismissTo('/(auth)')}
+            style={{ textDecorationLine: 'underline' }}
+          >
+            {t('changeLink')}
+          </Text>
+        </View>
+        <Text variant="display" accessibilityRole="header">
+          {t('signUpTitle')}
+        </Text>
+      </View>
+
+      <View style={{ gap: spacing.lg }}>
+        <Input
+          ref={fullNameRef}
+          label={t('fullNameLabel')}
           placeholder={t('fullNamePlaceholder')}
           autoCapitalize="words"
           autoComplete="name"
+          returnKeyType="next"
           value={fullName}
           onChangeText={setFullName}
-          onFocus={() => scrollInputIntoView(scrollViewRef.current, fullNameInputRef)}
+          onFocus={() => scrollInputIntoView(scrollRef.current, fullNameRef)}
+          onSubmitEditing={() => phoneRef.current?.focus()}
         />
-        <TextInput
-          ref={emailInputRef}
-          style={styles.input}
-          placeholder={t('emailPlaceholder')}
+        <Input
+          ref={phoneRef}
+          label={t('phoneLabel')}
+          autoComplete="tel"
+          keyboardType="phone-pad"
+          returnKeyType="next"
+          value={phone}
+          onChangeText={setPhone}
+          onFocus={() => scrollInputIntoView(scrollRef.current, phoneRef)}
+          onSubmitEditing={() => emailRef.current?.focus()}
+        />
+        <Input
+          ref={emailRef}
+          label={t('emailLabel')}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
+          returnKeyType="next"
           value={email}
           onChangeText={setEmail}
-          onFocus={() => scrollInputIntoView(scrollViewRef.current, emailInputRef)}
-        />
-        <TextInput
-          ref={phoneInputRef}
-          style={styles.input}
-          placeholder={t('phonePlaceholder')}
-          autoComplete="tel"
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-          onFocus={() => scrollInputIntoView(scrollViewRef.current, phoneInputRef)}
+          onFocus={() => scrollInputIntoView(scrollRef.current, emailRef)}
+          onSubmitEditing={() => passwordRef.current?.focus()}
         />
         <PasswordInput
-          inputRef={passwordInputRef}
-          placeholder={t('passwordSignupPlaceholder')}
+          ref={passwordRef}
+          label={t('passwordLabel')}
+          helper={t('passwordSignupHelper', { n: MIN_PASSWORD_LENGTH })}
           autoComplete="password-new"
+          returnKeyType="done"
           value={password}
           onChangeText={setPassword}
-          onFocus={() => scrollInputIntoView(scrollViewRef.current, passwordInputRef)}
+          onFocus={() => scrollInputIntoView(scrollRef.current, passwordRef)}
         />
+        {error && <Banner tone="danger" message={error} />}
+        {info && <Banner tone="success" message={info} />}
+      </View>
 
-        {error && <Text style={styles.error}>{error}</Text>}
-        {info && <Text style={styles.info}>{info}</Text>}
-
-        <Pressable
-          style={[styles.button, submitting && styles.buttonDisabled]}
+      <View style={{ marginTop: 'auto', gap: spacing.md }}>
+        <Button
+          title={t('createAccountButton')}
+          loading={submitting}
+          loadingTitle={t('creatingAccountButton')}
           onPress={handleSignUp}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>{t('signUpButton')}</Text>
-          )}
-        </Pressable>
-
-        <Link href={{ pathname: '/(auth)/sign-in', params: { role } }} style={styles.link}>
-          {t('signInLink')}
-        </Link>
-
-        <Pressable onPress={() => Linking.openURL(USER_MANUAL_URL)}>
-          <Text style={styles.userManualLink}>{t('userManualLink')}</Text>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        />
+        <Text align="center">
+          {t('haveAccountPrompt')}{' '}
+          <Text
+            weight="bold"
+            accessibilityRole="link"
+            onPress={() => router.replace('/(auth)/sign-in')}
+            style={{ textDecorationLine: 'underline' }}
+          >
+            {t('logInLink')}
+          </Text>
+        </Text>
+        <Button title={t('userManualLink')} variant="ghost" size="small" onPress={openUserGuide} />
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#000',
-    backgroundColor: '#fff',
-  },
-  button: {
-    backgroundColor: '#2f95dc',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#d33',
-    fontSize: 14,
-  },
-  info: {
-    color: '#1a7f37',
-    fontSize: 14,
-  },
-  link: {
-    textAlign: 'center',
-    marginTop: 16,
-    color: '#2f95dc',
-    fontSize: 14,
-  },
-  userManualLink: {
-    textAlign: 'center',
-    marginTop: 8,
-    color: '#666',
-    fontSize: 13,
-  },
-});

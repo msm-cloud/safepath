@@ -1,24 +1,19 @@
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-} from 'react-native';
+import { ActivityIndicator, View, type ScrollView, type TextInput } from 'react-native';
 
-import PasswordInput from '@/components/PasswordInput';
+import Banner from '@/components/ui/Banner';
+import Button from '@/components/ui/Button';
+import PasswordInput from '@/components/ui/PasswordInput';
+import Screen from '@/components/ui/Screen';
+import Text from '@/components/ui/Text';
 import { extractRecoveryTokens } from '@/lib/deep-link-recovery';
 import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
-import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { MIN_PASSWORD_LENGTH } from '@/lib/validation';
+import { useTheme } from '@/theme';
 
 // Deliberately a TOP-LEVEL route (app/reset-password.tsx), not
 // app/(auth)/reset-password.tsx — the moment the recovery link's tokens
@@ -34,15 +29,15 @@ type Status = 'verifying' | 'ready' | 'invalid';
 
 export default function ResetPasswordScreen() {
   const { t } = useLanguage();
+  const { colors, spacing } = useTheme();
   const router = useRouter();
   const [status, setStatus] = useState<Status>('verifying');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const scrollViewRef = useRef<ScrollView>(null);
-  const passwordInputRef = useRef<TextInput>(null);
-  const keyboardHeight = useKeyboardHeight();
+  const scrollRef = useRef<ScrollView>(null);
+  const passwordRef = useRef<TextInput>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,116 +119,54 @@ export default function ResetPasswordScreen() {
 
   if (status === 'verifying') {
     return (
-      <ScrollView contentContainerStyle={styles.centered}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.subtitle}>{t('resetLinkVerifying')}</Text>
-      </ScrollView>
+      <Screen background="auth" contentStyle={{ justifyContent: 'center', gap: spacing.lg }}>
+        <ActivityIndicator size="large" color={colors.onOverlay} />
+        <Text align="center">{t('resetLinkVerifying')}</Text>
+      </Screen>
     );
   }
 
   if (status === 'invalid') {
     return (
-      <ScrollView contentContainerStyle={styles.centered}>
-        <Text style={styles.error}>{t('invalidOrExpiredResetLink')}</Text>
-        <Pressable onPress={() => router.replace('/(auth)/forgot-password')}>
-          <Text style={styles.link}>{t('requestNewResetLinkLink')}</Text>
-        </Pressable>
-      </ScrollView>
+      <Screen background="auth" contentStyle={{ justifyContent: 'center', gap: spacing.lg }}>
+        <Banner tone="danger" message={t('invalidOrExpiredResetLink')} />
+        <Button
+          title={t('requestNewResetLinkLink')}
+          onPress={() => router.replace('/(auth)/forgot-password')}
+        />
+      </Screen>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      enabled={Platform.OS === 'ios'}
-    >
-      <ScrollView
-        ref={scrollViewRef}
-        contentContainerStyle={[styles.container, { paddingBottom: keyboardHeight }]}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title}>{t('resetPasswordTitle')}</Text>
+    <Screen background="auth" scrollRef={scrollRef} contentStyle={{ gap: spacing.xl }}>
+      <Text variant="display" accessibilityRole="header">
+        {t('resetPasswordTitle')}
+      </Text>
 
+      <View style={{ gap: spacing.lg }}>
         <PasswordInput
-          inputRef={passwordInputRef}
-          placeholder={t('newPasswordPlaceholder')}
+          ref={passwordRef}
+          label={t('newPasswordLabel')}
+          helper={t('passwordSignupHelper', { n: MIN_PASSWORD_LENGTH })}
           autoComplete="password-new"
+          returnKeyType="done"
           value={password}
           onChangeText={setPassword}
-          onFocus={() => scrollInputIntoView(scrollViewRef.current, passwordInputRef)}
+          onFocus={() => scrollInputIntoView(scrollRef.current, passwordRef)}
+          onSubmitEditing={handleSubmit}
         />
+        {error && <Banner tone="danger" message={error} />}
+      </View>
 
-        {error && <Text style={styles.error}>{error}</Text>}
-
-        <Pressable
-          style={[styles.button, submitting && styles.buttonDisabled]}
+      <View style={{ marginTop: 'auto' }}>
+        <Button
+          title={t('resetPasswordButton')}
+          loading={submitting}
+          loadingTitle={t('resettingPasswordButton')}
           onPress={handleSubmit}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>{t('resetPasswordButton')}</Text>
-          )}
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        />
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  centered: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#2f95dc',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#d33',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  link: {
-    textAlign: 'center',
-    marginTop: 16,
-    color: '#2f95dc',
-    fontSize: 14,
-  },
-});

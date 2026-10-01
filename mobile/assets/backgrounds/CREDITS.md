@@ -19,5 +19,11 @@ Rules for a photo to qualify:
 When a photographer asks for credit on the source page, the credit must also appear in the
 app, not only in this file.
 
-| File | Source | Photographer | License | Downloaded | Changes | Overlay | Lowest contrast |
-| ---- | ------ | ------------ | ------- | ---------- | ------- | ------- | --------------- |
+| File           | Source                                                                                                   | Photographer                                     | License        | Downloaded | Changes                                                                                                                                                  | Overlay | Lowest contrast |
+| -------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | -------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------------- |
+| `welcome.webp` | [Pexels 298366](https://www.pexels.com/photo/city-landscape-during-nighttime-298366/)                    | [Humaied Ullah](https://www.pexels.com/@humaied) | Pexels License | 2026-10-01 | Portrait crop 1080×2340 from the 2340 px-tall rendition (left edge at x=760, which leaves out the photographer's watermark), WebP q82, metadata stripped | 0.58    | 4.62:1          |
+| `auth.webp`    | [Pexels 913612](https://www.pexels.com/photo/beautiful-bangladesh-golden-sunset-landscape-river-913612/) | [Humaied Ullah](https://www.pexels.com/@humaied) | Pexels License | 2026-10-01 | Portrait crop 1080×2340 from the 2340 px-tall rendition (left edge at x=780, keeps the sun and the boat), WebP q82, metadata stripped                    | 0.58    | 4.52:1          |
+
+Neither source page asks for credit, so no in-app credit is shown. Lowest contrast is white
+text at the brightest spot of the photo under its overlay, as measured by
+`pnpm check:contrast`; the gradient in `Screen` only darkens further.

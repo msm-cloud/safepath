@@ -56,7 +56,7 @@ const BANGLA_STRINGS = Object.entries(translations).map(([key, value]) => [key, 
 type Surface = 'plain' | 'photo';
 
 function UiGallery() {
-  const { language, setLanguage } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const { scheme } = useTheme();
   const [surface, setSurface] = useState<Surface>('plain');
   const [selectedRole, setSelectedRole] = useState<'student' | 'guardian'>('student');
@@ -115,7 +115,21 @@ function UiGallery() {
               icon={{ ios: 'phone.fill', android: 'call' }}
               onPress={() => {}}
             />
-            <Button title="Loading" loading onPress={() => {}} />
+            <Button title="Loading" loading loadingTitle={t('sendingLabel')} onPress={() => {}} />
+            <Button
+              title="Loading primary"
+              variant="primary"
+              loading
+              loadingTitle={t('sendingLabel')}
+              onPress={() => {}}
+            />
+            <Button
+              title="Loading ghost"
+              variant="ghost"
+              loading
+              loadingTitle={t('sendingLabel')}
+              onPress={() => {}}
+            />
             <Button title="Disabled" disabled onPress={() => {}} />
             <Button title="Disabled ghost" variant="ghost" disabled onPress={() => {}} />
             <Button title="Small" size="small" fullWidth={false} onPress={() => {}} />

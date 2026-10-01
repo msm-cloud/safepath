@@ -16,17 +16,40 @@ export type BannerProps = {
   action?: { label: string; onPress: () => void };
 };
 
-const TONES: Record<BannerTone, { bg: keyof ThemeColors; fg: TextColor }> = {
-  primary: { bg: 'primarySoft', fg: 'onPrimarySoft' },
-  info: { bg: 'infoSoft', fg: 'onInfoSoft' },
-  success: { bg: 'successSoft', fg: 'onSuccessSoft' },
-  warning: { bg: 'warningSoft', fg: 'onWarningSoft' },
-  danger: { bg: 'dangerSoft', fg: 'onDangerSoft' },
+type ToneSpec = { bg: keyof ThemeColors; fg: TextColor; icon: SymbolViewProps['name'] };
+
+// Each tone has its own icon so the meaning never rests on colour alone.
+const TONES: Record<BannerTone, ToneSpec> = {
+  primary: {
+    bg: 'primarySoft',
+    fg: 'onPrimarySoft',
+    icon: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' },
+  },
+  info: {
+    bg: 'infoSoft',
+    fg: 'onInfoSoft',
+    icon: { ios: 'info.circle.fill', android: 'info', web: 'info' },
+  },
+  success: {
+    bg: 'successSoft',
+    fg: 'onSuccessSoft',
+    icon: { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' },
+  },
+  warning: {
+    bg: 'warningSoft',
+    fg: 'onWarningSoft',
+    icon: { ios: 'exclamationmark.triangle.fill', android: 'warning', web: 'warning' },
+  },
+  danger: {
+    bg: 'dangerSoft',
+    fg: 'onDangerSoft',
+    icon: { ios: 'exclamationmark.octagon.fill', android: 'error', web: 'error' },
+  },
 };
 
 export default function Banner({ tone = 'primary', title, message, icon, action }: BannerProps) {
   const { colors, radius, spacing } = useTheme();
-  const { bg, fg } = TONES[tone];
+  const { bg, fg, icon: toneIcon } = TONES[tone];
   const urgent = tone === 'warning' || tone === 'danger';
 
   return (
@@ -44,7 +67,7 @@ export default function Banner({ tone = 'primary', title, message, icon, action 
           backgroundColor: colors[bg],
         }}
       >
-        {icon && <SymbolView name={icon} tintColor={colors[fg]} size={20} />}
+        <SymbolView name={icon ?? toneIcon} tintColor={colors[fg]} size={20} />
         <View style={{ flex: 1, gap: spacing.xs }}>
           {title && (
             <Text variant="label" color={fg}>

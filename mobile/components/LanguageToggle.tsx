@@ -3,10 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLanguage } from '@/lib/language-context';
 
 // Self-contained (reads/writes LanguageContext itself, no props needed) so
-// it can be reused anywhere LanguageProvider is mounted — both inside
-// Settings (components/SettingsScreen.tsx) and on the pre-auth welcome
-// screen (app/(auth)/index.tsx), which sits inside the same provider (see
-// app/_layout.tsx: LanguageProvider wraps the whole Stack, auth included).
+// it can be dropped into any screen under LanguageProvider. Signed-out
+// screens use the language switch in components/AuthHeader.tsx instead.
 export default function LanguageToggle() {
   const { t, language, setLanguage } = useLanguage();
 

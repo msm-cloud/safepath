@@ -8,6 +8,8 @@ packages:
 nodeLinker: hoisted
 allowBuilds:
   unrs-resolver: true
+  # Ships prebuilt binaries; its install script only builds from source.
+  sharp: false
 minimumReleaseAgeExclude:
   - '@next/env@16.3.2'
   - '@next/eslint-plugin-next@16.3.2'
