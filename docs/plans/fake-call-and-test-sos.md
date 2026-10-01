@@ -15,6 +15,15 @@ Fake call setup and Test SOS come after Tier A push: they reuse its native notif
 module, and Test SOS can only report "delivered" once guardians receive pushes while the
 app is closed.
 
+### Persona
+
+PR 2's welcome screen asks for a persona (student, working woman or guardian) but stores
+only the role: guardian creates a guardian account, the other two a user account, and the
+persona only changes wording on the signed-out screens. Onboarding will ask for the persona
+again and store it in a new nullable `profiles.persona` column (numbered migration,
+regenerated shared types). The onboarding step shows a one-line reason for asking, for
+example "So SafePath can suggest the right safety features for your day".
+
 ## Fake call setup
 
 ### Screen and settings
