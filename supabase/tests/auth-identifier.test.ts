@@ -23,6 +23,10 @@ const PASSWORD = 'correct-horse';
 const SALT = 'test-salt';
 const FORWARD_SECRET = 'dashboard-forward-secret';
 
+// Node timers can fire a fraction of a millisecond before performance.now()
+// says the delay has passed, so floor checks allow this much slack.
+const TIMER_SLACK_MS = 1;
+
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 type Fake = {
@@ -288,7 +292,7 @@ describe('reset', () => {
     const res = await send(fake.deps, reset(KNOWN_PHONE));
 
     assert.equal(res.status, 200);
-    assert.ok(res.elapsed >= 100 && res.elapsed < 1000, `elapsed ${res.elapsed}`);
+    assert.ok(res.elapsed >= 100 - TIMER_SLACK_MS && res.elapsed < 1000, `elapsed ${res.elapsed}`);
     assert.equal(finished, false);
   });
 
@@ -329,7 +333,9 @@ describe('minimum response time', () => {
     const limited = await send(fake.deps, signIn(KNOWN_PHONE, 'x'));
 
     assert.deepEqual([ok.status, bad.status, limited.status], [200, 400, 429]);
-    for (const res of [ok, bad, limited]) assert.ok(res.elapsed >= 120, `elapsed ${res.elapsed}`);
+    for (const res of [ok, bad, limited]) {
+      assert.ok(res.elapsed >= 120 - TIMER_SLACK_MS, `elapsed ${res.elapsed}`);
+    }
   });
 });
 
