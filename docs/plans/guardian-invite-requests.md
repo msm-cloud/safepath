@@ -128,11 +128,10 @@ name or reason.
    "Waiting to accept" until the link goes live, and a cancel would show the same neutral
    "Code no longer active".
 
-## SOS PIN: open questions
-
-1. A duress PIN (a second PIN that appears to work while quietly signalling trouble) could
-   also fake-accept a guardian link: the review screen shows success, but no link is
-   created and the guardian keeps seeing "Waiting to accept" until the code expires.
+Neither the delay nor a duress PIN that fake-accepts a link (open question under "Is a
+duress PIN in scope?" in `fake-call-and-test-sos.md`) fully hides anything: a guardian
+can see that a link hasn't gone live yet, or never activates. Both only buy the student
+time.
 
 Decided 2026-10-01: 24-hour expiry, 8-character codes, dashboard redeem form removed, no
 switch to turn off requests by code.
