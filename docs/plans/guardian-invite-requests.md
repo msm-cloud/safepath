@@ -16,8 +16,8 @@ PR 3 already added `revoke_guardian_link`, the no-reactivation rule,
 
 ## Flow
 
-1. The guardian opens **Invite a family member** and creates a code (6 characters, shown as
-   `K7Q 92M`). They share or copy it. The screen lists their codes still waiting, each with
+1. The guardian opens **Invite a family member** and creates a code (8 characters, shown as
+   `K7Q9 2MXZ` like PR 3's codes). They share or copy it. The screen lists their codes still waiting, each with
    **Cancel**, and **Create another code**.
 2. The student opens **Guardians → Have an invite code?** and enters it.
 3. If the code is valid, the student sees the review screen: the guardian's name and photo,
@@ -31,13 +31,16 @@ PR 3 already added `revoke_guardian_link`, the no-reactivation rule,
 
 ## Rules
 
-- **Expiry**: a code expires 24 hours after it is created (the board's `[EXPIRY]`). Expired
+- **Expiry**: a code expires 24 hours after it is created (the board's `[EXPIRY]`; decided
+  2026-10-01). Expired
   codes can't be looked up; a cron job marks them expired and deletes requests older than
   30 days.
 - **Single use**: the first student who looks up a valid code claims it. No one else can
   look it up afterwards, and it can only be accepted or declined by that student.
-- **Codes**: 6 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (31 symbols, about 887
-  million codes), generated with `gen_random_bytes`. Lookup ignores spaces and case.
+- **Codes**: 8 characters from the same 32-symbol alphabet as today's invite codes
+  (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, about 1.1 trillion codes), generated with
+  `gen_random_bytes`. The board shows 6; 8 was kept (decided 2026-10-01). Lookup ignores
+  spaces, dashes and case.
 - **Attempt limits** (same table and pattern as `auth_rate_limit_events`):
   - Student lookups: 5 failed lookups per 15 minutes and 20 per day per account. Not
     found, expired, cancelled and already claimed all return the same error, so a code's
@@ -105,15 +108,13 @@ minimum supported app version is 1.3 or later (the same signal used for the
   apart from the older-app entry.
 - Student: Guardians tab gains "Have an invite code?" and claimed-request cards; new review
   screen (`User-InviteAccept`). Removal stays as in PR 3.
-- Dashboard: the redeem form is replaced by the same create-code flow, or removed while the
-  dashboard runs locally only (open question).
+- Dashboard: the redeem form (`dashboard/app/dashboard/redeem-invite-form.tsx`) and its
+  strings are removed; guardians create codes in the mobile app (decided 2026-10-01).
 - `mobile/lib/translations.ts`, `supabase/tests/rls.test.mjs`, docs.
 
 ## Open questions
 
-1. Is 24 hours the right expiry?
-2. 6-character codes (board) or keep 8? 6 is easier to read out; with expiry, single use
-   and attempt limits it is enough.
-3. Dashboard: build the create-code flow there now, or remove the redeem form?
-4. Should a student be able to turn off "requests by code" entirely (for example, under
+1. Should a student be able to turn off "requests by code" entirely (for example, under
    pressure at home)?
+
+Decided 2026-10-01: 24-hour expiry, 8-character codes, dashboard redeem form removed.
