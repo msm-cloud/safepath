@@ -464,29 +464,65 @@ export const translations = {
 
   // --- Guardians ---
   guardiansTitle: { en: 'Guardians', bn: 'অভিভাবক' },
-  inviteGuardianButton: { en: 'Invite a Guardian', bn: 'একজন অভিভাবককে আমন্ত্রণ জানান' },
-  shareCodeLabel: {
-    en: 'Share this code with your guardian',
-    bn: 'আপনার অভিভাবকের সাথে এই কোডটি শেয়ার করুন',
+  inviteGuardianButton: { en: 'Invite guardian', bn: 'অভিভাবককে আমন্ত্রণ জানান' },
+  inviteCodeTitle: { en: 'Your invite code', bn: 'আপনার আমন্ত্রণ কোড' },
+  inviteCodeHint: {
+    en: 'Works once. Share it only with someone you trust.',
+    bn: 'একবারই কাজ করে। শুধু বিশ্বস্ত কারো সাথে শেয়ার করুন।',
   },
+  shareCodeButton: { en: 'Share code', bn: 'কোড শেয়ার করুন' },
   copyButton: { en: 'Copy', bn: 'কপি করুন' },
-  copiedButton: { en: 'Copied!', bn: 'কপি হয়েছে!' },
-  shareButton: { en: 'Share', bn: 'শেয়ার করুন' },
-  yourGuardiansLabel: { en: 'Your guardians', bn: 'আপনার অভিভাবকরা' },
+  copiedButton: { en: 'Copied', bn: 'কপি হয়েছে' },
+  howItWorksTitle: { en: 'How it works', bn: 'যেভাবে কাজ করে' },
+  howItWorksBody: {
+    en: 'Your guardian opens SafePath, taps Link to someone and enters this code. They are linked to you as soon as they enter it. You can remove a guardian any time.',
+    bn: 'আপনার অভিভাবক সেফপাথ খুলে "কারো সাথে যুক্ত হন"-এ ট্যাপ করে এই কোডটি লিখবেন। কোড লেখার সাথে সাথেই তিনি আপনার সাথে যুক্ত হবেন। আপনি যেকোনো সময় একজন অভিভাবককে সরিয়ে দিতে পারেন।',
+  },
+  unusedCodesLabel: { en: 'Codes not used yet', bn: 'এখনো ব্যবহার না হওয়া কোড' },
+  unusedCodeMeta: { en: 'Created {date}', bn: '{date}-এ তৈরি' },
+  cancelCodeButton: { en: 'Cancel', bn: 'বাতিল করুন' },
+  cancelCodeLabel: { en: 'Cancel code {code}', bn: '{code} কোডটি বাতিল করুন' },
+  yourGuardiansCount: { en: 'Your guardians · {n}', bn: 'আপনার অভিভাবক · {n}' },
+  guardianLinkedMeta: {
+    en: 'Linked · gets SOS and journeys',
+    bn: 'যুক্ত · SOS আর যাত্রার খবর পান',
+  },
+  removeGuardianButton: { en: 'Remove', bn: 'সরান' },
+  removeGuardianLabel: { en: 'Remove {name}', bn: '{name}-কে সরান' },
   noGuardiansYet: {
-    en: 'No guardians yet — invite one above and share the code with them.',
-    bn: 'এখনো কোনো অভিভাবক নেই — উপরে একজনকে আমন্ত্রণ জানান এবং তাদের সাথে কোডটি শেয়ার করুন।',
+    en: 'No guardians yet. Invite one and share the code with them.',
+    bn: 'এখনো কোনো অভিভাবক নেই। একজনকে আমন্ত্রণ জানিয়ে তাকে কোডটি দিন।',
   },
   unnamedGuardian: { en: 'Unnamed guardian', bn: 'নামহীন অভিভাবক' },
-  acceptedOn: { en: 'Accepted {date}', bn: '{date}-এ গৃহীত' },
-  createdOn: { en: 'Created {date}', bn: '{date}-এ তৈরি' },
-  statusPending: { en: 'pending', bn: 'অপেক্ষমান' },
-  statusAccepted: { en: 'accepted', bn: 'গৃহীত' },
-  statusRevoked: { en: 'revoked', bn: 'বাতিল' },
   shareInviteMessage: {
     en: 'Use this SafePath invite code to connect as my guardian: {code}',
     bn: 'আমার অভিভাবক হিসেবে যুক্ত হতে এই সেফপাথ আমন্ত্রণ কোডটি ব্যবহার করুন: {code}',
   },
+  guardianUpdateFailed: {
+    en: "Couldn't update your guardians. Check your connection and try again.",
+    bn: 'অভিভাবকদের তথ্য আপডেট করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
+  },
+
+  // --- Remove guardian ---
+  removeGuardianTitle: {
+    en: 'Remove {name} as your guardian?',
+    bn: '{name}-কে আপনার অভিভাবক থেকে সরাবেন?',
+  },
+  removeGuardianStopsAlerts: {
+    en: '{name} will stop getting your SOS alerts and journey check-ins',
+    bn: '{name} আর আপনার SOS সতর্কবার্তা ও যাত্রার খবর পাবেন না',
+  },
+  removeGuardianStopsLocation: {
+    en: '{name} will no longer see your location or history',
+    bn: '{name} আর আপনার অবস্থান বা অবস্থানের ইতিহাস দেখতে পাবেন না',
+  },
+  removeGuardianRelink: {
+    en: 'To link again later, you will need a new invite.',
+    bn: 'পরে আবার যুক্ত হতে নতুন আমন্ত্রণ লাগবে।',
+  },
+  removeGuardianConfirm: { en: 'Remove guardian', bn: 'অভিভাবক সরান' },
+  removingGuardian: { en: 'Removing…', bn: 'সরানো হচ্ছে…' },
+  keepGuardianButton: { en: 'Keep {name}', bn: '{name}-কে রাখুন' },
 
   // --- Settings ---
   settingsTitle: { en: 'Settings', bn: 'সেটিংস' },
@@ -720,7 +756,7 @@ export const translations = {
   activeForHoursMinutes: { en: 'Active for {h}h {m}m', bn: '{h} ঘণ্টা {m} মিনিট সক্রিয় ছিল' },
   activeForHours: { en: 'Active for {h} hour{s}', bn: '{h} ঘণ্টা সক্রিয় ছিল' },
   activeForDays: { en: 'Active for {d} day{s}', bn: '{d} দিন সক্রিয় ছিল' },
-  inviteCodePlaceholder: { en: 'Invite code', bn: 'আমন্ত্রণ কোড' },
+  inviteCodeLabel: { en: 'Invite code', bn: 'আমন্ত্রণ কোড' },
   enterInviteCode: { en: 'Enter an invite code.', bn: 'একটি আমন্ত্রণ কোড লিখুন।' },
   invalidOrUsedCode: {
     en: 'That invite code is invalid or has already been used.',
@@ -733,6 +769,7 @@ export const translations = {
   nowLinkedTo: { en: "You're now linked to {name}.", bn: 'আপনি এখন {name}-এর সাথে যুক্ত।' },
   thisUserFallback: { en: 'this user', bn: 'এই ব্যবহারকারী' },
   linkButton: { en: 'Link', bn: 'যুক্ত করুন' },
+  linkingButton: { en: 'Linking…', bn: 'যুক্ত করা হচ্ছে…' },
 
   // --- Not found (app/+not-found.tsx) ---
   notFoundTitle: { en: 'Oops!', bn: 'ওহো!' },

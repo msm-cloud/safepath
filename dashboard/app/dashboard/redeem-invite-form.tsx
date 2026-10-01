@@ -34,7 +34,8 @@ export default function RedeemInviteForm() {
     setError(null);
     setConfirmation(null);
 
-    const trimmed = code.trim();
+    // The mobile app shows codes in two groups ("ABCD EFGH").
+    const trimmed = code.replace(/[\s-]/g, '');
     if (trimmed.length === 0) {
       setError(t('enterInviteCode'));
       return;

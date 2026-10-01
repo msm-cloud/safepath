@@ -1,13 +1,14 @@
 import { Image } from 'expo-image';
 import { HeaderHeightContext, useIsFocused } from 'expo-router/react-navigation';
 import { StatusBar } from 'expo-status-bar';
-import { use, type ReactNode, type Ref } from 'react';
+import { use, type ReactElement, type ReactNode, type Ref } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   View,
+  type RefreshControlProps,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -31,6 +32,8 @@ export type ScreenProps = {
   // Lets a form call scrollInputIntoView (lib/scroll-to-input.ts) for the
   // focused field.
   scrollRef?: Ref<ScrollView>;
+  // Pull to refresh; only applies when `scroll` is on.
+  refreshControl?: ReactElement<RefreshControlProps>;
 };
 
 // Shown under the overlay while a photo is loading or not yet chosen, so
@@ -45,6 +48,7 @@ export default function Screen({
   edges = ['top', 'bottom'],
   contentStyle,
   scrollRef,
+  refreshControl,
 }: ScreenProps) {
   const { colors, sizes, spacing } = useTheme();
   const keyboardHeight = useKeyboardHeight();
@@ -77,6 +81,7 @@ export default function Screen({
     >
       <ScrollView
         ref={scrollRef}
+        refreshControl={refreshControl}
         keyboardShouldPersistTaps="handled"
         // Padding by the keyboard height gives short screens real scroll
         // range, see lib/use-keyboard-height.ts.
