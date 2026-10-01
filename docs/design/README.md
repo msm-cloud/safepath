@@ -1,6 +1,6 @@
 # Design boards
 
-`safepath-ui/` holds the exported "SafePath UI" design boards (16 screens) that the
+`safepath-ui/` holds the exported "SafePath UI" design boards (18 screens) that the
 mobile theme and base components are built from. They are kept verbatim as a reference
 and are not part of any build.
 
