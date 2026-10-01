@@ -112,9 +112,27 @@ minimum supported app version is 1.3 or later (the same signal used for the
   strings are removed; guardians create codes in the mobile app (decided 2026-10-01).
 - `mobile/lib/translations.ts`, `supabase/tests/rls.test.mjs`, docs.
 
+## Protection under pressure
+
+There is no switch to turn off requests by code (decided 2026-10-01). A request only
+reaches the student when the student enters the guardian's code themselves, so unsolicited
+requests can't happen. If a student is pressured into accepting, they are protected by
+quiet removal: PR 3's `revoke_guardian_link` drops the guardian with no notification,
+name or reason.
+
 ## Open questions
 
-1. Should a student be able to turn off "requests by code" entirely (for example, under
-   pressure at home)?
+1. **Delay before a new link goes live.** After the student accepts, the link could wait a
+   few hours before the guardian sees anything. During that time the student can cancel it
+   from the Guardians tab, and the guardian is not notified. The guardian would see
+   "Waiting to accept" until the link goes live, and a cancel would show the same neutral
+   "Code no longer active".
 
-Decided 2026-10-01: 24-hour expiry, 8-character codes, dashboard redeem form removed.
+## SOS PIN: open questions
+
+1. A duress PIN (a second PIN that appears to work while quietly signalling trouble) could
+   also fake-accept a guardian link: the review screen shows success, but no link is
+   created and the guardian keeps seeing "Waiting to accept" until the code expires.
+
+Decided 2026-10-01: 24-hour expiry, 8-character codes, dashboard redeem form removed, no
+switch to turn off requests by code.
