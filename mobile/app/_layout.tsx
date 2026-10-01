@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
@@ -57,6 +58,13 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      {/* Base of the status bar stack, so it must mount before any screen.
+          Photo screens push a light style on top; without this entry,
+          leaving one falls back to React Native's default (white icons),
+          which disappear on a light background. Set from the app's own
+          scheme rather than "auto", which reads an unspecified system
+          scheme as dark while the app falls back to light. */}
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <Stack>
         {/* Existing student experience — completely unchanged. */}
         <Stack.Protected guard={!!session && role === 'user'}>

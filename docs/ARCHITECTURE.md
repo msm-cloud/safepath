@@ -68,8 +68,10 @@ app continues with system fonts rather than staying on the splash screen.
 
 `Screen` accepts `background?: 'welcome' | 'auth' | 'onboarding' | 'empty'`. The union is
 closed on purpose: SOS, alert, map, list and settings screens cannot take a photo. A
-background screen draws the photo (or a dark fallback until one is chosen), the `overlay`
-colour on top, and a light status bar.
+background screen draws the photo (or a dark fallback until one is chosen) and the `overlay`
+colour on top. It switches the status bar to light icons only when no navigation header sits
+above it; otherwise the header is under the status bar and the root layout's theme-based
+style applies.
 
 `Screen` also sets the surface tone to `image`. `Text` then renders surface colours
 (`text`, `textMuted`, `primary`, ...) in `onOverlay`, and ghost buttons follow. `Card`,

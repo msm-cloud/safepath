@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
+import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { StatusBar } from 'expo-status-bar';
-import type { ReactNode, Ref } from 'react';
+import { use, type ReactNode, type Ref } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -46,6 +47,9 @@ export default function Screen({
 }: ScreenProps) {
   const { colors, sizes, spacing } = useTheme();
   const keyboardHeight = useKeyboardHeight();
+  // With a navigation header above, the header sits under the status bar,
+  // not the photo, so the icons keep following the theme.
+  const underStatusBar = (use(HeaderHeightContext) ?? 0) === 0;
   const photo = background ? backgroundPhotos[background] : null;
   // The overlay is the fallback colour at reduced opacity, so a per-photo
   // value only changes how much of the photo shows through.
@@ -101,7 +105,7 @@ export default function Screen({
             />
           )}
           <View style={[StyleSheet.absoluteFill, overlay]} />
-          <StatusBar style="light" />
+          {underStatusBar && <StatusBar style="light" />}
         </>
       )}
       <SurfaceToneContext value={background ? 'image' : 'default'}>
