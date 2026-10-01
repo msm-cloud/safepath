@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { HeaderHeightContext } from 'expo-router/react-navigation';
+import { HeaderHeightContext, useIsFocused } from 'expo-router/react-navigation';
 import { StatusBar } from 'expo-status-bar';
 import { use, type ReactNode, type Ref } from 'react';
 import {
@@ -15,7 +15,8 @@ import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { colors as palette, useTheme } from '@/theme';
-import { backgroundPhotos, clampOverlayOpacity, type ScreenBackground } from '@/theme/backgrounds';
+import { backgroundPhoto } from '@/theme/background-sources';
+import { clampOverlayOpacity, PHOTO_GRADIENT, type ScreenBackground } from '@/theme/backgrounds';
 import { SurfaceToneContext } from '@/theme/surface-tone';
 
 export type ScreenProps = {
@@ -50,13 +51,15 @@ export default function Screen({
   // With a navigation header above, the header sits under the status bar,
   // not the photo, so the icons keep following the theme.
   const underStatusBar = (use(HeaderHeightContext) ?? 0) === 0;
-  const photo = background ? backgroundPhotos[background] : null;
+  // A screen left mounted under the one on top (e.g. the welcome screen
+  // under a pushed route) must not keep forcing light icons.
+  const focused = useIsFocused();
+  const photo = background ? backgroundPhoto(background) : null;
   // The overlay is the fallback colour at reduced opacity, so a per-photo
   // value only changes how much of the photo shows through.
-  const overlay: ViewStyle =
-    photo?.overlayOpacity !== undefined
-      ? { backgroundColor: PHOTO_FALLBACK, opacity: clampOverlayOpacity(photo.overlayOpacity) }
-      : { backgroundColor: colors.overlay };
+  const overlay: ViewStyle = photo
+    ? { backgroundColor: PHOTO_FALLBACK, opacity: clampOverlayOpacity(photo.overlayOpacity) }
+    : { backgroundColor: colors.overlay };
 
   const bottom = padded ? spacing.xl : 0;
   const padding: ViewStyle = padded
@@ -105,7 +108,10 @@ export default function Screen({
             />
           )}
           <View style={[StyleSheet.absoluteFill, overlay]} />
-          {underStatusBar && <StatusBar style="light" />}
+          <View
+            style={[StyleSheet.absoluteFill, { experimental_backgroundImage: PHOTO_GRADIENT }]}
+          />
+          {underStatusBar && focused && <StatusBar style="light" />}
         </>
       )}
       <SurfaceToneContext value={background ? 'image' : 'default'}>

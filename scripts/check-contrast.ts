@@ -4,6 +4,15 @@
 //
 // Usage: pnpm check:contrast
 
+import { fileURLToPath } from 'node:url';
+
+import sharp from 'sharp';
+
+import {
+  backgroundPhotoSpecs,
+  clampOverlayOpacity,
+  type ScreenBackground,
+} from '../mobile/theme/backgrounds.ts';
 import { colors, type ColorScheme, type ThemeColors } from '../mobile/theme/colors.ts';
 
 type Rgb = [number, number, number];
@@ -175,12 +184,87 @@ for (const pair of PAIRS) {
   rows.push(`| ${pair.group} | ${pair.label} | ${cells[0]} | ${cells[1]} | ${needs} |`);
 }
 
+// Each background photo is measured at the brightest spot a line of text
+// could sit on: the photo is scaled to roughly 1 px per dp and blurred by
+// about a glyph stroke, so a lone bright pixel doesn't count but the sun
+// does. Text, ghost buttons and links on a photo all use onOverlay, so one
+// required pair covers them. Button fills are reported only: their labels
+// are checked against the fill above, and a fill needs no contrast with
+// the photo to be recognised as a button.
+const PHOTO_DIR = fileURLToPath(new URL('../mobile/assets/backgrounds/', import.meta.url));
+const PHOTO_SCALE_WIDTH = 360;
+const PHOTO_BLUR_SIGMA = 1.5;
+// Screen draws the overlay with this colour (palette.dark.bg) in both themes.
+const PHOTO_OVERLAY_BASE = colors.dark.bg;
+const FILLED_VARIANTS: { label: string; key: Key }[] = [
+  { label: 'primary', key: 'primary' },
+  { label: 'secondary', key: 'surface' },
+  { label: 'danger', key: 'danger' },
+];
+
+async function photoExtremes(file: string, opacity: number): Promise<{ light: Rgb; dark: Rgb }> {
+  const { data, info } = await sharp(PHOTO_DIR + file)
+    .resize({ width: PHOTO_SCALE_WIDTH })
+    .blur(PHOTO_BLUR_SIGMA)
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const overlay = parse(PHOTO_OVERLAY_BASE).rgb;
+  let light: Rgb = [0, 0, 0];
+  let dark: Rgb = [255, 255, 255];
+  for (let i = 0; i < data.length; i += info.channels) {
+    const px = [0, 1, 2].map((c) =>
+      Math.round(overlay[c] * opacity + data[i + c] * (1 - opacity))
+    ) as Rgb;
+    if (luminance(px) > luminance(light)) light = px;
+    if (luminance(px) < luminance(dark)) dark = px;
+  }
+  return { light, dark };
+}
+
+async function photoReport(): Promise<string> {
+  const lines = [
+    '| Photo | Overlay | Pair | Light | Dark | Needs |',
+    '| --- | --- | --- | --- | --- | --- |',
+  ];
+  const entries = Object.entries(backgroundPhotoSpecs) as [
+    ScreenBackground,
+    (typeof backgroundPhotoSpecs)[ScreenBackground],
+  ][];
+  for (const [name, spec] of entries) {
+    if (!spec) continue;
+    const opacity = clampOverlayOpacity(spec.overlayOpacity);
+    const { light, dark } = await photoExtremes(spec.file, opacity);
+    const row = (pair: string, values: [number, number], needed: number | null) => {
+      const cells = values.map((value, i) => {
+        if (needed !== null && value < needed) {
+          failures.push(`${schemes[i]}: Photo ${name} / ${pair} = ${value.toFixed(2)}`);
+        }
+        const mark = needed === null ? '(info)' : value >= needed ? 'pass' : 'FAIL';
+        return `${value.toFixed(2)} ${mark}`;
+      });
+      const needs = needed === null ? 'report only' : `${needed}:1`;
+      lines.push(`| ${name} | ${opacity} | ${pair} | ${cells[0]} | ${cells[1]} | ${needs} |`);
+    };
+    const both = (key: Key, spot: Rgb): [number, number] =>
+      schemes.map((scheme) => ratio(parse(colors[scheme][key]).rgb, spot)) as [number, number];
+
+    row('Text, links and ghost buttons (brightest spot)', both('onOverlay', light), THRESHOLD.text);
+    for (const variant of FILLED_VARIANTS) {
+      row(`${variant.label} fill vs brightest spot`, both(variant.key, light), null);
+      row(`${variant.label} fill vs darkest spot`, both(variant.key, dark), null);
+    }
+  }
+  return lines.join('\n');
+}
+
 // Dark mode primary buttons must use dark label text, not white.
 if (luminance(parse(colors.dark.onPrimary).rgb) > 0.2) {
   failures.push('dark: onPrimary must be a dark colour');
 }
 
 console.log(rows.join('\n'));
+console.log(`\n${await photoReport()}`);
 
 if (failures.length > 0) {
   console.error(`\n${failures.length} pair(s) below threshold:\n${failures.join('\n')}`);

@@ -1,5 +1,3 @@
-import type { ImageSource } from 'expo-image';
-
 // Background photos are only for calm, low-stakes screens. SOS, alerts,
 // maps, lists and settings must stay on plain surfaces so nothing competes
 // with the information on them; keeping this union closed makes that a
@@ -11,9 +9,10 @@ export type ScreenBackground = 'welcome' | 'auth' | 'onboarding' | 'empty';
 // values outside the range are clamped.
 export const OVERLAY_OPACITY_RANGE = { min: 0.55, max: 0.65 } as const;
 
-export type BackgroundPhoto = {
-  source: ImageSource;
-  overlayOpacity?: number;
+export type BackgroundPhotoSpec = {
+  // File name in mobile/assets/backgrounds/.
+  file: string;
+  overlayOpacity: number;
 };
 
 export function clampOverlayOpacity(value: number): number {
@@ -21,11 +20,23 @@ export function clampOverlayOpacity(value: number): number {
 }
 
 // Every file here must have a matching row in
-// assets/backgrounds/CREDITS.md. Until a photo is added, the screen shows
-// the dark fallback colour under the default overlay.
-export const backgroundPhotos: Record<ScreenBackground, BackgroundPhoto | null> = {
-  welcome: null,
-  auth: null,
+// assets/backgrounds/CREDITS.md, and `pnpm check:contrast` measures each one
+// at its overlay. Until a photo is added, the screen shows the dark fallback
+// colour under the default overlay.
+//
+// Kept free of require() so the contrast script can import it under Node;
+// the image sources live in background-sources.ts.
+export const backgroundPhotoSpecs: Record<ScreenBackground, BackgroundPhotoSpec | null> = {
+  welcome: { file: 'welcome.webp', overlayOpacity: 0.58 },
+  auth: { file: 'auth.webp', overlayOpacity: 0.58 },
   onboarding: null,
   empty: null,
 };
+
+// Drawn over the flat overlay. It darkens the top behind the status bar and
+// the bottom half, where buttons and small print sit, so those stay readable
+// wherever the cover crop lands on a given screen. It only ever adds
+// darkness, so the contrast check measures the flat overlay alone.
+export const PHOTO_GRADIENT =
+  'linear-gradient(to bottom, rgba(17,19,31,0.35) 0%, rgba(17,19,31,0) 18%, ' +
+  'rgba(17,19,31,0) 50%, rgba(17,19,31,0.5) 100%)';
