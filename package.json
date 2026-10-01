@@ -10,7 +10,8 @@
     "typecheck": "pnpm -r --if-present run typecheck",
     "gen:types": "node scripts/gen-types.mjs",
     "test:rls": "node supabase/tests/rls.test.mjs",
-    "test:auth-identifier": "node --test supabase/tests/auth-identifier.test.ts"
+    "test:auth-identifier": "node --test supabase/tests/auth-identifier.test.ts",
+    "check:contrast": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-contrast.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.5",

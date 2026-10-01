@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
@@ -8,6 +9,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { LanguageProvider } from '@/lib/language-context';
 import { UserSettingsProvider } from '@/lib/user-settings-context';
+import { useBrandFonts } from '@/theme/fonts';
 
 // NOTE: the live-location-sharing background task (TaskManager.defineTask)
 // is registered from the custom entry point mobile/index.js, NOT here.
@@ -22,7 +24,8 @@ export {
 
 // Prevent the splash screen from auto-hiding until we know whether there's
 // an existing session — otherwise the app would flash the wrong stack
-// (tabs vs. sign-in) before Stack.Protected below can redirect.
+// (tabs vs. sign-in) before Stack.Protected below can redirect. It also
+// waits for the brand fonts so text doesn't re-flow after first paint.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -40,19 +43,28 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { session, role, loading } = useAuth();
+  const fontsReady = useBrandFonts();
+  const ready = !loading && fontsReady;
 
   useEffect(() => {
-    if (!loading) {
+    if (ready) {
       SplashScreen.hideAsync();
     }
-  }, [loading]);
+  }, [ready]);
 
-  if (loading) {
+  if (!ready) {
     return null;
   }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      {/* Base of the status bar stack, so it must mount before any screen.
+          Photo screens push a light style on top; without this entry,
+          leaving one falls back to React Native's default (white icons),
+          which disappear on a light background. Set from the app's own
+          scheme rather than "auto", which reads an unspecified system
+          scheme as dark while the app falls back to light. */}
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <Stack>
         {/* Existing student experience — completely unchanged. */}
         <Stack.Protected guard={!!session && role === 'user'}>

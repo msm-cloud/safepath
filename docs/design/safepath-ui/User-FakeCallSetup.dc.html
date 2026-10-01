@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SafePath – Fake call setup</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&amp;family=Figtree:wght@400;500;600;700&amp;family=Hind+Siliguri:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;background:#F6F4F1;font-family:'Figtree',system-ui,sans-serif;color:#171A2F}
+a{color:#3B45B5}a:hover{color:#2A3290}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 52px 20px 28px; display: flex; flex-direction: column; gap: 18px; background: #F6F4F1; overflow: hidden">
+  <div style="display: flex; align-items: center; gap: 10px">
+    <a href="User-Home.dc.html" aria-label="Back" style="width: 44px; height: 44px; border-radius: 50%; background: #FFFFFF; border: 1px solid #E4E1EA; display: flex; align-items: center; justify-content: center; color: #171A2F"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+    <div style="font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700">Fake call</div>
+  </div>
+  <div style="font-size: 15px; line-height: 1.45; color: #474B5C">Your phone rings like a normal call, so you have a reason to leave. SafePath does not appear on the call screen.</div>
+
+  <fieldset style="margin: 0; padding: 0; border: none; display: flex; flex-direction: column; gap: 8px">
+    <legend style="padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 700; color: #171A2F">Who is calling</legend>
+    <label style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #E6E8F7; border: 2px solid {{primary}}">
+      <span style="width: 36px; height: 36px; border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700">AM</span>
+      <span style="flex-grow: 1; font-size: 15px; font-weight: 700">Ammu</span>
+      <input type="radio" name="caller" checked style="width: 20px; height: 20px; margin: 0; accent-color: {{primary}}">
+    </label>
+    <label style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 1px solid #E4E1EA">
+      <span style="width: 36px; height: 36px; border-radius: 50%; background: #FBE9D7; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700">AB</span>
+      <span style="flex-grow: 1; font-size: 15px; font-weight: 700">Abbu</span>
+      <input type="radio" name="caller" style="width: 20px; height: 20px; margin: 0; accent-color: {{primary}}">
+    </label>
+    <label style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 1px solid #E4E1EA">
+      <span style="width: 36px; height: 36px; border-radius: 50%; background: #EFEDF3; display: flex; align-items: center; justify-content: center; color: #474B5C"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg></span>
+      <span style="flex-grow: 1; font-size: 15px; font-weight: 700">Other name</span>
+      <input type="radio" name="caller" style="width: 20px; height: 20px; margin: 0; accent-color: {{primary}}">
+    </label>
+  </fieldset>
+
+  <fieldset style="margin: 0; padding: 0; border: none">
+    <legend style="padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 700; color: #171A2F">Ring in</legend>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+      <label style="height: 48px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E1EA; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; font-weight: 700"><input type="radio" name="when" style="margin: 0; accent-color: {{primary}}">Now</label>
+      <label style="height: 48px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E1EA; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; font-weight: 700"><input type="radio" name="when" style="margin: 0; accent-color: {{primary}}">30 s</label>
+      <label style="height: 48px; border-radius: 14px; background: #E6E8F7; border: 2px solid {{primary}}; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; font-weight: 700"><input type="radio" name="when" checked style="margin: 0; accent-color: {{primary}}">1 min</label>
+      <label style="height: 48px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E1EA; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; font-weight: 700"><input type="radio" name="when" style="margin: 0; accent-color: {{primary}}">5 min</label>
+    </div>
+  </fieldset>
+
+  <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 18px; background: #FFFFFF; border: 1px solid #E4E1EA">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#474B5C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"></path></svg>
+    <label for="ring" style="flex-grow: 1"><span style="display: block; font-size: 15px; font-weight: 700">Ring out loud</span><span style="display: block; font-size: 13px; color: #5C6070">Off: vibrate only</span></label>
+    <input id="ring" type="checkbox" checked style="width: 22px; height: 22px; margin: 0; accent-color: {{primary}}">
+  </div>
+
+  <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
+    <a href="User-FakeCall.dc.html" style="height: 56px; border-radius: 18px; background: {{primary}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 700; text-decoration: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Ring in 1 minute</a>
+    <div style="text-align: center; font-size: 13px; color: #5C6070">You can cancel it from the notification.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"primary":{"editor":"color","default":"#3B45B5","options":["#3B45B5","#0B6E73","#6D2E8C","#1E3A5F"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { primary: this.props.primary ?? '#3B45B5' };
+  }
+}
+</script>
+</body>
+</html>

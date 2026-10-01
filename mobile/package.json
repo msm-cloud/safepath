@@ -3,6 +3,9 @@
   "main": "index.js",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/figtree": "^0.4.1",
+    "@expo-google-fonts/hind-siliguri": "^0.4.1",
+    "@expo-google-fonts/sora": "^0.4.2",
     "@expo/metro-runtime": "~57.0.14",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@safepath/shared-types": "workspace:*",
@@ -11,6 +14,7 @@
     "expo-audio": "~57.0.4",
     "expo-clipboard": "~57.0.1",
     "expo-constants": "~57.0.15",
+    "expo-font": "~57.0.4",
     "expo-haptics": "~57.0.2",
     "expo-image": "~57.0.3",
     "expo-image-manipulator": "~57.0.14",
