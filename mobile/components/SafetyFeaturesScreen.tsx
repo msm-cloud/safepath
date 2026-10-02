@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -48,15 +49,23 @@ export default function SafetyFeaturesScreen() {
     setAlarmSoundEnabled,
   } = useUserSettings();
 
+  // The setters undo the change themselves when the write fails; this
+  // only tells the person why it flipped back.
+  const reportIfUnsaved = (save: Promise<boolean>) => {
+    void save.then((saved) => {
+      if (!saved) Alert.alert(t('settingSaveFailedTitle'), t('settingSaveFailedMessage'));
+    });
+  };
+
   const scrollViewRef = useRef<ScrollView>(null);
   const callerNameInputRef = useRef<TextInput>(null);
 
   // Local draft so every keystroke doesn't hit the network — persisted via
-  // setFakeCallCallerName (which itself updates context immediately, same
-  // "optimistic update" pattern as setLanguage) only on blur. useState's
-  // initializer alone isn't enough here: fakeCallCallerName arrives
-  // asynchronously (fetched from the database after mount), so this
-  // effect re-syncs the draft once that real value actually loads —
+  // setFakeCallCallerName (which itself updates context immediately) only
+  // on blur. useState's initializer alone isn't enough here:
+  // fakeCallCallerName arrives asynchronously (fetched from the database
+  // after mount), so this effect re-syncs the draft once that real value
+  // actually loads, and again if a failed save rolls the name back —
   // without it, the field would be stuck showing empty even for someone
   // who'd previously saved a name.
   const [callerNameDraft, setCallerNameDraft] = useState(fakeCallCallerName ?? '');
@@ -80,13 +89,19 @@ export default function SafetyFeaturesScreen() {
       >
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>{t('shakeSosToggleLabel')}</Text>
-          <Switch value={shakeSosEnabled} onValueChange={setShakeSosEnabled} />
+          <Switch
+            value={shakeSosEnabled}
+            onValueChange={(value) => reportIfUnsaved(setShakeSosEnabled(value))}
+          />
         </View>
         <Text style={styles.toggleHint}>{t('shakeSosToggleHint')}</Text>
 
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>{t('fakeCallToggleLabel')}</Text>
-          <Switch value={fakeCallEnabled} onValueChange={setFakeCallEnabled} />
+          <Switch
+            value={fakeCallEnabled}
+            onValueChange={(value) => reportIfUnsaved(setFakeCallEnabled(value))}
+          />
         </View>
 
         {fakeCallEnabled && (
@@ -99,7 +114,7 @@ export default function SafetyFeaturesScreen() {
               value={callerNameDraft}
               onChangeText={setCallerNameDraft}
               onFocus={() => scrollInputIntoView(scrollViewRef.current, callerNameInputRef)}
-              onBlur={() => setFakeCallCallerName(callerNameDraft.trim() || null)}
+              onBlur={() => reportIfUnsaved(setFakeCallCallerName(callerNameDraft.trim() || null))}
             />
           </View>
         )}
@@ -108,7 +123,10 @@ export default function SafetyFeaturesScreen() {
           <>
             <View style={styles.toggleRow}>
               <Text style={styles.toggleLabel}>{t('alarmSoundToggleLabel')}</Text>
-              <Switch value={alarmSoundEnabled} onValueChange={setAlarmSoundEnabled} />
+              <Switch
+                value={alarmSoundEnabled}
+                onValueChange={(value) => reportIfUnsaved(setAlarmSoundEnabled(value))}
+              />
             </View>
             <Text style={styles.toggleHint}>{t('alarmSoundToggleHint')}</Text>
           </>
