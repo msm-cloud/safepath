@@ -2,14 +2,20 @@ import { Redirect, Stack } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
+import Avatar from '@/components/ui/Avatar';
 import Banner from '@/components/ui/Banner';
 import Button, { type ButtonVariant } from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import EmptyState from '@/components/ui/EmptyState';
 import IconTile, { type IconTileTone } from '@/components/ui/IconTile';
 import Input from '@/components/ui/Input';
+import ListGroup from '@/components/ui/ListGroup';
+import ListRow from '@/components/ui/ListRow';
 import PasswordInput from '@/components/ui/PasswordInput';
+import RoleBadge from '@/components/ui/RoleBadge';
 import Screen from '@/components/ui/Screen';
 import SegmentedControl from '@/components/ui/SegmentedControl';
+import SwitchRow from '@/components/ui/SwitchRow';
 import Text from '@/components/ui/Text';
 import { useLanguage } from '@/lib/language-context';
 import { translations, type Language } from '@/lib/translations';
@@ -63,6 +69,8 @@ function UiGallery() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [showAllBangla, setShowAllBangla] = useState(false);
+  const [shakeOn, setShakeOn] = useState(true);
+  const [alarmOn, setAlarmOn] = useState(false);
 
   return (
     <>
@@ -195,6 +203,62 @@ function UiGallery() {
               action={{ label: 'Open settings', onPress: () => {} }}
             />
             <Banner tone="danger" title="Danger" message="Couldn't send the alert. Try again." />
+          </Section>
+
+          <Section title="List rows">
+            <ListGroup title="Account">
+              <ListRow
+                title="Language"
+                value="English"
+                icon={{ ios: 'globe', android: 'language' }}
+                iconTone="primarySoft"
+                onPress={() => {}}
+              />
+              <ListRow
+                title="Phone number"
+                subtitle="Used for SOS text messages"
+                icon={{ ios: 'phone.fill', android: 'phone' }}
+                iconTone="success"
+                onPress={() => {}}
+              />
+              <ListRow title="Read-only row" value="1.2.0" />
+            </ListGroup>
+            <ListGroup title="Safety">
+              <SwitchRow
+                title="Shake to send SOS"
+                hint="Shake the phone hard to start an alert."
+                icon={{ ios: 'iphone.radiowaves.left.and.right', android: 'vibration' }}
+                iconTone="danger"
+                value={shakeOn}
+                onValueChange={setShakeOn}
+              />
+              <SwitchRow title="Alarm sound" value={alarmOn} onValueChange={setAlarmOn} />
+              <SwitchRow title="Disabled" value={false} onValueChange={() => {}} disabled />
+            </ListGroup>
+          </Section>
+
+          <Section title="Avatars and badge">
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
+              <Avatar name="Nusrat Jahan" url={null} size={56} />
+              <Avatar name="Rahim Uddin" url={null} size={56} />
+              <Avatar name="Tania Akter" url={null} size={56} />
+              <Avatar name="Karim" url={null} size={56} />
+              <Avatar name="নুসরাত জাহান" url={null} size={56} />
+              <Avatar name={null} url={null} size={56} />
+              <Avatar name="Small" url={null} size={36} />
+            </View>
+            <RoleBadge style={{ alignSelf: 'flex-start' }} />
+          </Section>
+
+          <Section title="Empty state">
+            <Card>
+              <EmptyState
+                icon={{ ios: 'clock.arrow.circlepath', android: 'history' }}
+                title="No past alerts"
+                message="Alerts from the people you look after will show up here."
+                action={{ label: 'Refresh', onPress: () => {} }}
+              />
+            </Card>
           </Section>
 
           <Section title="Icon tiles">

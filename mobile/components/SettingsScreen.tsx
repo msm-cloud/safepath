@@ -1,79 +1,36 @@
 import { useRouter } from 'expo-router';
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  type AlertButton,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, type AlertButton, Pressable, View } from 'react-native';
 
-import Avatar from '@/components/Avatar';
-import RoleBadge from '@/components/RoleBadge';
+import Avatar from '@/components/ui/Avatar';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import ListGroup from '@/components/ui/ListGroup';
+import ListRow from '@/components/ui/ListRow';
+import RoleBadge from '@/components/ui/RoleBadge';
+import Screen from '@/components/ui/Screen';
+import Text from '@/components/ui/Text';
 import { useAuth } from '@/lib/auth-context';
 import { type AvatarSource, pickAndUploadAvatar, removeAvatar } from '@/lib/avatar-upload';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import { useUserSettings } from '@/lib/user-settings-context';
+import { useTheme } from '@/theme';
 
-const CHEVRON_COLOR = '#c7c7cc';
-
-// One card-styled, icon-led row that navigates to its own screen on tap —
-// the shared building block for every entry in the list below. Purely
-// visual: every row still just calls router.push() to a screen that
-// already existed before this pass (see components/SettingsScreen.tsx's
-// own history) — no navigation target or underlying logic changed here.
-function SettingsRow({
-  icon,
-  iconColor,
-  iconBackgroundColor,
-  label,
-  onPress,
-}: {
-  icon: SymbolViewProps['name'];
-  iconColor: string;
-  iconBackgroundColor: string;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable style={styles.row} onPress={onPress}>
-      <View style={[styles.iconBadge, { backgroundColor: iconBackgroundColor }]}>
-        <SymbolView name={icon} tintColor={iconColor} size={18} />
-      </View>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <SymbolView
-        name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-        tintColor={CHEVRON_COLOR}
-        size={16}
-      />
-    </Pressable>
-  );
-}
+const AVATAR_SIZE = 88;
+const EDIT_BADGE_SIZE = 30;
 
 // Shared between the student ((tabs)/settings.tsx) and guardian
-// ((guardian)/settings.tsx) tab groups — this list and sign-out don't
-// differ by role, so this one component backs both routes rather than
-// duplicating it. The one role-specific row (Emergency Contacts,
-// relevant only to the at-risk-user/student role) is conditional on
-// `role`.
-//
-// A simple navigation list — every actual toggleable/editable setting
-// lives in its own screen now (LanguageSettingsScreen,
-// PhoneNumberSettingsScreen, SafetyFeaturesScreen, ChangePasswordScreen,
-// the existing Emergency Contacts screen), reachable by tapping a row
-// here. This screen itself doesn't own any of that underlying logic —
-// it only navigates to it. Sign Out stays a direct action here rather
-// than its own screen, since it doesn't need one — kept visually
-// separated below a divider so it doesn't read as just another row in
-// the card list above it.
+// ((guardian)/settings.tsx) tab groups. Each setting lives on its own
+// screen; this one only navigates there, plus the profile photo and sign
+// out. Emergency contacts (students) and share location (guardians) are
+// the only role-specific rows.
+
 export default function SettingsScreen() {
   const { session, role, signOut } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { colors, spacing } = useTheme();
   const { fullName, avatarPath, setAvatarPathLocal } = useUserSettings();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
@@ -163,197 +120,121 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Pressable style={styles.avatarWrap} onPress={handleAvatarPress} disabled={avatarBusy}>
-        <Avatar name={fullName} url={avatarPath} size={96} />
-        <View style={styles.avatarEditBadge}>
-          {avatarBusy ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <SymbolView
-              name={{ ios: 'camera.fill', android: 'photo_camera', web: 'photo_camera' }}
-              tintColor="#fff"
-              size={14}
-            />
+    <Screen edges={[]} contentStyle={{ gap: spacing.xl }}>
+      <Card>
+        <View style={{ alignItems: 'center', gap: spacing.sm }}>
+          <Pressable
+            onPress={handleAvatarPress}
+            disabled={avatarBusy}
+            accessibilityRole="button"
+            accessibilityLabel={t('profilePhotoActionTitle')}
+            accessibilityState={{ busy: avatarBusy }}
+            style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, marginBottom: spacing.xs }}
+          >
+            <Avatar name={fullName} url={avatarPath} size={AVATAR_SIZE} />
+            <View
+              style={{
+                position: 'absolute',
+                right: -2,
+                bottom: -2,
+                width: EDIT_BADGE_SIZE,
+                height: EDIT_BADGE_SIZE,
+                borderRadius: EDIT_BADGE_SIZE / 2,
+                borderWidth: 2,
+                borderColor: colors.surface,
+                backgroundColor: colors.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {avatarBusy ? (
+                <ActivityIndicator color={colors.onPrimary} size="small" />
+              ) : (
+                <SymbolView
+                  name={{ ios: 'camera.fill', android: 'photo_camera', web: 'photo_camera' }}
+                  tintColor={colors.onPrimary}
+                  size={14}
+                />
+              )}
+            </View>
+          </Pressable>
+          {fullName ? (
+            <Text variant="title" align="center">
+              {fullName}
+            </Text>
+          ) : null}
+          {session?.user.email && (
+            <Text variant="caption" color="textMuted" align="center">
+              {t('signedInAs', { email: session.user.email })}
+            </Text>
           )}
+          <RoleBadge style={{ alignSelf: 'center' }} />
         </View>
-      </Pressable>
+      </Card>
 
-      <Text style={styles.title}>{t('settingsTitle')}</Text>
-      {session?.user.email && (
-        <Text style={styles.email}>{t('signedInAs', { email: session.user.email })}</Text>
-      )}
-      <RoleBadge style={styles.roleBadge} />
-
-      <View style={styles.rowsList}>
-        <SettingsRow
+      <ListGroup>
+        <ListRow
+          title={t('languageLabel')}
+          value={language === 'bn' ? t('languageBn') : t('languageEn')}
           icon={{ ios: 'globe', android: 'language', web: 'language' }}
-          iconColor="#2f95dc"
-          iconBackgroundColor="#e8f4fc"
-          label={t('languageLabel')}
+          iconTone="primarySoft"
           onPress={() => router.push('/language')}
         />
-        <SettingsRow
+        <ListRow
+          title={t('phonePlaceholder')}
           icon={{ ios: 'phone.fill', android: 'phone', web: 'phone' }}
-          iconColor="#34c759"
-          iconBackgroundColor="#e8f9ee"
-          label={t('phonePlaceholder')}
+          iconTone="success"
           onPress={() => router.push('/phone-number')}
         />
-        <SettingsRow
+        <ListRow
+          title={t('changePasswordLink')}
           icon={{ ios: 'lock.fill', android: 'lock', web: 'lock' }}
-          iconColor="#8e8e93"
-          iconBackgroundColor="#f0f0f1"
-          label={t('changePasswordLink')}
           onPress={() => router.push('/change-password')}
         />
+      </ListGroup>
+
+      <ListGroup>
         {role === 'user' && (
-          <SettingsRow
+          <ListRow
+            title={t('emergencyContactsLink')}
             icon={{ ios: 'person.2.fill', android: 'people', web: 'people' }}
-            iconColor="#ff9500"
-            iconBackgroundColor="#fff2e0"
-            label={t('emergencyContactsLink')}
+            iconTone="warning"
             onPress={() => router.push('/emergency-contacts')}
           />
         )}
         {role === 'guardian' && (
-          <SettingsRow
+          <ListRow
+            title={t('guardianShareLocationLink')}
             icon={{ ios: 'location.fill', android: 'location_on', web: 'location_on' }}
-            iconColor="#2f95dc"
-            iconBackgroundColor="#e8f4fc"
-            label={t('guardianShareLocationLink')}
+            iconTone="info"
             onPress={() => router.push('/share-location')}
           />
         )}
-        <SettingsRow
+        <ListRow
+          title={t('safetyFeaturesLink')}
           icon={{ ios: 'shield.fill', android: 'security', web: 'security' }}
-          iconColor="#af52de"
-          iconBackgroundColor="#f6ebfb"
-          label={t('safetyFeaturesLink')}
+          iconTone="danger"
           onPress={() => router.push('/safety-features')}
         />
-        <SettingsRow
+        <ListRow
+          title={t('helpAndTutorialLink')}
           icon={{ ios: 'questionmark.circle.fill', android: 'help', web: 'help' }}
-          iconColor="#30b0c7"
-          iconBackgroundColor="#e5f6fa"
-          label={t('helpAndTutorialLink')}
+          iconTone="primarySoft"
           onPress={() => router.push('/tutorial')}
         />
-      </View>
+      </ListGroup>
 
-      <View style={styles.signOutWrap}>
-        <Pressable
-          style={[styles.button, signingOut && styles.buttonDisabled]}
-          onPress={handleSignOut}
-          disabled={signingOut}
-        >
-          {signingOut ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>{t('signOutButton')}</Text>
-          )}
-        </Pressable>
-      </View>
-    </ScrollView>
+      <Button
+        title={t('signOutButton')}
+        variant="secondary"
+        icon={{
+          ios: 'rectangle.portrait.and.arrow.right',
+          android: 'logout',
+          web: 'logout',
+        }}
+        loading={signingOut}
+        onPress={handleSignOut}
+      />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 32,
-    gap: 12,
-  },
-  avatarWrap: {
-    width: 96,
-    height: 96,
-    marginBottom: 4,
-  },
-  avatarEditBadge: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#2f95dc',
-    borderWidth: 2,
-    borderColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  email: {
-    fontSize: 14,
-    color: '#666',
-  },
-  // Explicit, not omitted: relying on inherited/'auto' alignSelf to
-  // shrink-wrap a Text with backgroundColor+padding turned out to render
-  // correctly on web but stretch full-width on native (confirmed via
-  // screenshot) — the exact bug this fixes. Never leave this to
-  // inheritance for RoleBadge; every placement sets it explicitly.
-  roleBadge: {
-    alignSelf: 'center',
-  },
-  rowsList: {
-    width: '100%',
-    marginTop: 12,
-    gap: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  iconBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowLabel: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1c1c1e',
-  },
-  signOutWrap: {
-    width: '100%',
-    marginTop: 24,
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    alignItems: 'center',
-  },
-  button: {
-    backgroundColor: '#d33',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

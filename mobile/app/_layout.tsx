@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -7,9 +7,10 @@ import 'react-native-reanimated';
 import ShakeSosListener from '@/components/ShakeSosListener';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
-import { LanguageProvider } from '@/lib/language-context';
+import { LanguageProvider, useLanguage } from '@/lib/language-context';
 import { UserSettingsProvider } from '@/lib/user-settings-context';
 import { useBrandFonts } from '@/theme/fonts';
+import { navigationTheme } from '@/theme/navigation';
 
 // NOTE: the live-location-sharing background task (TaskManager.defineTask)
 // is registered from the custom entry point mobile/index.js, NOT here.
@@ -42,6 +43,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const { language } = useLanguage();
   const { session, role, loading } = useAuth();
   const fontsReady = useBrandFonts();
   const ready = !loading && fontsReady;
@@ -57,7 +59,12 @@ function RootLayoutNav() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider
+      value={navigationTheme(
+        colorScheme === 'dark' ? 'dark' : 'light',
+        language === 'bn' ? 'bengali' : 'latin'
+      )}
+    >
       {/* Base of the status bar stack, so it must mount before any screen.
           Photo screens push a light style on top; without this entry,
           leaving one falls back to React Native's default (white icons),

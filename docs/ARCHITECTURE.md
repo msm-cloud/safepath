@@ -122,9 +122,8 @@ someone" screen have moved too.
 The welcome screen asks for a persona (student, working woman or guardian, in
 `lib/personas.ts`). Only the role is stored: guardian creates a guardian account and the
 other two create a user account. The persona only changes wording on the signed-out
-screens. `constants/Colors.ts` and the older
-components it serves (`PasswordInput`, `LanguageToggle`, the settings rows) are removed
-once nothing imports them. The dashboard will get the same values as Tailwind CSS
+screens. The old `PasswordInput` and `LanguageToggle` are gone; `constants/Colors.ts`
+and the remaining components that use it are removed once nothing imports them. The dashboard will get the same values as Tailwind CSS
 variables when it is reworked.
 
 ## Guardian links
