@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useLanguage } from '@/lib/language-context';
 
@@ -8,13 +8,19 @@ import { useLanguage } from '@/lib/language-context';
 export default function LanguageToggle() {
   const { t, language, setLanguage } = useLanguage();
 
+  // setLanguage restores the previous language itself when the write fails.
+  const choose = async (next: typeof language) => {
+    if (!(await setLanguage(next)))
+      Alert.alert(t('settingSaveFailedTitle'), t('settingSaveFailedMessage'));
+  };
+
   return (
     <View style={styles.section}>
       <Text style={styles.label}>{t('languageLabel')}</Text>
       <View style={styles.switch}>
         <Pressable
           style={[styles.option, language === 'bn' && styles.optionActive]}
-          onPress={() => setLanguage('bn')}
+          onPress={() => choose('bn')}
         >
           <Text style={[styles.optionText, language === 'bn' && styles.optionTextActive]}>
             {t('languageBn')}
@@ -22,7 +28,7 @@ export default function LanguageToggle() {
         </Pressable>
         <Pressable
           style={[styles.option, language === 'en' && styles.optionActive]}
-          onPress={() => setLanguage('en')}
+          onPress={() => choose('en')}
         >
           <Text style={[styles.optionText, language === 'en' && styles.optionTextActive]}>
             {t('languageEn')}

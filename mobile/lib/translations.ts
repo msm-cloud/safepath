@@ -582,6 +582,12 @@ export const translations = {
     en: 'When someone you guard sends an SOS alert, your phone will play a looping alarm sound and vibrate until you acknowledge it. The on-screen flash always shows either way.',
     bn: 'আপনি যাকে নিরাপত্তা দিচ্ছেন তিনি SOS অ্যালার্ট পাঠালে, আপনি স্বীকার না করা পর্যন্ত আপনার ফোনে বারবার অ্যালার্ম শব্দ ও কম্পন হতে থাকবে। স্ক্রিনে ফ্ল্যাশ যেকোনো ক্ষেত্রেই দেখাবে।',
   },
+  // Shown when a settings change couldn't be saved; the change is undone.
+  settingSaveFailedTitle: { en: 'Not saved', bn: 'সেভ হয়নি' },
+  settingSaveFailedMessage: {
+    en: "Couldn't save this setting. Check your internet connection and try again.",
+    bn: 'সেটিংটি সেভ করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
+  },
   // Row label on the main Settings list + the replay screen's own title
   // (components/HelpTutorialScreen.tsx) — replays the same onboarding
   // carousel shown once automatically right after sign-up.
