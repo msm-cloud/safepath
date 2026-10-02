@@ -1,21 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-} from 'react-native';
+import { type ScrollView, type TextInput, View } from 'react-native';
 
+import Banner from '@/components/ui/Banner';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Screen from '@/components/ui/Screen';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useUserSettings } from '@/lib/user-settings-context';
 import { isValidPhone } from '@/lib/validation';
+import { useTheme } from '@/theme';
 
 // profiles.phone's unique index violation — see
 // supabase/migrations/20260828063528_phone_login_and_password_reset.sql.
@@ -27,16 +23,17 @@ const PHONE_UNIQUE_VIOLATION = '23505';
 //
 // Purely a relocation out of components/SettingsScreen.tsx — the phone
 // field's own logic (its own local draft/error/saving state, not
-// UserSettingsProvider's optimistic fire-and-forget setters, because a
-// duplicate phone number is a real, user-facing failure that has to be
-// shown) is unchanged, only where it's rendered from.
+// UserSettingsProvider's optimistic setters, because a duplicate phone
+// number is a real, user-facing failure that has to be shown inline) is
+// unchanged, only where it's rendered from.
 export default function PhoneNumberSettingsScreen() {
   const { session } = useAuth();
   const { t } = useLanguage();
   const { phone, setPhoneLocal } = useUserSettings();
+  const { spacing } = useTheme();
   const userId = session?.user.id;
 
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const phoneInputRef = useRef<TextInput>(null);
 
   const [phoneDraft, setPhoneDraft] = useState(phone ?? '');
@@ -77,98 +74,34 @@ export default function PhoneNumberSettingsScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      // See SettingsScreen.tsx for the full investigation — unconditionally
-      // safe on Android.
-      enabled={Platform.OS === 'ios'}
-    >
-      <ScrollView
-        ref={scrollViewRef}
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.fieldLabel}>{t('phonePlaceholder')}</Text>
-        <TextInput
+    <Screen edges={[]} scrollRef={scrollRef} contentStyle={{ gap: spacing.xl }}>
+      <View style={{ gap: spacing.lg }}>
+        <Input
           ref={phoneInputRef}
-          style={styles.input}
-          placeholder={t('phonePlaceholder')}
+          label={t('phoneLabel')}
           autoComplete="tel"
           keyboardType="phone-pad"
+          returnKeyType="done"
           value={phoneDraft}
+          error={phoneError ?? undefined}
           onChangeText={(value) => {
             setPhoneDraft(value);
             setPhoneSaved(false);
           }}
-          onFocus={() => scrollInputIntoView(scrollViewRef.current, phoneInputRef)}
+          onFocus={() => scrollInputIntoView(scrollRef.current, phoneInputRef)}
+          onSubmitEditing={handleSavePhone}
         />
-        {phoneError && <Text style={styles.fieldError}>{phoneError}</Text>}
-        {phoneSaved && <Text style={styles.fieldSaved}>{t('phoneSavedMessage')}</Text>}
-        <Pressable
-          style={[styles.savePhoneButton, savingPhone && styles.buttonDisabled]}
+        {phoneSaved && <Banner tone="success" message={t('phoneSavedMessage')} />}
+      </View>
+
+      <View style={{ marginTop: 'auto' }}>
+        <Button
+          title={t('saveButton')}
+          loading={savingPhone}
+          disabled={phoneDraft.trim() === (phone ?? '')}
           onPress={handleSavePhone}
-          disabled={savingPhone || phoneDraft.trim() === (phone ?? '')}
-        >
-          {savingPhone ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.savePhoneButtonText}>{t('saveButton')}</Text>
-          )}
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        />
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
-    gap: 6,
-  },
-  fieldError: {
-    color: '#d33',
-    fontSize: 13,
-  },
-  fieldSaved: {
-    color: '#1a7f37',
-    fontSize: 13,
-  },
-  savePhoneButton: {
-    backgroundColor: '#2f95dc',
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 20,
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  savePhoneButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#444',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: '#000',
-    backgroundColor: '#fff',
-  },
-});

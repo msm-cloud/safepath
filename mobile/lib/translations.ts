@@ -140,7 +140,6 @@ export const translations = {
   backToSignInLink: { en: 'Back to log in', bn: 'লগ ইনে ফিরে যান' },
   resetPasswordTitle: { en: 'Set a new password', bn: 'একটি নতুন পাসওয়ার্ড সেট করুন' },
   newPasswordLabel: { en: 'New password', bn: 'নতুন পাসওয়ার্ড' },
-  newPasswordPlaceholder: { en: 'New password', bn: 'নতুন পাসওয়ার্ড' },
   resetPasswordButton: { en: 'Reset password', bn: 'পাসওয়ার্ড রিসেট করুন' },
   resettingPasswordButton: { en: 'Resetting…', bn: 'রিসেট করা হচ্ছে…' },
   resetLinkVerifying: { en: 'Verifying your reset link…', bn: 'আপনার রিসেট লিংক যাচাই করা হচ্ছে…' },
@@ -157,8 +156,8 @@ export const translations = {
   // convention as signInButton/signUpButton already documented in
   // app/(auth)/_layout.tsx. ---
   changePasswordLink: { en: 'Change Password', bn: 'পাসওয়ার্ড পরিবর্তন করুন' },
-  currentPasswordPlaceholder: { en: 'Current password', bn: 'বর্তমান পাসওয়ার্ড' },
-  confirmNewPasswordPlaceholder: { en: 'Confirm new password', bn: 'নতুন পাসওয়ার্ড নিশ্চিত করুন' },
+  currentPasswordLabel: { en: 'Current password', bn: 'বর্তমান পাসওয়ার্ড' },
+  confirmNewPasswordLabel: { en: 'Confirm new password', bn: 'নতুন পাসওয়ার্ড নিশ্চিত করুন' },
   currentPasswordIncorrect: {
     en: 'Current password is incorrect.',
     bn: 'বর্তমান পাসওয়ার্ড সঠিক নয়।',

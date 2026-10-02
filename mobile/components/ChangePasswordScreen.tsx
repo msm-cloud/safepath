@@ -1,25 +1,17 @@
 import { useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { type ScrollView, type TextInput, View } from 'react-native';
 
-import PasswordInput from '@/components/PasswordInput';
+import Banner from '@/components/ui/Banner';
+import Button from '@/components/ui/Button';
+import PasswordInput from '@/components/ui/PasswordInput';
+import Screen from '@/components/ui/Screen';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
-import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { MIN_PASSWORD_LENGTH } from '@/lib/validation';
+import { useTheme } from '@/theme';
 
 // How long the success message stays visible before navigating back to
 // Settings — long enough to actually read it, short enough not to feel
@@ -42,6 +34,7 @@ export default function ChangePasswordScreen() {
   const { t } = useLanguage();
   const { session } = useAuth();
   const router = useRouter();
+  const { spacing } = useTheme();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -50,11 +43,10 @@ export default function ChangePasswordScreen() {
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const scrollViewRef = useRef<ScrollView>(null);
-  const currentPasswordInputRef = useRef<TextInput>(null);
-  const newPasswordInputRef = useRef<TextInput>(null);
-  const confirmPasswordInputRef = useRef<TextInput>(null);
-  const keyboardHeight = useKeyboardHeight();
+  const scrollRef = useRef<ScrollView>(null);
+  const currentPasswordRef = useRef<TextInput>(null);
+  const newPasswordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
 
   const handleChangePassword = async () => {
     setError(null);
@@ -106,136 +98,56 @@ export default function ChangePasswordScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      // See SettingsScreen.tsx / sign-in.tsx for the full investigation —
-      // unconditionally safe on Android.
-      enabled={Platform.OS === 'ios'}
-    >
-      <ScrollView
-        ref={scrollViewRef}
-        contentContainerStyle={[styles.container, { paddingBottom: keyboardHeight }]}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.headerIconBadge}>
-          <SymbolView
-            name={{ ios: 'lock.fill', android: 'lock', web: 'lock' }}
-            tintColor="#8e8e93"
-            size={26}
-          />
-        </View>
-        <Text style={styles.title}>{t('changePasswordLink')}</Text>
-
-        {success ? (
-          <Text style={styles.success}>{t('passwordChangedMessage')}</Text>
-        ) : (
-          <View style={styles.card}>
+    <Screen edges={[]} scrollRef={scrollRef} contentStyle={{ gap: spacing.xl }}>
+      {success ? (
+        <Banner tone="success" message={t('passwordChangedMessage')} />
+      ) : (
+        <>
+          <View style={{ gap: spacing.lg }}>
             <PasswordInput
-              inputRef={currentPasswordInputRef}
-              placeholder={t('currentPasswordPlaceholder')}
+              ref={currentPasswordRef}
+              label={t('currentPasswordLabel')}
               autoComplete="current-password"
+              returnKeyType="next"
               value={currentPassword}
               onChangeText={setCurrentPassword}
-              onFocus={() => scrollInputIntoView(scrollViewRef.current, currentPasswordInputRef)}
+              onFocus={() => scrollInputIntoView(scrollRef.current, currentPasswordRef)}
+              onSubmitEditing={() => newPasswordRef.current?.focus()}
             />
             <PasswordInput
-              inputRef={newPasswordInputRef}
-              placeholder={t('newPasswordPlaceholder')}
+              ref={newPasswordRef}
+              label={t('newPasswordLabel')}
+              helper={t('passwordSignupHelper', { n: MIN_PASSWORD_LENGTH })}
               autoComplete="password-new"
+              returnKeyType="next"
               value={newPassword}
               onChangeText={setNewPassword}
-              onFocus={() => scrollInputIntoView(scrollViewRef.current, newPasswordInputRef)}
+              onFocus={() => scrollInputIntoView(scrollRef.current, newPasswordRef)}
+              onSubmitEditing={() => confirmPasswordRef.current?.focus()}
             />
             <PasswordInput
-              inputRef={confirmPasswordInputRef}
-              placeholder={t('confirmNewPasswordPlaceholder')}
+              ref={confirmPasswordRef}
+              label={t('confirmNewPasswordLabel')}
               autoComplete="password-new"
+              returnKeyType="done"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              onFocus={() => scrollInputIntoView(scrollViewRef.current, confirmPasswordInputRef)}
+              onFocus={() => scrollInputIntoView(scrollRef.current, confirmPasswordRef)}
+              onSubmitEditing={handleChangePassword}
             />
-
-            {error && <Text style={styles.error}>{error}</Text>}
-
-            <Pressable
-              style={[styles.button, submitting && styles.buttonDisabled]}
-              onPress={handleChangePassword}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>{t('changePasswordLink')}</Text>
-              )}
-            </Pressable>
+            {error && <Banner tone="danger" message={error} />}
           </View>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          <View style={{ marginTop: 'auto' }}>
+            <Button
+              title={t('changePasswordLink')}
+              loading={submitting}
+              loadingTitle={t('changingPasswordButton')}
+              onPress={handleChangePassword}
+            />
+          </View>
+        </>
+      )}
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  headerIconBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#f0f0f1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 4,
-  },
-  card: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  button: {
-    backgroundColor: '#2f95dc',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#d33',
-    fontSize: 14,
-  },
-  success: {
-    color: '#1a7f37',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-});
