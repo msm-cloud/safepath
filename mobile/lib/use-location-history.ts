@@ -103,8 +103,11 @@ export function useLocationHistory(): UseLocationHistory {
           permission === 'granted' ? 'background' : 'foreground';
         if (!cancelled) {
           setMode(resolvedMode);
-          // Clear a stale denied banner once permission is back.
-          setError((current) => (current === 'permission-denied' ? null : current));
+          // Clear a stale denied banner once permission is back, and a stale
+          // start failure — it's re-set below if this attempt fails too.
+          setError((current) =>
+            current === 'permission-denied' || current === 'start-failed' ? null : current
+          );
         }
 
         // Live sharing already holds a foreground service and feeds history
@@ -118,8 +121,13 @@ export function useLocationHistory(): UseLocationHistory {
           try {
             await startLocationHistory(resolvedMode, foregroundServiceText);
           } catch {
+            // Keep the feature on (the next focus retries), but surface the
+            // failure — otherwise the toggle reads ON while nothing records.
             await stopLocationHistory();
-            if (!cancelled) setMode(null);
+            if (!cancelled) {
+              setMode(null);
+              setError('start-failed');
+            }
           }
         }
       })();

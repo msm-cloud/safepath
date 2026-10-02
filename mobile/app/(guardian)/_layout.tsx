@@ -1,10 +1,12 @@
 import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useLanguage } from '@/lib/language-context';
+import { stopLiveSharingOnDevice } from '@/lib/live-sharing';
 
 // The guardian counterpart to app/(tabs)/_layout.tsx — a parallel tab
 // group, routed to instead of (tabs) when profile.role === 'guardian' (see
@@ -12,6 +14,15 @@ import { useLanguage } from '@/lib/language-context';
 export default function GuardianTabLayout() {
   const colorScheme = useColorScheme();
   const { t } = useLanguage();
+
+  // Guardians never live-share, and useLiveSharing's reconcile (the only
+  // other thing that tears down an orphaned live-sharing task) only runs
+  // on the student Home tab. A task still registered here was left behind
+  // by a student previously signed in on this device — stop it on the
+  // device only; its session belongs to that student, not this guardian.
+  useEffect(() => {
+    void stopLiveSharingOnDevice();
+  }, []);
 
   return (
     <Tabs
