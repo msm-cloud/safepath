@@ -2,7 +2,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import Avatar from '@/components/Avatar';
+import Avatar from '@/components/ui/Avatar';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import { useGuardianLinkRevoked } from '@/lib/use-guardian-link-revoked';

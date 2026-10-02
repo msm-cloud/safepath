@@ -12,8 +12,8 @@ import {
   View,
 } from 'react-native';
 
-import Avatar from '@/components/Avatar';
-import RoleBadge from '@/components/RoleBadge';
+import Avatar from '@/components/ui/Avatar';
+import RoleBadge from '@/components/ui/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { type AvatarSource, pickAndUploadAvatar, removeAvatar } from '@/lib/avatar-upload';
 import { useLanguage } from '@/lib/language-context';

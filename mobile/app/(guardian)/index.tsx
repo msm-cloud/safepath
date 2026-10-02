@@ -13,11 +13,11 @@ import {
   View,
 } from 'react-native';
 
-import Avatar from '@/components/Avatar';
+import Avatar from '@/components/ui/Avatar';
 import GuardianLiveSharing from '@/components/GuardianLiveSharing';
 import OnboardingScreen from '@/components/OnboardingScreen';
-import PhoneNotSavedNotice from '@/components/PhoneNotSavedNotice';
-import RoleBadge from '@/components/RoleBadge';
+import PhoneNotSavedNotice from '@/components/ui/PhoneNotSavedNotice';
+import RoleBadge from '@/components/ui/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';

@@ -105,6 +105,15 @@ const PAIRS: Pair[] = [
   { group: 'Banner', label: 'danger', fg: 'onDangerSoft', bg: 'dangerSoft', level: 'text' },
   { group: 'Banner', label: 'info', fg: 'onInfoSoft', bg: 'infoSoft', level: 'text' },
 
+  // Avatar initials reuse the banner pairs above; only the placeholder glyph
+  // has its own pair.
+  { group: 'Avatar', label: 'Placeholder glyph', fg: 'textMuted', bg: 'track', level: 'ui' },
+  { group: 'Badge', label: 'Role badge', fg: 'textSecondary', bg: 'track', level: 'text' },
+
+  { group: 'Switch', label: 'Off thumb on track', fg: 'textMuted', bg: 'track', level: 'ui' },
+  { group: 'Switch', label: 'On thumb on track', fg: 'onPrimary', bg: 'primary', level: 'ui' },
+  { group: 'Switch', label: 'On track vs card', fg: 'primary', bg: 'surface', level: 'ui' },
+
   // Worst case for background images: a pure white pixel under the overlay.
   {
     group: 'Overlay',

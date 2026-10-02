@@ -7,7 +7,9 @@ import { SurfaceToneContext } from '@/theme/surface-tone';
 export type CardProps = {
   children: ReactNode;
   variant?: 'plain' | 'muted';
-  padding?: Spacing;
+  // 'none' lets full-width rows (ListGroup) draw their own padding and
+  // dividers edge to edge.
+  padding?: Spacing | 'none';
   // Pressable cards (e.g. the role picker) show a selected state; plain
   // content cards leave both of these unset.
   onPress?: () => void;
@@ -28,7 +30,8 @@ export default function Card({
   const { colors, radius, shadows, spacing } = useTheme();
 
   const base: ViewStyle = {
-    padding: spacing[padding],
+    padding: padding === 'none' ? 0 : spacing[padding],
+    overflow: padding === 'none' ? 'hidden' : undefined,
     borderRadius: radius.lg,
     borderWidth: selected ? 2 : 1.5,
     borderColor: selected ? colors.primary : colors.border,

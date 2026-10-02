@@ -117,7 +117,7 @@ export const translations = {
     en: 'That phone number is already registered to another account.',
     bn: 'এই ফোন নম্বরটি ইতিমধ্যে অন্য একটি অ্যাকাউন্টে নিবন্ধিত।',
   },
-  // components/PhoneNotSavedNotice.tsx
+  // components/ui/PhoneNotSavedNotice.tsx
   phoneNotSavedMessage: {
     en: "The phone number you signed up with wasn't saved. It may already be linked to another account. Add a phone number to sign in with it.",
     bn: 'সাইন আপের সময় দেওয়া ফোন নম্বরটি সংরক্ষণ করা যায়নি। এটি হয়তো অন্য কোনো অ্যাকাউন্টের সাথে যুক্ত। ফোন নম্বর দিয়ে সাইন ইন করতে একটি ফোন নম্বর যোগ করুন।',
@@ -527,7 +527,7 @@ export const translations = {
   // --- Settings ---
   settingsTitle: { en: 'Settings', bn: 'সেটিংস' },
   signedInAs: { en: 'Signed in as {email}', bn: '{email} হিসেবে সাইন ইন করা আছে' },
-  // Role badge (components/RoleBadge.tsx) — shown at the top of the first
+  // Role badge (components/ui/RoleBadge.tsx) — shown at the top of the first
   // post-sign-in screen (Home for students, Active Alerts for guardians)
   // and again in Settings next to signedInAs above.
   signedInAsGuardianBadge: { en: 'Signed in as Guardian', bn: 'অভিভাবক হিসেবে সাইন ইন করা আছে' },
