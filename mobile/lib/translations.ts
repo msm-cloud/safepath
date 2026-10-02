@@ -762,6 +762,10 @@ export const translations = {
     en: 'That invite code is invalid or has already been used.',
     bn: 'এই আমন্ত্রণ কোডটি সঠিক নয় অথবা ইতিমধ্যে ব্যবহৃত হয়েছে।',
   },
+  alreadyLinkedCode: {
+    en: "You're already linked to this person, so this code wasn't used.",
+    bn: 'আপনি ইতিমধ্যে এই ব্যক্তির সাথে যুক্ত আছেন, তাই এই কোডটি ব্যবহার করা হয়নি।',
+  },
   sessionExpired: {
     en: 'Your session may have expired. Try signing in again.',
     bn: 'আপনার সেশনের মেয়াদ শেষ হয়ে থাকতে পারে। আবার সাইন ইন করার চেষ্টা করুন।',
