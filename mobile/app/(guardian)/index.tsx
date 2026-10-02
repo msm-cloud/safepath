@@ -18,6 +18,7 @@ import GuardianLiveSharing from '@/components/GuardianLiveSharing';
 import OnboardingScreen from '@/components/OnboardingScreen';
 import PhoneNotSavedNotice from '@/components/ui/PhoneNotSavedNotice';
 import RoleBadge from '@/components/ui/RoleBadge';
+import SettingsLoadNotice from '@/components/ui/SettingsLoadNotice';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
@@ -397,6 +398,7 @@ export default function GuardianActiveAlertsScreen() {
               <Text style={styles.title}>{t('guardianActiveAlertsTitle')}</Text>
             </View>
             <PhoneNotSavedNotice />
+            <SettingsLoadNotice />
             {/* Renders nothing unless a linked person is actively sharing
                 their live location — its own data + Realtime lifecycle. */}
             <GuardianLiveSharing />

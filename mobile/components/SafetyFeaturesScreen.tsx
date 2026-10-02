@@ -5,6 +5,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import ListGroup from '@/components/ui/ListGroup';
 import Screen from '@/components/ui/Screen';
+import SettingsLoadNotice from '@/components/ui/SettingsLoadNotice';
 import SwitchRow from '@/components/ui/SwitchRow';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
@@ -34,6 +35,7 @@ export default function SafetyFeaturesScreen() {
   const { t } = useLanguage();
   const { role } = useAuth();
   const {
+    loaded,
     shakeSosEnabled,
     fakeCallEnabled,
     fakeCallCallerName,
@@ -73,6 +75,7 @@ export default function SafetyFeaturesScreen() {
 
   return (
     <Screen edges={[]} scrollRef={scrollViewRef} contentStyle={{ gap: spacing.xl }}>
+      <SettingsLoadNotice />
       <ListGroup>
         <SwitchRow
           title={t('shakeSosToggleLabel')}
@@ -85,6 +88,7 @@ export default function SafetyFeaturesScreen() {
           iconTone="danger"
           value={shakeSosEnabled}
           onValueChange={(value) => reportIfUnsaved(setShakeSosEnabled(value))}
+          disabled={!loaded}
         />
         <SwitchRow
           title={t('fakeCallToggleLabel')}
@@ -92,6 +96,7 @@ export default function SafetyFeaturesScreen() {
           iconTone="primarySoft"
           value={fakeCallEnabled}
           onValueChange={(value) => reportIfUnsaved(setFakeCallEnabled(value))}
+          disabled={!loaded}
         />
         {role === 'guardian' && (
           <SwitchRow
@@ -101,6 +106,7 @@ export default function SafetyFeaturesScreen() {
             iconTone="warning"
             value={alarmSoundEnabled}
             onValueChange={(value) => reportIfUnsaved(setAlarmSoundEnabled(value))}
+            disabled={!loaded}
           />
         )}
       </ListGroup>
@@ -114,6 +120,7 @@ export default function SafetyFeaturesScreen() {
               placeholder={t('fakeCallDefaultCallerName')}
               value={callerNameDraft}
               onChangeText={setCallerNameDraft}
+              editable={loaded}
               onFocus={() => scrollInputIntoView(scrollViewRef.current, callerNameInputRef)}
               onBlur={() => reportIfUnsaved(setFakeCallCallerName(callerNameDraft.trim() || null))}
             />

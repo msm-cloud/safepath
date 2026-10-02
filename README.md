@@ -78,6 +78,11 @@ cp mobile/.env.example mobile/.env
 cp dashboard/.env.example dashboard/.env.local
 ```
 
+`EXPO_PUBLIC_SUPPORT_EMAIL` in `mobile/.env` is the address the app shows
+when an account has no profile row and can't be fixed from the app. EAS
+builds and updates read it from an EAS environment variable of the same
+name; without it the message is shown with no address.
+
 ### Run the mobile app (Expo)
 
 ```bash

@@ -1,14 +1,24 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@safepath/shared-types';
 
+// 'loading'  — first fetch in flight (or the one retry for a missing row).
+// 'retrying' — the fetch failed; retrying with backoff and on foreground.
+// 'missing'  — the request worked but the account has no profile row.
+//              Only the sign-up trigger creates it, so nothing on this
+//              device can fix it; retried on the next app start only.
+// 'loaded'   — the saved values are in.
+export type SettingsLoadState = 'loading' | 'retrying' | 'missing' | 'loaded';
+
 type UserSettingsContextValue = {
-  // False until the initial fetch for the current session completes —
-  // lets consumers (the Fake Call button, the shake listener) avoid
-  // flashing the "off" default before the real saved value is known.
+  // True only once the saved values are in. Until then every value below
+  // is a default, so consumers (the Fake Call button, the shake listener,
+  // the location-history reconcile) must not act on them.
   loaded: boolean;
+  loadState: SettingsLoadState;
   shakeSosEnabled: boolean;
   fakeCallEnabled: boolean;
   // Guardian-only device preference — whether a new SOS alert plays
@@ -66,6 +76,15 @@ type ProfileSettingsUpdate = Pick<
   'shake_sos_enabled' | 'fake_call_enabled' | 'fake_call_caller_name' | 'alarm_sound_enabled'
 >;
 
+const PROFILE_SETTINGS_COLUMNS =
+  'shake_sos_enabled, fake_call_enabled, fake_call_caller_name, alarm_sound_enabled, location_history_enabled, phone, full_name, avatar_url';
+
+// Backoff after a failed fetch; the last delay repeats until it succeeds.
+const RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 30_000];
+// A row missing right after sign-up can be the trigger still committing,
+// so a missing row gets one retry before it is reported.
+const MISSING_ROW_RETRY_MS = 3_000;
+
 // Supabase query builders only send the request once awaited, so a write
 // that is built but not awaited never reaches the database.
 async function saveProfileSettings(
@@ -92,38 +111,95 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
   const [phone, setPhoneState] = useState<string | null>(null);
   const [fullName, setFullNameState] = useState<string | null>(null);
   const [avatarPath, setAvatarPathState] = useState<string | null>(null);
-  const [loadedForUserId, setLoadedForUserId] = useState<string | null>(null);
+  // Keyed by user so a previous account's state never counts as loaded
+  // for the next one.
+  const [load, setLoad] = useState<{ userId: string; state: SettingsLoadState } | null>(null);
 
+  // A failed fetch must never fall back to the defaults: the location
+  // history reconcile treats `locationHistoryEnabled` as the truth and
+  // would stop recording. So `loaded` only turns true on a real row, and
+  // failures retry until one arrives.
   useEffect(() => {
-    if (!userId || loadedForUserId === userId) return;
+    if (!userId) return;
+    const id = userId;
 
     let cancelled = false;
-    supabase
-      .from('profiles')
-      .select(
-        'shake_sos_enabled, fake_call_enabled, fake_call_caller_name, alarm_sound_enabled, location_history_enabled, phone, full_name, avatar_url'
-      )
-      .eq('id', userId)
-      .single()
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data) {
-          setShakeSosEnabledState(data.shake_sos_enabled);
-          setFakeCallEnabledState(data.fake_call_enabled);
-          setFakeCallCallerNameState(data.fake_call_caller_name);
-          setAlarmSoundEnabledState(data.alarm_sound_enabled);
-          setLocationHistoryEnabledState(data.location_history_enabled);
-          setPhoneState(data.phone);
-          setFullNameState(data.full_name);
-          setAvatarPathState(data.avatar_url);
-        }
-        setLoadedForUserId(userId);
-      });
+    let inFlight = false;
+    let failures = 0;
+    let missingRetried = false;
+    let state: SettingsLoadState = 'loading';
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const report = (next: SettingsLoadState) => {
+      state = next;
+      setLoad({ userId: id, state: next });
+    };
+
+    const retryIn = (ms: number) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => void fetchSettings(), ms);
+    };
+
+    async function fetchSettings() {
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      timer = null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(PROFILE_SETTINGS_COLUMNS)
+        .eq('id', id)
+        .maybeSingle();
+      inFlight = false;
+      if (cancelled) return;
+
+      if (data) {
+        setShakeSosEnabledState(data.shake_sos_enabled);
+        setFakeCallEnabledState(data.fake_call_enabled);
+        setFakeCallCallerNameState(data.fake_call_caller_name);
+        setAlarmSoundEnabledState(data.alarm_sound_enabled);
+        setLocationHistoryEnabledState(data.location_history_enabled);
+        setPhoneState(data.phone);
+        setFullNameState(data.full_name);
+        setAvatarPathState(data.avatar_url);
+        report('loaded');
+        return;
+      }
+
+      if (error) {
+        report('retrying');
+        retryIn(RETRY_DELAYS_MS[Math.min(failures, RETRY_DELAYS_MS.length - 1)]);
+        failures += 1;
+        return;
+      }
+
+      if (!missingRetried) {
+        missingRetried = true;
+        retryIn(MISSING_ROW_RETRY_MS);
+        return;
+      }
+      report('missing');
+    }
+
+    report('loading');
+    void fetchSettings();
+
+    // Coming back online usually coincides with coming back to the app,
+    // so a pending retry runs at once instead of waiting out its delay.
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active' && state === 'retrying') {
+        if (timer) clearTimeout(timer);
+        void fetchSettings();
+      }
+    });
 
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
+      subscription.remove();
     };
-  }, [userId, loadedForUserId]);
+  }, [userId]);
+
+  const loadState: SettingsLoadState = load && load.userId === userId ? load.state : 'loading';
 
   const setShakeSosEnabled = useCallback(
     async (value: boolean): Promise<boolean> => {
@@ -195,7 +271,8 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
   return (
     <UserSettingsContext.Provider
       value={{
-        loaded: loadedForUserId === userId && !!userId,
+        loaded: !!userId && loadState === 'loaded',
+        loadState,
         shakeSosEnabled,
         fakeCallEnabled,
         fakeCallCallerName,
