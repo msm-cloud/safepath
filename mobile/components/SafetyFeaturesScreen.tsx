@@ -1,19 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { type ScrollView, type TextInput, View } from 'react-native';
 
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import ListGroup from '@/components/ui/ListGroup';
+import Screen from '@/components/ui/Screen';
+import SwitchRow from '@/components/ui/SwitchRow';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { useUserSettings } from '@/lib/user-settings-context';
+import { useTheme } from '@/theme';
 
 // Shared between the student ((tabs)/safety-features.tsx) and guardian
 // ((guardian)/safety-features.tsx) tab groups — reachable from Settings
@@ -48,6 +45,7 @@ export default function SafetyFeaturesScreen() {
     setAlarmSoundEnabled,
   } = useUserSettings();
 
+  const { spacing } = useTheme();
   const scrollViewRef = useRef<ScrollView>(null);
   const callerNameInputRef = useRef<TextInput>(null);
 
@@ -66,35 +64,45 @@ export default function SafetyFeaturesScreen() {
   }, [fakeCallCallerName]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      // See SettingsScreen.tsx for the full investigation — unconditionally
-      // safe on Android.
-      enabled={Platform.OS === 'ios'}
-    >
-      <ScrollView
-        ref={scrollViewRef}
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>{t('shakeSosToggleLabel')}</Text>
-          <Switch value={shakeSosEnabled} onValueChange={setShakeSosEnabled} />
-        </View>
-        <Text style={styles.toggleHint}>{t('shakeSosToggleHint')}</Text>
+    <Screen edges={[]} scrollRef={scrollViewRef} contentStyle={{ gap: spacing.xl }}>
+      <ListGroup>
+        <SwitchRow
+          title={t('shakeSosToggleLabel')}
+          hint={t('shakeSosToggleHint')}
+          icon={{
+            ios: 'iphone.radiowaves.left.and.right',
+            android: 'vibration',
+            web: 'vibration',
+          }}
+          iconTone="danger"
+          value={shakeSosEnabled}
+          onValueChange={setShakeSosEnabled}
+        />
+        <SwitchRow
+          title={t('fakeCallToggleLabel')}
+          icon={{ ios: 'phone.arrow.down.left', android: 'phone_callback', web: 'phone_callback' }}
+          iconTone="primarySoft"
+          value={fakeCallEnabled}
+          onValueChange={setFakeCallEnabled}
+        />
+        {role === 'guardian' && (
+          <SwitchRow
+            title={t('alarmSoundToggleLabel')}
+            hint={t('alarmSoundToggleHint')}
+            icon={{ ios: 'speaker.wave.3.fill', android: 'volume_up', web: 'volume_up' }}
+            iconTone="warning"
+            value={alarmSoundEnabled}
+            onValueChange={setAlarmSoundEnabled}
+          />
+        )}
+      </ListGroup>
 
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>{t('fakeCallToggleLabel')}</Text>
-          <Switch value={fakeCallEnabled} onValueChange={setFakeCallEnabled} />
-        </View>
-
-        {fakeCallEnabled && (
-          <View style={styles.callerNameWrap}>
-            <Text style={styles.fieldLabel}>{t('fakeCallCallerNameLabel')}</Text>
-            <TextInput
+      {fakeCallEnabled && (
+        <Card>
+          <View>
+            <Input
               ref={callerNameInputRef}
-              style={styles.input}
+              label={t('fakeCallCallerNameLabel')}
               placeholder={t('fakeCallDefaultCallerName')}
               value={callerNameDraft}
               onChangeText={setCallerNameDraft}
@@ -102,66 +110,8 @@ export default function SafetyFeaturesScreen() {
               onBlur={() => setFakeCallCallerName(callerNameDraft.trim() || null)}
             />
           </View>
-        )}
-
-        {role === 'guardian' && (
-          <>
-            <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>{t('alarmSoundToggleLabel')}</Text>
-              <Switch value={alarmSoundEnabled} onValueChange={setAlarmSoundEnabled} />
-            </View>
-            <Text style={styles.toggleHint}>{t('alarmSoundToggleHint')}</Text>
-          </>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </Card>
+      )}
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
-    gap: 12,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  toggleLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-  },
-  toggleHint: {
-    alignSelf: 'flex-start',
-    fontSize: 12,
-    color: '#888',
-    marginTop: -8,
-  },
-  callerNameWrap: {
-    width: '100%',
-    gap: 6,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#444',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: '#000',
-    backgroundColor: '#fff',
-  },
-});
