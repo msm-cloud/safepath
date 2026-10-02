@@ -37,7 +37,9 @@ export default function RoleBadge({ style }: RoleBadgeProps) {
         style,
       ]}
     >
-      <Text variant="micro" color="textSecondary">
+      {/* Android can measure Bangla wider than it draws, so centre the
+          label rather than leave the spare width on one side. */}
+      <Text variant="micro" color="textSecondary" align="center">
         {role === 'guardian' ? t('signedInAsGuardianBadge') : t('signedInAsStudentBadge')}
       </Text>
     </View>
