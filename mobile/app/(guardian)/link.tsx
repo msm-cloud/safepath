@@ -14,14 +14,15 @@ import { useTheme } from '@/theme';
 
 // redeem_guardian_invite returns jsonb, which the generated Supabase types
 // can't know the shape of — this is the shape it actually returns, per
-// supabase/migrations/20260929200021_security_db_hardening.sql (the
+// supabase/migrations/20261002060000_unique_accepted_guardian_link.sql (the
 // dashboard's redeem-invite-form.tsx calls it the same way).
 type RedeemResult =
   | { success: true; user_id: string; user_name: string | null }
-  | { success: false; error: 'invalid_or_used_code' | 'not_authenticated' };
+  | { success: false; error: 'invalid_or_used_code' | 'already_linked' | 'not_authenticated' };
 
 const ERROR_KEYS: Record<string, TranslationKey> = {
   invalid_or_used_code: 'invalidOrUsedCode',
+  already_linked: 'alreadyLinkedCode',
   // Shouldn't happen — this screen is only reachable while signed in — but
   // handle it rather than showing a raw/confusing message if it does.
   not_authenticated: 'sessionExpired',

@@ -2339,5 +2339,113 @@ console.log('\n--- revoke_guardian_link ---');
   });
 }
 
+console.log('\n--- one accepted link per user and guardian ---');
+{
+  const userDS = await mkUser('DS', 'user');
+  const userDG = await mkUser('DG', 'guardian');
+  const userDG2 = await mkUser('DG2', 'guardian');
+
+  const newCode = () =>
+    asUser(userDS, async () => {
+      const ins = await db.query(
+        `insert into public.guardian_links (user_id) values ('${userDS}') returning id, invite_code`
+      );
+      return ins.rows[0];
+    });
+  const acceptedLinks = async () =>
+    (
+      await db.query(
+        `select id from public.guardian_links
+          where user_id = '${userDS}' and guardian_id = '${userDG}' and status = 'accepted'`
+      )
+    ).rows;
+
+  const first = await newCode();
+  await asUser(userDG, async () => {
+    check('DG redeems the first DS code', (await redeem(db, first.invite_code)).success === true);
+  });
+
+  const second = await newCode();
+  await asUser(userDG, async () => {
+    const result = await redeem(db, second.invite_code);
+    check(
+      'redeeming a second code for an already-linked pair returns already_linked',
+      result.success === false && result.error === 'already_linked'
+    );
+  });
+  check('the pair still has exactly one accepted link', (await acceptedLinks()).length === 1);
+  {
+    const row = await db.query(
+      `select status, guardian_id from public.guardian_links where id = '${second.id}'`
+    );
+    check(
+      'the rejected code stays pending and unclaimed',
+      row.rows[0].status === 'pending' && row.rows[0].guardian_id === null
+    );
+  }
+  await asUser(userDG2, async () => {
+    check(
+      'a different guardian can still redeem that code',
+      (await redeem(db, second.invite_code)).success === true
+    );
+  });
+
+  await expectError(
+    'the database refuses a second accepted link for the same pair',
+    `insert into public.guardian_links (user_id, guardian_id, status, accepted_at)
+     values ('${userDS}', '${userDG}', 'accepted', now())`,
+    /guardian_links_one_accepted_per_pair/
+  );
+
+  await asUser(userDS, async () => {
+    const r = await db.query(`select public.revoke_guardian_link($1) as result`, [first.id]);
+    const raw = r.rows[0].result;
+    const result = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    check('DS removes DG', result.success === true);
+  });
+  const third = await newCode();
+  await asUser(userDG, async () => {
+    check(
+      'DG can link again with a new code after being removed',
+      (await redeem(db, third.invite_code)).success === true
+    );
+  });
+  check(
+    'after relinking the pair has exactly one accepted link',
+    (await acceptedLinks()).length === 1
+  );
+
+  // Re-run the migration over a duplicate created the way the old redeem
+  // allowed: the oldest accepted link stays, the newer one is revoked.
+  const migrationSql = await readFile(
+    path.join(MIGRATIONS_DIR, '20261002060000_unique_accepted_guardian_link.sql'),
+    'utf8'
+  );
+  const userMS = await mkUser('MS', 'user');
+  const userMG = await mkUser('MG', 'guardian');
+  await db.exec(`drop index public.guardian_links_one_accepted_per_pair`);
+  const seeded = await db.query(
+    `insert into public.guardian_links (user_id, guardian_id, status, accepted_at)
+     values ('${userMS}', '${userMG}', 'accepted', now() - interval '30 days'),
+            ('${userMS}', '${userMG}', 'accepted', now() - interval '1 day')
+     returning id, accepted_at`
+  );
+  const [older, newer] = [...seeded.rows].sort((a, b) => a.accepted_at - b.accepted_at);
+  await db.exec(migrationSql);
+  const statuses = Object.fromEntries(
+    (
+      await db.query(`select id, status from public.guardian_links where user_id = '${userMS}'`)
+    ).rows.map((r) => [r.id, r.status])
+  );
+  check(
+    'the migration keeps the oldest duplicate accepted and revokes the newer one',
+    statuses[older.id] === 'accepted' && statuses[newer.id] === 'revoked'
+  );
+  const index = await db.query(
+    `select 1 from pg_indexes where indexname = 'guardian_links_one_accepted_per_pair'`
+  );
+  check('the migration recreates the unique index after cleaning up', index.rows.length === 1);
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;
