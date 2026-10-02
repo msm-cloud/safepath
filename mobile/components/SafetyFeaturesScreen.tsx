@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { type ScrollView, type TextInput, View } from 'react-native';
+import { Alert, type ScrollView, type TextInput, View } from 'react-native';
 
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
@@ -19,9 +19,8 @@ import { useTheme } from '@/theme';
 // Purely a relocation out of components/SettingsScreen.tsx, grouping
 // shake-to-trigger SOS and the fake-call escape together since they're
 // conceptually related (both optional, in-app safety/escape features) —
-// their underlying logic (UserSettingsProvider's optimistic
-// fire-and-forget setters, the same "reads DB once, writes through in
-// the background" pattern) is completely unchanged, only where they're
+// their underlying logic (UserSettingsProvider's optimistic setters,
+// which roll back when the write fails) is unchanged, only where they're
 // rendered from.
 //
 // The alarm-sound toggle added below is the one row on this shared screen
@@ -46,15 +45,24 @@ export default function SafetyFeaturesScreen() {
   } = useUserSettings();
 
   const { spacing } = useTheme();
+
+  // The setters undo the change themselves when the write fails; this
+  // only tells the person why it flipped back.
+  const reportIfUnsaved = (save: Promise<boolean>) => {
+    void save.then((saved) => {
+      if (!saved) Alert.alert(t('settingSaveFailedTitle'), t('settingSaveFailedMessage'));
+    });
+  };
+
   const scrollViewRef = useRef<ScrollView>(null);
   const callerNameInputRef = useRef<TextInput>(null);
 
   // Local draft so every keystroke doesn't hit the network — persisted via
-  // setFakeCallCallerName (which itself updates context immediately, same
-  // "optimistic update" pattern as setLanguage) only on blur. useState's
-  // initializer alone isn't enough here: fakeCallCallerName arrives
-  // asynchronously (fetched from the database after mount), so this
-  // effect re-syncs the draft once that real value actually loads —
+  // setFakeCallCallerName (which itself updates context immediately) only
+  // on blur. useState's initializer alone isn't enough here:
+  // fakeCallCallerName arrives asynchronously (fetched from the database
+  // after mount), so this effect re-syncs the draft once that real value
+  // actually loads, and again if a failed save rolls the name back —
   // without it, the field would be stuck showing empty even for someone
   // who'd previously saved a name.
   const [callerNameDraft, setCallerNameDraft] = useState(fakeCallCallerName ?? '');
@@ -76,14 +84,14 @@ export default function SafetyFeaturesScreen() {
           }}
           iconTone="danger"
           value={shakeSosEnabled}
-          onValueChange={setShakeSosEnabled}
+          onValueChange={(value) => reportIfUnsaved(setShakeSosEnabled(value))}
         />
         <SwitchRow
           title={t('fakeCallToggleLabel')}
           icon={{ ios: 'phone.arrow.down.left', android: 'phone_callback', web: 'phone_callback' }}
           iconTone="primarySoft"
           value={fakeCallEnabled}
-          onValueChange={setFakeCallEnabled}
+          onValueChange={(value) => reportIfUnsaved(setFakeCallEnabled(value))}
         />
         {role === 'guardian' && (
           <SwitchRow
@@ -92,7 +100,7 @@ export default function SafetyFeaturesScreen() {
             icon={{ ios: 'speaker.wave.3.fill', android: 'volume_up', web: 'volume_up' }}
             iconTone="warning"
             value={alarmSoundEnabled}
-            onValueChange={setAlarmSoundEnabled}
+            onValueChange={(value) => reportIfUnsaved(setAlarmSoundEnabled(value))}
           />
         )}
       </ListGroup>
@@ -107,7 +115,7 @@ export default function SafetyFeaturesScreen() {
               value={callerNameDraft}
               onChangeText={setCallerNameDraft}
               onFocus={() => scrollInputIntoView(scrollViewRef.current, callerNameInputRef)}
-              onBlur={() => setFakeCallCallerName(callerNameDraft.trim() || null)}
+              onBlur={() => reportIfUnsaved(setFakeCallCallerName(callerNameDraft.trim() || null))}
             />
           </View>
         </Card>

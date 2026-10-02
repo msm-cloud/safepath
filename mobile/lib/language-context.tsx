@@ -6,7 +6,9 @@ import { t as translate, type Language, type TranslationKey } from '@/lib/transl
 
 type LanguageContextValue = {
   language: Language;
-  setLanguage: (language: Language) => void;
+  // Switches at once, awaits the write and resolves to whether it
+  // persisted; on failure the previous language is restored first.
+  setLanguage: (language: Language) => Promise<boolean>;
   t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 };
 
@@ -44,16 +46,25 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [session?.user.id, loadedForUserId]);
 
   const setLanguage = useCallback(
-    (next: Language) => {
-      // Update immediately — don't wait on the write below to reflect the
-      // choice in the UI.
+    async (next: Language): Promise<boolean> => {
+      const previous = language;
       setLanguageState(next);
       const userId = session?.user.id;
-      if (userId) {
-        supabase.from('profiles').update({ preferred_language: next }).eq('id', userId);
+      // Signed out (the auth screens' switch), there is no profile to save to.
+      if (!userId) return true;
+
+      // The query builder only sends the request once awaited.
+      const { error } = await supabase
+        .from('profiles')
+        .update({ preferred_language: next })
+        .eq('id', userId);
+      if (error) {
+        setLanguageState((current) => (current === next ? previous : current));
+        return false;
       }
+      return true;
     },
-    [session?.user.id]
+    [language, session?.user.id]
   );
 
   const t = useCallback(

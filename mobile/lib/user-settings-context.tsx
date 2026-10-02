@@ -2,6 +2,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useS
 
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
+import type { Database } from '@safepath/shared-types';
 
 type UserSettingsContextValue = {
   // False until the initial fetch for the current session completes —
@@ -29,11 +30,8 @@ type UserSettingsContextValue = {
   // was on before phone got wired into handle_new_user() (see the
   // phone-login migration's own comment), or for a signup that happened
   // to race a duplicate. SettingsScreen.tsx is where this actually gets
-  // set/fixed, not this context: unlike the three setters below, saving
-  // a phone number is a real, user-facing failure mode (already taken)
-  // that needs synchronous error handling — a fire-and-forget optimistic
-  // write would either silently drop the error or, worse, show a phone
-  // number as "saved" that wasn't.
+  // set/fixed, not this context: saving a phone number has its own
+  // user-facing failure mode (already taken) that the screen handles.
   phone: string | null;
   // The signed-in user's own display name and profile-photo path — read
   // here for the avatar shown on their own screens (Settings header, Home
@@ -42,17 +40,16 @@ type UserSettingsContextValue = {
   // setAvatarPathLocal). Both null until `loaded`.
   fullName: string | null;
   avatarPath: string | null;
-  setShakeSosEnabled: (value: boolean) => void;
-  setFakeCallEnabled: (value: boolean) => void;
-  setAlarmSoundEnabled: (value: boolean) => void;
-  // Unlike the fire-and-forget setters above, this one awaits the write and
-  // resolves to whether it persisted. Location history drives an OS
-  // background task and a guardian-visible "recording" state, so a silently
-  // dropped write (toggle stuck ON while the DB stays OFF) is a real
-  // failure the caller needs to surface — see use-location-history.ts. On
-  // failure the optimistic local flip is rolled back before it resolves.
+  // Every setter below updates local state at once, awaits the write and
+  // resolves to whether it persisted. On failure the local value is rolled
+  // back before it resolves, so the caller only has to tell the person.
+  setShakeSosEnabled: (value: boolean) => Promise<boolean>;
+  setFakeCallEnabled: (value: boolean) => Promise<boolean>;
+  setAlarmSoundEnabled: (value: boolean) => Promise<boolean>;
+  // Location history also drives an OS background task and a
+  // guardian-visible "recording" state; see use-location-history.ts.
   setLocationHistoryEnabled: (value: boolean) => Promise<boolean>;
-  setFakeCallCallerName: (value: string | null) => void;
+  setFakeCallCallerName: (value: string | null) => Promise<boolean>;
   // Updates only the in-memory value, once SettingsScreen has confirmed
   // its own write actually succeeded.
   setPhoneLocal: (value: string | null) => void;
@@ -64,12 +61,25 @@ type UserSettingsContextValue = {
 
 const UserSettingsContext = createContext<UserSettingsContextValue | undefined>(undefined);
 
+type ProfileSettingsUpdate = Pick<
+  Database['public']['Tables']['profiles']['Update'],
+  'shake_sos_enabled' | 'fake_call_enabled' | 'fake_call_caller_name' | 'alarm_sound_enabled'
+>;
+
+// Supabase query builders only send the request once awaited, so a write
+// that is built but not awaited never reaches the database.
+async function saveProfileSettings(
+  userId: string,
+  update: ProfileSettingsUpdate
+): Promise<boolean> {
+  const { error } = await supabase.from('profiles').update(update).eq('id', userId);
+  return !error;
+}
+
 // Same shape/reasoning as LanguageProvider (see language-context.tsx):
 // profiles columns, not local device storage, so these safety-feature
 // settings survive a reinstall or a new device rather than silently
-// resetting. Updates immediately in local state (so toggles feel instant)
-// and writes through to the database in the background, same
-// "optimistic update" pattern setLanguage already uses.
+// resetting. Local state updates first so toggles feel instant.
 export function UserSettingsProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -116,41 +126,47 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
   }, [userId, loadedForUserId]);
 
   const setShakeSosEnabled = useCallback(
-    (value: boolean) => {
+    async (value: boolean): Promise<boolean> => {
       setShakeSosEnabledState(value);
-      if (userId) {
-        supabase.from('profiles').update({ shake_sos_enabled: value }).eq('id', userId);
-      }
+      if (!userId) return true;
+      const saved = await saveProfileSettings(userId, { shake_sos_enabled: value });
+      // Roll back only if nothing changed the value in the meantime.
+      if (!saved) setShakeSosEnabledState((current) => (current === value ? !value : current));
+      return saved;
     },
     [userId]
   );
 
   const setFakeCallEnabled = useCallback(
-    (value: boolean) => {
+    async (value: boolean): Promise<boolean> => {
       setFakeCallEnabledState(value);
-      if (userId) {
-        supabase.from('profiles').update({ fake_call_enabled: value }).eq('id', userId);
-      }
+      if (!userId) return true;
+      const saved = await saveProfileSettings(userId, { fake_call_enabled: value });
+      if (!saved) setFakeCallEnabledState((current) => (current === value ? !value : current));
+      return saved;
     },
     [userId]
   );
 
   const setFakeCallCallerName = useCallback(
-    (value: string | null) => {
+    async (value: string | null): Promise<boolean> => {
+      const previous = fakeCallCallerName;
       setFakeCallCallerNameState(value);
-      if (userId) {
-        supabase.from('profiles').update({ fake_call_caller_name: value }).eq('id', userId);
-      }
+      if (!userId) return true;
+      const saved = await saveProfileSettings(userId, { fake_call_caller_name: value });
+      if (!saved) setFakeCallCallerNameState((current) => (current === value ? previous : current));
+      return saved;
     },
-    [userId]
+    [userId, fakeCallCallerName]
   );
 
   const setAlarmSoundEnabled = useCallback(
-    (value: boolean) => {
+    async (value: boolean): Promise<boolean> => {
       setAlarmSoundEnabledState(value);
-      if (userId) {
-        supabase.from('profiles').update({ alarm_sound_enabled: value }).eq('id', userId);
-      }
+      if (!userId) return true;
+      const saved = await saveProfileSettings(userId, { alarm_sound_enabled: value });
+      if (!saved) setAlarmSoundEnabledState((current) => (current === value ? !value : current));
+      return saved;
     },
     [userId]
   );
