@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 
 import Card from '@/components/ui/Card';
 import Screen from '@/components/ui/Screen';
@@ -15,6 +15,12 @@ export default function LanguageSettingsScreen() {
   const { t, language, setLanguage } = useLanguage();
   const { spacing } = useTheme();
 
+  // setLanguage restores the previous language itself when the write fails.
+  const choose = async (next: Language) => {
+    if (!(await setLanguage(next)))
+      Alert.alert(t('settingSaveFailedTitle'), t('settingSaveFailedMessage'));
+  };
+
   return (
     <Screen edges={[]}>
       <Card>
@@ -23,7 +29,7 @@ export default function LanguageSettingsScreen() {
           <SegmentedControl<Language>
             accessibilityLabel={t('languageLabel')}
             value={language}
-            onChange={setLanguage}
+            onChange={choose}
             options={[
               { value: 'bn', label: t('languageBn') },
               { value: 'en', label: t('languageEn') },
