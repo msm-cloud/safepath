@@ -2,6 +2,7 @@ import { Redirect, Stack } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
+import ActionTile from '@/components/ui/ActionTile';
 import Avatar from '@/components/ui/Avatar';
 import Banner from '@/components/ui/Banner';
 import Button, { type ButtonVariant } from '@/components/ui/Button';
@@ -266,6 +267,21 @@ function UiGallery() {
               {ICON_TONES.map((tone) => (
                 <IconTile key={tone} tone={tone} icon={{ ios: 'shield.fill', android: 'shield' }} />
               ))}
+            </View>
+          </Section>
+
+          <Section title="Action tiles">
+            <View style={{ flexDirection: 'row', gap: spacing.sm + 2 }}>
+              <ActionTile
+                icon={{ ios: 'phone.fill', android: 'call' }}
+                label="Fake call"
+                onPress={() => {}}
+              />
+              <ActionTile
+                icon={{ ios: 'cross.case.fill', android: 'local_hospital' }}
+                label="নিকটতম হাসপাতাল"
+                onPress={() => {}}
+              />
             </View>
           </Section>
 

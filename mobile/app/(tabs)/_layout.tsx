@@ -1,19 +1,19 @@
 import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useLanguage } from '@/lib/language-context';
+import { useTheme } from '@/theme';
+import { tabBarScreenOptions } from '@/theme/navigation';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { colors } = useTheme();
   const { t } = useLanguage();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme].tint,
+        ...tabBarScreenOptions(colors),
         // Disable the static render of the header on web
         // to prevent a hydration error in React Navigation.
         headerShown: useClientOnlyValue(false, true),
@@ -23,6 +23,8 @@ export default function TabLayout() {
         name="index"
         options={{
           title: t('homeTitle'),
+          // Home draws its own greeting header, as on the boards.
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'house.fill', android: 'home', web: 'home' }}
