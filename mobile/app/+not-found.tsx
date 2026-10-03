@@ -1,42 +1,24 @@
-import { Link, Stack } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 
+import EmptyState from '@/components/ui/EmptyState';
+import Screen from '@/components/ui/Screen';
 import { useLanguage } from '@/lib/language-context';
 
 export default function NotFoundScreen() {
   const { t } = useLanguage();
+  const router = useRouter();
 
   return (
     <>
       <Stack.Screen options={{ title: t('notFoundTitle') }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>{t('notFoundMessage')}</Text>
-
-        <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>{t('goToHomeLink')}</Text>
-        </Link>
-      </View>
+      <Screen edges={['bottom']} scroll={false} contentStyle={{ justifyContent: 'center' }}>
+        <EmptyState
+          icon={{ ios: 'questionmark.folder', android: 'explore_off', web: 'explore_off' }}
+          tone="neutral"
+          title={t('notFoundMessage')}
+          action={{ label: t('goToHomeLink'), onPress: () => router.replace('/') }}
+        />
+      </Screen>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#2e78b7',
-  },
-});

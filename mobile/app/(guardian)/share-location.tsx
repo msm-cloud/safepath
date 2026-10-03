@@ -1,16 +1,12 @@
-import {
-  ActivityIndicator,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
+import { Linking, View } from 'react-native';
 
+import Banner from '@/components/ui/Banner';
+import ListGroup from '@/components/ui/ListGroup';
+import Screen from '@/components/ui/Screen';
+import SwitchRow from '@/components/ui/SwitchRow';
 import { useLanguage } from '@/lib/language-context';
 import { useLocationHistory } from '@/lib/use-location-history';
+import { useTheme } from '@/theme';
 
 // Guardian counterpart to the student Home tab's "Location History
 // Recording" card (app/(tabs)/index.tsx) — same underlying toggle
@@ -28,6 +24,7 @@ import { useLocationHistory } from '@/lib/use-location-history';
 // is a guardian rather than a student.
 export default function ShareLocationScreen() {
   const { t } = useLanguage();
+  const { spacing } = useTheme();
   const locationHistory = useLocationHistory();
 
   const handleToggle = (next: boolean) => {
@@ -39,113 +36,51 @@ export default function ShareLocationScreen() {
     }
   };
 
+  const openSettings = { label: t('openSettings'), onPress: () => void Linking.openSettings() };
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>{t('guardianShareLocationTitle')}</Text>
+    <Screen edges={[]} contentStyle={{ gap: spacing.lg }}>
+      <ListGroup>
+        <SwitchRow
+          title={t('guardianShareLocationTitle')}
+          hint={t('guardianShareLocationSubtitle')}
+          icon={{ ios: 'location.fill', android: 'my_location', web: 'my_location' }}
+          iconTone="primarySoft"
+          value={locationHistory.enabled}
+          onValueChange={handleToggle}
+          disabled={locationHistory.loading}
+          busy={locationHistory.busy}
+        />
+      </ListGroup>
 
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardSubtitle}>{t('guardianShareLocationSubtitle')}</Text>
-          {locationHistory.busy ? (
-            <ActivityIndicator />
-          ) : (
-            <Switch
-              value={locationHistory.enabled}
-              onValueChange={handleToggle}
-              disabled={locationHistory.loading}
-            />
-          )}
-        </View>
-
+      <View style={{ gap: spacing.md }}>
         {locationHistory.enabled && (
-          <View style={styles.onBanner}>
-            <Text style={styles.onBannerText}>{t('guardianShareLocationOnStatus')}</Text>
-          </View>
+          <Banner tone="success" message={t('guardianShareLocationOnStatus')} />
         )}
-
         {locationHistory.enabled && locationHistory.mode === 'foreground' && (
-          <Pressable style={styles.warnBanner} onPress={() => Linking.openSettings()}>
-            <Text style={styles.warnBannerText}>{t('guardianShareLocationForegroundWarning')}</Text>
-          </Pressable>
+          <Banner
+            tone="warning"
+            message={t('guardianShareLocationForegroundWarning')}
+            action={openSettings}
+          />
         )}
-
         {locationHistory.error === 'permission-denied' && (
-          <View style={styles.warnBanner}>
-            <Text style={styles.warnBannerText}>{t('guardianShareLocationPermissionDenied')}</Text>
-            <Pressable onPress={() => Linking.openSettings()}>
-              <Text style={styles.settingsLink}>{t('openSettings')}</Text>
-            </Pressable>
-          </View>
+          <Banner
+            tone="warning"
+            message={t('guardianShareLocationPermissionDenied')}
+            action={openSettings}
+          />
         )}
-
         {locationHistory.error === 'start-failed' && (
-          <Text style={styles.error}>{t('guardianShareLocationStartError')}</Text>
+          <Banner tone="danger" message={t('guardianShareLocationStartError')} />
         )}
         {locationHistory.error === 'stop-failed' && (
-          <Text style={styles.error}>{t('guardianShareLocationStopError')}</Text>
+          <Banner tone="danger" message={t('guardianShareLocationStopError')} />
         )}
         {locationHistory.error === 'save-failed' && (
-          <Text style={styles.error}>{t('guardianShareLocationSaveError')}</Text>
+          <Banner tone="danger" message={t('guardianShareLocationSaveError')} />
         )}
       </View>
-    </ScrollView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 20,
-    paddingTop: 32,
-    gap: 16,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  card: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    padding: 16,
-    gap: 10,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  cardSubtitle: {
-    flex: 1,
-    fontSize: 13,
-    color: '#666',
-  },
-  onBanner: {
-    backgroundColor: '#e6f4ea',
-    borderRadius: 10,
-    padding: 12,
-  },
-  onBannerText: {
-    color: '#1a7f37',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  warnBanner: {
-    backgroundColor: '#fff4e5',
-    borderRadius: 10,
-    padding: 12,
-    gap: 6,
-  },
-  warnBannerText: {
-    color: '#7a4a00',
-    fontSize: 13,
-  },
-  settingsLink: {
-    color: '#2f95dc',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#d33',
-    fontSize: 13,
-  },
-});
