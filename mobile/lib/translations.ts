@@ -323,6 +323,8 @@ export const translations = {
   locationHistoryRetention3d: { en: '3 days', bn: '৩ দিন' },
   locationHistoryRetention7d: { en: '7 days', bn: '৭ দিন' },
   locationHistoryRetentionLabel: { en: 'Keep history for', bn: 'ইতিহাস রাখুন' },
+  locationHistoryViewTrail: { en: 'View trail', bn: 'পথ দেখুন' },
+  locationHistoryHideTrail: { en: 'Hide trail', bn: 'পথ লুকান' },
 
   // --- Guardian: share my location (reciprocal to the student's own
   // Location History Recording above) — a guardian's own recording
@@ -372,10 +374,6 @@ export const translations = {
     en: "Guardian's Shared Location",
     bn: 'অভিভাবকের শেয়ার করা অবস্থান',
   },
-  studentGuardianLocationHeading: {
-    en: "Your Guardians' Shared Location",
-    bn: 'আপনার অভিভাবকদের শেয়ার করা অবস্থান',
-  },
   studentGuardianLocationSubtitle: {
     en: 'The saved location trail for each guardian who has location sharing turned on.',
     bn: 'যে অভিভাবকদের অবস্থান শেয়ারিং চালু আছে, তাদের প্রত্যেকের সংরক্ষিত অবস্থানের পথ।',
@@ -394,8 +392,6 @@ export const translations = {
     en: '{n} points in the last {window}',
     bn: 'গত {window}-এ {n}টি পয়েন্ট',
   },
-  studentGuardianLocationViewTrail: { en: 'View trail', bn: 'পথ দেখুন' },
-  studentGuardianLocationHideTrail: { en: 'Hide trail', bn: 'পথ লুকান' },
 
   // --- SOS ---
   // "SOS" itself is left as the Latin acronym in both languages — it's an
@@ -650,6 +646,7 @@ export const translations = {
   },
   addContactButton: { en: 'Add Contact', bn: 'যোগাযোগ যোগ করুন' },
   namePlaceholder: { en: 'Name', bn: 'নাম' },
+  enterContactName: { en: "Enter the contact's name.", bn: 'যোগাযোগের নাম লিখুন।' },
   phonePlaceholder: { en: 'Phone number', bn: 'ফোন নম্বর' },
   invalidPhone: { en: 'Enter a valid phone number.', bn: 'একটি সঠিক ফোন নম্বর লিখুন।' },
   saveButton: { en: 'Save', bn: 'সংরক্ষণ করুন' },
@@ -711,7 +708,6 @@ export const translations = {
   // --- Guardian: recorded live location (its own tab, between "Link to
   // Someone" and "Settings") ---
   guardianLocationHistoryTitle: { en: 'Recorded Location', bn: 'রেকর্ড করা অবস্থান' },
-  guardianLocationHistoryHeading: { en: 'Recorded Live Location', bn: 'রেকর্ড করা লাইভ অবস্থান' },
   guardianLocationHistorySubtitle: {
     en: 'The saved location trail for each person you support who has recording turned on.',
     bn: 'আপনি যাদের সহায়তা করেন এবং যাদের রেকর্ডিং চালু আছে, তাদের প্রত্যেকের সংরক্ষিত অবস্থানের পথ।',
@@ -730,8 +726,6 @@ export const translations = {
     en: '{n} points in the last {window}',
     bn: 'গত {window} সময়ে {n}টি অবস্থান',
   },
-  guardianLocationHistoryViewTrail: { en: 'View trail', bn: 'পথ দেখুন' },
-  guardianLocationHistoryHideTrail: { en: 'Hide trail', bn: 'পথ লুকান' },
   viewLastKnownLocationLink: {
     en: 'View last known location',
     bn: 'সর্বশেষ জানা অবস্থান দেখুন',
@@ -783,7 +777,7 @@ export const translations = {
   // --- Not found (app/+not-found.tsx) ---
   notFoundTitle: { en: 'Oops!', bn: 'ওহো!' },
   notFoundMessage: { en: "This screen doesn't exist.", bn: 'এই স্ক্রিনটি নেই।' },
-  goToHomeLink: { en: 'Go to home screen!', bn: 'হোম স্ক্রিনে যান!' },
+  goToHomeLink: { en: 'Go to home screen', bn: 'হোম স্ক্রিনে যান' },
 } as const satisfies Record<string, Entry>;
 
 export type TranslationKey = keyof typeof translations;

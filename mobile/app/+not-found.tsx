@@ -1,42 +1,31 @@
-import { Link, Stack } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 
+import EmptyState from '@/components/ui/EmptyState';
+import Screen from '@/components/ui/Screen';
+import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 
 export default function NotFoundScreen() {
   const { t } = useLanguage();
+  const { session, role } = useAuth();
+  const router = useRouter();
+
+  // A bare '/' resolves to the first group's index, (auth), which the root
+  // Stack.Protected rejects for a signed-in user — so target the group the
+  // current user is actually allowed into.
+  const homeHref = !session ? '/(auth)' : role === 'guardian' ? '/(guardian)' : '/(tabs)';
 
   return (
     <>
       <Stack.Screen options={{ title: t('notFoundTitle') }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>{t('notFoundMessage')}</Text>
-
-        <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>{t('goToHomeLink')}</Text>
-        </Link>
-      </View>
+      <Screen edges={['bottom']} scroll={false} contentStyle={{ justifyContent: 'center' }}>
+        <EmptyState
+          icon={{ ios: 'questionmark.folder', android: 'explore_off', web: 'explore_off' }}
+          tone="neutral"
+          title={t('notFoundMessage')}
+          action={{ label: t('goToHomeLink'), onPress: () => router.dismissTo(homeHref) }}
+        />
+      </Screen>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#2e78b7',
-  },
-});

@@ -16,6 +16,9 @@ export type SegmentedControlProps<T extends string> = {
   value: T;
   onChange: (value: T) => void;
   accessibilityLabel: string;
+  // Stretches the track and splits it evenly, for option sets too wide to
+  // sit at their natural width inside a card.
+  fullWidth?: boolean;
 };
 
 const TRACK_PADDING = 4;
@@ -25,6 +28,7 @@ export default function SegmentedControl<T extends string>({
   value,
   onChange,
   accessibilityLabel,
+  fullWidth = false,
 }: SegmentedControlProps<T>) {
   const { colors, radius, sizes, spacing } = useTheme();
 
@@ -35,7 +39,7 @@ export default function SegmentedControl<T extends string>({
         accessibilityLabel={accessibilityLabel}
         style={{
           flexDirection: 'row',
-          alignSelf: 'flex-start',
+          alignSelf: fullWidth ? 'stretch' : 'flex-start',
           padding: TRACK_PADDING,
           gap: spacing.xxs,
           borderRadius: radius.pill,
@@ -52,10 +56,12 @@ export default function SegmentedControl<T extends string>({
               accessibilityLabel={option.accessibilityLabel ?? option.label}
               accessibilityState={{ checked: selected }}
               style={{
+                flex: fullWidth ? 1 : undefined,
                 minHeight: sizes.minTouch - TRACK_PADDING * 2,
-                paddingHorizontal: spacing.lg,
+                paddingHorizontal: fullWidth ? spacing.xs : spacing.lg,
                 borderRadius: radius.pill,
                 justifyContent: 'center',
+                alignItems: 'center',
                 backgroundColor: selected ? colors.ink : 'transparent',
               }}
             >

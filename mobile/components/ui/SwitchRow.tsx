@@ -1,5 +1,5 @@
 import type { SymbolViewProps } from 'expo-symbols';
-import { Pressable, Switch, View } from 'react-native';
+import { ActivityIndicator, Pressable, Switch, View } from 'react-native';
 
 import { useTheme } from '@/theme';
 
@@ -14,6 +14,9 @@ export type SwitchRowProps = {
   icon?: SymbolViewProps['name'];
   iconTone?: IconTileTone;
   disabled?: boolean;
+  // Shows a spinner in place of the switch while a change is being applied
+  // (e.g. starting a location task); the row ignores presses meanwhile.
+  busy?: boolean;
 };
 
 const ICON_SIZE = 40;
@@ -28,17 +31,19 @@ export default function SwitchRow({
   icon,
   iconTone = 'neutral',
   disabled = false,
+  busy = false,
 }: SwitchRowProps) {
   const { colors, sizes, spacing } = useTheme();
+  const inactive = disabled || busy;
 
   return (
     <Pressable
       onPress={() => onValueChange(!value)}
-      disabled={disabled}
+      disabled={inactive}
       accessibilityRole="switch"
       accessibilityLabel={title}
       accessibilityHint={hint}
-      accessibilityState={{ checked: value, disabled }}
+      accessibilityState={{ checked: value, disabled: inactive, busy }}
       style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',
@@ -61,18 +66,22 @@ export default function SwitchRow({
           </Text>
         )}
       </View>
-      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        <Switch
-          value={value}
-          onValueChange={onValueChange}
-          disabled={disabled}
-          // The off thumb is dark enough to see against the pale track; the
-          // platform default (white on light grey) is close to invisible.
-          trackColor={{ false: colors.track, true: colors.primary }}
-          thumbColor={value ? colors.onPrimary : colors.textMuted}
-          ios_backgroundColor={colors.track}
-        />
-      </View>
+      {busy ? (
+        <ActivityIndicator color={colors.primary} />
+      ) : (
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Switch
+            value={value}
+            onValueChange={onValueChange}
+            disabled={disabled}
+            // The off thumb is dark enough to see against the pale track; the
+            // platform default (white on light grey) is close to invisible.
+            trackColor={{ false: colors.track, true: colors.primary }}
+            thumbColor={value ? colors.onPrimary : colors.textMuted}
+            ios_backgroundColor={colors.track}
+          />
+        </View>
+      )}
     </Pressable>
   );
 }
