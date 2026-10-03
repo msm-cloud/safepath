@@ -1,4 +1,4 @@
-import type { TextStyle } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 
 // Sora for headings, Figtree for everything else, Hind Siliguri for Bangla.
 // Sora and Figtree have no Bengali glyphs, so Bangla text always switches
@@ -88,6 +88,17 @@ export const textVariants: Record<TextVariant, VariantSpec> = {
 // breaks conjuncts apart).
 const BENGALI_LINE_HEIGHT = 1.6;
 
+// Android Bangla deliberately sets no lineHeight. With one set, Android
+// measures the text a fraction narrower than it draws it, so any label
+// sized to fit its text (buttons, segments, pills) wraps its last word onto
+// a second line that is then clipped ("সাইন আউট" showed as "সাইন"). Hind
+// Siliguri's own line height (1.617 em) is already as tall as
+// BENGALI_LINE_HEIGHT, so nothing is lost. Don't add it back.
+function bengaliLineHeight(size: number, latinLineHeight: number): number | undefined {
+  if (Platform.OS === 'android') return undefined;
+  return Math.max(latinLineHeight, Math.round(size * BENGALI_LINE_HEIGHT));
+}
+
 export function textStyle(
   variant: TextVariant,
   script: Script,
@@ -99,7 +110,7 @@ export function textStyle(
     return {
       fontFamily: fontFamily('bengali', spec.role, weight ?? spec.weight),
       fontSize: size,
-      lineHeight: Math.max(spec.lineHeight, Math.round(size * BENGALI_LINE_HEIGHT)),
+      lineHeight: bengaliLineHeight(size, spec.lineHeight),
       letterSpacing: 0,
     };
   }
