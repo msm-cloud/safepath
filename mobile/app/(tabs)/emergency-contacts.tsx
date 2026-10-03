@@ -30,6 +30,14 @@ type EmergencyContact = {
 
 const AVATAR_SIZE = 40;
 
+// Validation errors sit under the field they are about; a failed save sits
+// above the form's button.
+type FormError = { field: 'name' | 'phone' | 'form'; message: string };
+
+function fieldError(error: FormError | null, field: FormError['field']): string | undefined {
+  return error?.field === field ? error.message : undefined;
+}
+
 export default function EmergencyContactsScreen() {
   const { session } = useAuth();
   const { t } = useLanguage();
@@ -44,14 +52,14 @@ export default function EmergencyContactsScreen() {
   // Add-contact form.
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
-  const [addError, setAddError] = useState<string | null>(null);
+  const [addError, setAddError] = useState<FormError | null>(null);
   const [adding, setAdding] = useState(false);
 
   // Inline edit — at most one row editable at a time.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
-  const [editError, setEditError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<FormError | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -93,10 +101,10 @@ export default function EmergencyContactsScreen() {
     setRefreshing(false);
   };
 
-  // The message to show, or null when the pair can be saved.
-  const validate = (name: string, phone: string): string | null => {
-    if (name.trim().length === 0) return t('enterContactName');
-    if (!isValidPhone(phone)) return t('invalidPhone');
+  // The error to show, or null when the pair can be saved.
+  const validate = (name: string, phone: string): FormError | null => {
+    if (name.trim().length === 0) return { field: 'name', message: t('enterContactName') };
+    if (!isValidPhone(phone)) return { field: 'phone', message: t('invalidPhone') };
     return null;
   };
 
@@ -112,7 +120,7 @@ export default function EmergencyContactsScreen() {
     setAdding(false);
 
     if (error) {
-      setAddError(t('contactSaveError'));
+      setAddError({ field: 'form', message: t('contactSaveError') });
       return;
     }
 
@@ -147,7 +155,7 @@ export default function EmergencyContactsScreen() {
     setSaving(false);
 
     if (error) {
-      setEditError(t('contactSaveError'));
+      setEditError({ field: 'form', message: t('contactSaveError') });
       return;
     }
 
@@ -205,6 +213,7 @@ export default function EmergencyContactsScreen() {
               autoComplete="name"
               returnKeyType="next"
               value={editName}
+              error={fieldError(editError, 'name')}
               onChangeText={setEditName}
               onFocus={() => scrollToInput(editNameInputRef)}
               onSubmitEditing={() => editPhoneInputRef.current?.focus()}
@@ -215,11 +224,12 @@ export default function EmergencyContactsScreen() {
               keyboardType="phone-pad"
               autoComplete="tel"
               value={editPhone}
-              error={editError ?? undefined}
+              error={fieldError(editError, 'phone')}
               onChangeText={setEditPhone}
               onFocus={() => scrollToInput(editPhoneInputRef)}
               onSubmitEditing={handleSaveEdit}
             />
+            {editError?.field === 'form' && <Banner tone="danger" message={editError.message} />}
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               <Button
                 title={t('saveButton')}
@@ -286,6 +296,7 @@ export default function EmergencyContactsScreen() {
           autoComplete="name"
           returnKeyType="next"
           value={newName}
+          error={fieldError(addError, 'name')}
           onChangeText={setNewName}
           onFocus={() => scrollToInput(newNameInputRef)}
           onSubmitEditing={() => newPhoneInputRef.current?.focus()}
@@ -296,11 +307,12 @@ export default function EmergencyContactsScreen() {
           keyboardType="phone-pad"
           autoComplete="tel"
           value={newPhone}
-          error={addError ?? undefined}
+          error={fieldError(addError, 'phone')}
           onChangeText={setNewPhone}
           onFocus={() => scrollToInput(newPhoneInputRef)}
           onSubmitEditing={handleAdd}
         />
+        {addError?.field === 'form' && <Banner tone="danger" message={addError.message} />}
         <Button
           title={t('addContactButton')}
           variant="primary"
