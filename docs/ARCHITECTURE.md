@@ -137,6 +137,10 @@ at the database.
 - **Revoking**: `revoke_guardian_link(p_link_id)` can only be called by the student on the
   link. It ends an accepted link or cancels an unused code. A revoked link can never become
   pending or accepted again (the update trigger rejects it); linking again needs a new code.
+- **Expiry**: an invite code can be redeemed for 24 hours after it is created; after that
+  `redeem_guardian_invite` gives the same error as for an unknown code. The
+  `expire-guardian-invites` cron job (`expire_guardian_invites()`, every 15 minutes)
+  revokes expired pending codes so they leave the student's list.
 - **SOS recipients**: `sos_recipient_guardian_ids(p_user_id)` is the only list of who is
   told about an SOS outside the app. It is callable by the service role only.
   `send-alert-email` uses it, and the push sender must use it too.

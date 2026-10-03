@@ -2359,6 +2359,67 @@ console.log('\n--- revoke_guardian_link ---');
   });
 }
 
+console.log('\n--- invite codes expire after 24 hours ---');
+{
+  const userES = await mkUser('ES', 'user');
+  const userEG = await mkUser('EG', 'guardian');
+  const userEG2 = await mkUser('EG2', 'guardian');
+
+  // Inserted as the table owner: clients can't set created_at.
+  const seedCode = async (age, status = 'pending', guardianId = null) =>
+    (
+      await db.query(
+        `insert into public.guardian_links (user_id, guardian_id, status, created_at, accepted_at)
+         values ($1, $2, $3::public.guardian_link_status, now() - $4::interval,
+                 case when $3::public.guardian_link_status = 'accepted' then now() end)
+         returning id, invite_code`,
+        [userES, guardianId, status, age]
+      )
+    ).rows[0];
+  const statusOf = async (id) =>
+    (await db.query(`select status from public.guardian_links where id = $1`, [id])).rows[0].status;
+
+  const expired = await seedCode('25 hours');
+  const fresh = await seedCode('23 hours');
+  const oldLink = await seedCode('30 days', 'accepted', userEG);
+
+  await asUser(userEG2, async () => {
+    check(
+      'a code older than 24 hours gives the same error as an unknown code',
+      (await redeem(db, expired.invite_code)).error === 'invalid_or_used_code' &&
+        (await redeem(db, 'ZZZZZZZZ')).error === 'invalid_or_used_code'
+    );
+  });
+  check(
+    'a failed redeem of an expired code leaves it untouched',
+    (await statusOf(expired.id)) === 'pending'
+  );
+
+  const privs = await db.query(
+    `select has_function_privilege('authenticated', 'public.expire_guardian_invites()', 'execute') as auth_exec,
+            has_function_privilege('anon', 'public.expire_guardian_invites()', 'execute') as anon_exec`
+  );
+  check(
+    'neither authenticated nor anon can run expire_guardian_invites()',
+    !privs.rows[0].auth_exec && !privs.rows[0].anon_exec
+  );
+
+  await db.query(`select public.expire_guardian_invites()`);
+  check('the expiry job revokes the expired code', (await statusOf(expired.id)) === 'revoked');
+  check('the expiry job leaves a fresh code pending', (await statusOf(fresh.id)) === 'pending');
+  check(
+    'the expiry job leaves an old accepted link alone',
+    (await statusOf(oldLink.id)) === 'accepted'
+  );
+
+  await asUser(userEG2, async () => {
+    check(
+      'a code younger than 24 hours can still be redeemed',
+      (await redeem(db, fresh.invite_code)).success === true
+    );
+  });
+}
+
 console.log('\n--- one accepted link per user and guardian ---');
 {
   const userDS = await mkUser('DS', 'user');

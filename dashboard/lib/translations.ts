@@ -211,8 +211,8 @@ export const translations = {
   inviteCodePlaceholder: { en: 'Invite code', bn: 'আমন্ত্রণ কোড' },
   enterInviteCode: { en: 'Enter an invite code.', bn: 'একটি আমন্ত্রণ কোড লিখুন।' },
   invalidOrUsedCode: {
-    en: 'That invite code is invalid or has already been used.',
-    bn: 'এই আমন্ত্রণ কোডটি সঠিক নয় অথবা ইতিমধ্যে ব্যবহৃত হয়েছে।',
+    en: 'That invite code is invalid, expired or already used.',
+    bn: 'এই আমন্ত্রণ কোডটি সঠিক নয়, মেয়াদোত্তীর্ণ অথবা ইতিমধ্যে ব্যবহৃত।',
   },
   alreadyLinkedCode: {
     en: "You're already linked to this person, so this code wasn't used.",
