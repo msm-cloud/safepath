@@ -646,6 +646,7 @@ export const translations = {
   },
   addContactButton: { en: 'Add Contact', bn: 'যোগাযোগ যোগ করুন' },
   namePlaceholder: { en: 'Name', bn: 'নাম' },
+  enterContactName: { en: "Enter the contact's name.", bn: 'যোগাযোগের নাম লিখুন।' },
   phonePlaceholder: { en: 'Phone number', bn: 'ফোন নম্বর' },
   invalidPhone: { en: 'Enter a valid phone number.', bn: 'একটি সঠিক ফোন নম্বর লিখুন।' },
   saveButton: { en: 'Save', bn: 'সংরক্ষণ করুন' },

@@ -2,23 +2,25 @@ import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
   RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
+  type ScrollView,
+  type TextInput,
   View,
 } from 'react-native';
 
+import Avatar from '@/components/ui/Avatar';
+import Banner from '@/components/ui/Banner';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Screen from '@/components/ui/Screen';
+import Text from '@/components/ui/Text';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
-import { scrollInputIntoView, type ScrollResponderHandle } from '@/lib/scroll-to-input';
+import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
-import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { isValidPhone } from '@/lib/validation';
+import { useTheme } from '@/theme';
 
 type EmergencyContact = {
   id: string;
@@ -26,9 +28,12 @@ type EmergencyContact = {
   phone: string;
 };
 
+const AVATAR_SIZE = 40;
+
 export default function EmergencyContactsScreen() {
   const { session } = useAuth();
   const { t } = useLanguage();
+  const { spacing } = useTheme();
   const userId = session?.user.id;
 
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
@@ -50,26 +55,15 @@ export default function EmergencyContactsScreen() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // FlatList's own ref type doesn't expose scrollResponderScrollNative-
-  // HandleToKeyboard directly — only getScrollResponder(), which the .d.ts
-  // types as a bare JSX.Element (a known lag behind the actual Flow types;
-  // see node_modules/react-native/Libraries/Lists/FlatList.js, which
-  // returns the real underlying ScrollView's imperative handle at
-  // runtime) — hence the cast in scrollFormInputIntoView below.
-  const flatListRef = useRef<FlatList>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const newNameInputRef = useRef<TextInput>(null);
   const newPhoneInputRef = useRef<TextInput>(null);
-  // Shared by every row's inline edit form — safe because at most one row
-  // is ever in edit mode at a time (see editingId above).
+  // Shared by every row's edit form; only one row is ever in edit mode.
   const editNameInputRef = useRef<TextInput>(null);
   const editPhoneInputRef = useRef<TextInput>(null);
-  const keyboardHeight = useKeyboardHeight();
 
-  const scrollFormInputIntoView = useCallback((inputRef: RefObject<TextInput | null>) => {
-    const scrollResponder = flatListRef.current?.getScrollResponder() as
-      ScrollResponderHandle | null | undefined;
-    scrollInputIntoView(scrollResponder, inputRef);
-  }, []);
+  const scrollToInput = (inputRef: RefObject<TextInput | null>) =>
+    scrollInputIntoView(scrollRef.current, inputRef);
 
   const fetchContacts = useCallback(async () => {
     if (!userId) return;
@@ -99,24 +93,22 @@ export default function EmergencyContactsScreen() {
     setRefreshing(false);
   };
 
-  const handleAdd = async () => {
-    setAddError(null);
+  // The message to show, or null when the pair can be saved.
+  const validate = (name: string, phone: string): string | null => {
+    if (name.trim().length === 0) return t('enterContactName');
+    if (!isValidPhone(phone)) return t('invalidPhone');
+    return null;
+  };
 
-    const trimmedName = newName.trim();
-    if (trimmedName.length === 0) {
-      setAddError(t('enterYourName'));
-      return;
-    }
-    if (!isValidPhone(newPhone)) {
-      setAddError(t('invalidPhone'));
-      return;
-    }
-    if (!userId) return;
+  const handleAdd = async () => {
+    const invalid = validate(newName, newPhone);
+    setAddError(invalid);
+    if (invalid || !userId) return;
 
     setAdding(true);
     const { error } = await supabase
       .from('emergency_contacts')
-      .insert({ user_id: userId, name: trimmedName, phone: newPhone.trim() });
+      .insert({ user_id: userId, name: newName.trim(), phone: newPhone.trim() });
     setAdding(false);
 
     if (error) {
@@ -143,22 +135,14 @@ export default function EmergencyContactsScreen() {
 
   const handleSaveEdit = async () => {
     if (!editingId) return;
-    setEditError(null);
-
-    const trimmedName = editName.trim();
-    if (trimmedName.length === 0) {
-      setEditError(t('enterYourName'));
-      return;
-    }
-    if (!isValidPhone(editPhone)) {
-      setEditError(t('invalidPhone'));
-      return;
-    }
+    const invalid = validate(editName, editPhone);
+    setEditError(invalid);
+    if (invalid) return;
 
     setSaving(true);
     const { error } = await supabase
       .from('emergency_contacts')
-      .update({ name: trimmedName, phone: editPhone.trim() })
+      .update({ name: editName.trim(), phone: editPhone.trim() })
       .eq('id', editingId);
     setSaving(false);
 
@@ -193,258 +177,138 @@ export default function EmergencyContactsScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      // See components/SettingsScreen.tsx's comment for the full
-      // investigation: on Android, KeyboardAvoidingView unconditionally
-      // triggers LayoutAnimation on every keyboard show/hide event
-      // regardless of `behavior`, which can knock a focused TextInput out
-      // of focus and cause a show/hide loop. enabled={false} on Android
-      // doesn't change this component's rendered output there at all, so
-      // this is safe everywhere it's used.
-      enabled={Platform.OS === 'ios'}
+    <Screen
+      edges={[]}
+      scrollRef={scrollRef}
+      contentStyle={{ gap: spacing.lg }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
     >
-      <View style={styles.container}>
-        <FlatList
-          ref={flatListRef}
-          data={contacts}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.listContent, { paddingBottom: keyboardHeight }]}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-          ListHeaderComponent={
-            <View>
-              <Text style={styles.title}>{t('emergencyContactsTitle')}</Text>
-              <Text style={styles.subtitle}>{t('emergencyContactsSubtitle')}</Text>
+      {/* With no contacts, the warning below already says this. */}
+      {(loading || contacts.length > 0) && (
+        <Text variant="bodySm" color="textMuted">
+          {t('emergencyContactsSubtitle')}
+        </Text>
+      )}
+      {listError && <Banner tone="danger" message={listError} />}
+      {loading && <ActivityIndicator />}
+      {!loading && !listError && contacts.length === 0 && (
+        <Banner tone="warning" message={t('noContactsYet')} />
+      )}
 
-              <View style={styles.addForm}>
-                <TextInput
-                  ref={newNameInputRef}
-                  style={styles.input}
-                  placeholder={t('namePlaceholder')}
-                  autoCapitalize="words"
-                  value={newName}
-                  onChangeText={setNewName}
-                  onFocus={() => scrollFormInputIntoView(newNameInputRef)}
-                />
-                <TextInput
-                  ref={newPhoneInputRef}
-                  style={styles.input}
-                  placeholder={t('phonePlaceholder')}
-                  keyboardType="phone-pad"
-                  value={newPhone}
-                  onChangeText={setNewPhone}
-                  onFocus={() => scrollFormInputIntoView(newPhoneInputRef)}
-                />
-                {addError && <Text style={styles.error}>{addError}</Text>}
-                <Pressable
-                  style={[styles.button, adding && styles.buttonDisabled]}
-                  onPress={handleAdd}
-                  disabled={adding}
-                >
-                  {adding ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.buttonText}>{t('addContactButton')}</Text>
-                  )}
-                </Pressable>
-              </View>
-
-              {listError && <Text style={styles.error}>{listError}</Text>}
-              {loading && <ActivityIndicator style={styles.loadingIndicator} />}
-              {!loading && contacts.length === 0 && (
-                <Text style={styles.emptyState}>{t('noContactsYet')}</Text>
-              )}
+      {contacts.map((contact) =>
+        editingId === contact.id ? (
+          <Card key={contact.id} style={{ gap: spacing.md }}>
+            <Input
+              ref={editNameInputRef}
+              label={t('namePlaceholder')}
+              autoCapitalize="words"
+              autoComplete="name"
+              returnKeyType="next"
+              value={editName}
+              onChangeText={setEditName}
+              onFocus={() => scrollToInput(editNameInputRef)}
+              onSubmitEditing={() => editPhoneInputRef.current?.focus()}
+            />
+            <Input
+              ref={editPhoneInputRef}
+              label={t('phoneLabel')}
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              value={editPhone}
+              error={editError ?? undefined}
+              onChangeText={setEditPhone}
+              onFocus={() => scrollToInput(editPhoneInputRef)}
+              onSubmitEditing={handleSaveEdit}
+            />
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Button
+                title={t('saveButton')}
+                variant="primary"
+                size="small"
+                fullWidth={false}
+                loading={saving}
+                onPress={handleSaveEdit}
+              />
+              <Button
+                title={t('cancelButton')}
+                variant="secondary"
+                size="small"
+                fullWidth={false}
+                disabled={saving}
+                onPress={cancelEditing}
+              />
             </View>
-          }
-          renderItem={({ item }) => {
-            if (editingId === item.id) {
-              return (
-                <View style={styles.contactRow}>
-                  <TextInput
-                    ref={editNameInputRef}
-                    style={styles.input}
-                    placeholder={t('namePlaceholder')}
-                    autoCapitalize="words"
-                    value={editName}
-                    onChangeText={setEditName}
-                    onFocus={() => scrollFormInputIntoView(editNameInputRef)}
-                  />
-                  <TextInput
-                    ref={editPhoneInputRef}
-                    style={styles.input}
-                    placeholder={t('phonePlaceholder')}
-                    keyboardType="phone-pad"
-                    value={editPhone}
-                    onChangeText={setEditPhone}
-                    onFocus={() => scrollFormInputIntoView(editPhoneInputRef)}
-                  />
-                  {editError && <Text style={styles.error}>{editError}</Text>}
-                  <View style={styles.rowActions}>
-                    <Pressable
-                      style={[styles.smallButton, saving && styles.buttonDisabled]}
-                      onPress={handleSaveEdit}
-                      disabled={saving}
-                    >
-                      {saving ? (
-                        <ActivityIndicator color="#fff" size="small" />
-                      ) : (
-                        <Text style={styles.smallButtonText}>{t('saveButton')}</Text>
-                      )}
-                    </Pressable>
-                    <Pressable style={styles.smallButtonSecondary} onPress={cancelEditing}>
-                      <Text style={styles.smallButtonSecondaryText}>{t('cancelButton')}</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              );
-            }
-
-            return (
-              <View style={styles.contactRow}>
-                <View style={styles.contactRowText}>
-                  <Text style={styles.contactName}>{item.name}</Text>
-                  <Text style={styles.contactPhone}>{item.phone}</Text>
-                </View>
-                <View style={styles.rowActions}>
-                  <Pressable style={styles.smallButtonSecondary} onPress={() => startEditing(item)}>
-                    <Text style={styles.smallButtonSecondaryText}>{t('editButton')}</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.smallButtonDanger}
-                    onPress={() => handleDelete(item)}
-                    disabled={deletingId === item.id}
-                  >
-                    {deletingId === item.id ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text style={styles.smallButtonText}>{t('deleteButton')}</Text>
-                    )}
-                  </Pressable>
-                </View>
+          </Card>
+        ) : (
+          <Card key={contact.id} style={{ gap: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <Avatar name={contact.name} url={null} size={AVATAR_SIZE} />
+              <View style={{ flex: 1, gap: spacing.xxs }}>
+                <Text variant="body" weight="semibold">
+                  {contact.name}
+                </Text>
+                <Text variant="bodySm" color="textMuted">
+                  {contact.phone}
+                </Text>
               </View>
-            );
-          }}
+            </View>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Button
+                title={t('editButton')}
+                variant="secondary"
+                size="small"
+                fullWidth={false}
+                icon={{ ios: 'pencil', android: 'edit', web: 'edit' }}
+                accessibilityLabel={`${t('editButton')}, ${contact.name}`}
+                disabled={editingId !== null}
+                onPress={() => startEditing(contact)}
+              />
+              <Button
+                title={t('deleteButton')}
+                variant="dangerOutline"
+                size="small"
+                fullWidth={false}
+                icon={{ ios: 'trash', android: 'delete', web: 'delete' }}
+                accessibilityLabel={`${t('deleteButton')}, ${contact.name}`}
+                loading={deletingId === contact.id}
+                onPress={() => handleDelete(contact)}
+              />
+            </View>
+          </Card>
+        )
+      )}
+
+      <Card style={{ gap: spacing.md }}>
+        <Input
+          ref={newNameInputRef}
+          label={t('namePlaceholder')}
+          autoCapitalize="words"
+          autoComplete="name"
+          returnKeyType="next"
+          value={newName}
+          onChangeText={setNewName}
+          onFocus={() => scrollToInput(newNameInputRef)}
+          onSubmitEditing={() => newPhoneInputRef.current?.focus()}
         />
-      </View>
-    </KeyboardAvoidingView>
+        <Input
+          ref={newPhoneInputRef}
+          label={t('phoneLabel')}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          value={newPhone}
+          error={addError ?? undefined}
+          onChangeText={setNewPhone}
+          onFocus={() => scrollToInput(newPhoneInputRef)}
+          onSubmitEditing={handleAdd}
+        />
+        <Button
+          title={t('addContactButton')}
+          variant="primary"
+          icon={{ ios: 'person.badge.plus', android: 'person_add', web: 'person_add' }}
+          loading={adding}
+          onPress={handleAdd}
+        />
+      </Card>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 20,
-    gap: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    marginTop: 4,
-    fontSize: 13,
-    color: '#666',
-  },
-  addForm: {
-    marginTop: 16,
-    gap: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: '#000',
-    backgroundColor: '#fff',
-  },
-  button: {
-    backgroundColor: '#2f95dc',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#d33',
-    fontSize: 13,
-  },
-  loadingIndicator: {
-    marginTop: 12,
-  },
-  emptyState: {
-    marginTop: 16,
-    fontSize: 14,
-    color: '#666',
-  },
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: '#f5f5f5',
-    gap: 8,
-  },
-  contactRowText: {
-    flex: 1,
-  },
-  contactName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  contactPhone: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 2,
-  },
-  rowActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  smallButton: {
-    backgroundColor: '#2f95dc',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  smallButtonDanger: {
-    backgroundColor: '#d33',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  smallButtonSecondary: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  smallButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  smallButtonSecondaryText: {
-    color: '#333',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});
