@@ -1,22 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Linking,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Linking, RefreshControl, View } from 'react-native';
 
 import Avatar from '@/components/ui/Avatar';
+import Banner from '@/components/ui/Banner';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import EmptyState from '@/components/ui/EmptyState';
+import Screen from '@/components/ui/Screen';
+import Text from '@/components/ui/Text';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import { useGuardianLinkRevoked } from '@/lib/use-guardian-link-revoked';
 import type { TranslationKey } from '@/lib/translations';
+import { useTheme } from '@/theme';
 
 const PAST_ALERTS_LIMIT = 20;
+const AVATAR_SIZE = 44;
 
 type PastAlert = {
   id: string;
@@ -37,6 +36,7 @@ type PastAlert = {
 // this deliberately isn't Realtime.
 export default function GuardianPastAlertsScreen() {
   const { t } = useLanguage();
+  const { spacing } = useTheme();
 
   const [alerts, setAlerts] = useState<PastAlert[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,54 +100,81 @@ export default function GuardianPastAlertsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={alerts}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-        ListHeaderComponent={
-          <View>
-            <Text style={styles.title}>{t('guardianPastAlertsTitle')}</Text>
-            {listError && <Text style={styles.error}>{listError}</Text>}
-            {loading && <ActivityIndicator style={styles.loadingIndicator} />}
-            {!loading && !listError && alerts.length === 0 && (
-              <Text style={styles.emptyState}>{t('noResolvedAlertsYet')}</Text>
-            )}
-          </View>
-        }
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            {item.trigger_type === 'journey_overdue' && (
-              <Text style={styles.rowLabel}>{t('missedCheckinTypeLabel')}</Text>
-            )}
-            <View style={styles.rowNameRow}>
-              <Avatar name={item.full_name} url={item.avatar_url} size={36} />
-              <View style={styles.rowNameText}>
-                <Text style={styles.rowName}>{item.full_name}</Text>
-                <Text style={styles.rowMeta}>
-                  {new Date(item.created_at).toLocaleString()}
-                  {item.resolved_at
-                    ? ` — ${formatDuration(item.created_at, item.resolved_at, t)}`
-                    : ''}
-                </Text>
-              </View>
-            </View>
-            {item.last_lat != null && item.last_lng != null ? (
-              <Pressable
-                onPress={() =>
-                  Linking.openURL(`https://www.google.com/maps?q=${item.last_lat},${item.last_lng}`)
-                }
-              >
-                <Text style={styles.link}>{t('viewLastKnownLocationLink')}</Text>
-              </Pressable>
-            ) : (
-              <Text style={styles.noLocation}>{t('noLocationRecorded')}</Text>
-            )}
-          </View>
-        )}
-      />
-    </View>
+    <Screen
+      edges={[]}
+      contentStyle={{ gap: spacing.md }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+    >
+      {listError && <Banner tone="danger" message={listError} />}
+      {loading && <ActivityIndicator />}
+      {!loading && !listError && alerts.length === 0 && (
+        <EmptyState
+          icon={{ ios: 'checkmark.shield', android: 'verified_user', web: 'verified_user' }}
+          tone="success"
+          title={t('noResolvedAlertsYet')}
+        />
+      )}
+      {alerts.map((alert) => (
+        <PastAlertCard key={alert.id} alert={alert} />
+      ))}
+    </Screen>
+  );
+}
+
+function PastAlertCard({ alert }: { alert: PastAlert }) {
+  const { t } = useLanguage();
+  const { colors, radius, spacing } = useTheme();
+  const hasLocation = alert.last_lat != null && alert.last_lng != null;
+
+  return (
+    <Card style={{ gap: spacing.md }}>
+      {alert.trigger_type === 'journey_overdue' && (
+        <View
+          style={{
+            alignSelf: 'flex-start',
+            paddingVertical: spacing.xxs,
+            paddingHorizontal: spacing.sm,
+            borderRadius: radius.pill,
+            backgroundColor: colors.warningSoft,
+          }}
+        >
+          <Text variant="micro" color="onWarningSoft" style={{ textTransform: 'uppercase' }}>
+            {t('missedCheckinTypeLabel')}
+          </Text>
+        </View>
+      )}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+        <Avatar name={alert.full_name} url={alert.avatar_url} size={AVATAR_SIZE} />
+        <View style={{ flex: 1, gap: spacing.xxs }}>
+          <Text variant="body" weight="semibold">
+            {alert.full_name}
+          </Text>
+          <Text variant="caption" color="textMuted">
+            {new Date(alert.created_at).toLocaleString()}
+          </Text>
+          {alert.resolved_at && (
+            <Text variant="caption" color="textMuted">
+              {formatDuration(alert.created_at, alert.resolved_at, t)}
+            </Text>
+          )}
+        </View>
+      </View>
+      {hasLocation ? (
+        <Button
+          title={t('viewLastKnownLocationLink')}
+          variant="secondary"
+          size="small"
+          icon={{ ios: 'map', android: 'map', web: 'map' }}
+          onPress={() =>
+            Linking.openURL(`https://www.google.com/maps?q=${alert.last_lat},${alert.last_lng}`)
+          }
+        />
+      ) : (
+        <Text variant="caption" color="textMuted">
+          {t('noLocationRecorded')}
+        </Text>
+      )}
+    </Card>
   );
 }
 
@@ -177,71 +204,3 @@ function formatDuration(
   const days = Math.floor(hours / 24);
   return t('activeForDays', { d: days, s: days === 1 ? '' : 's' });
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 20,
-    gap: 10,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  error: {
-    color: '#d33',
-    fontSize: 14,
-  },
-  loadingIndicator: {
-    marginTop: 12,
-  },
-  emptyState: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#666',
-  },
-  row: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: '#f5f5f5',
-    gap: 2,
-  },
-  rowNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  rowNameText: {
-    flex: 1,
-  },
-  rowLabel: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-    color: '#a3730a',
-    textTransform: 'uppercase',
-  },
-  rowName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  rowMeta: {
-    fontSize: 13,
-    color: '#666',
-  },
-  link: {
-    marginTop: 2,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2f95dc',
-  },
-  noLocation: {
-    marginTop: 2,
-    fontSize: 13,
-    color: '#999',
-  },
-});

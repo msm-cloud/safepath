@@ -26,12 +26,9 @@ import type { TextInput } from 'react-native';
 // dependency. RN's own core mechanism has none of that risk.
 const KEYBOARD_SCROLL_OFFSET = 16;
 
-// The subset of ScrollView's imperative API this needs. Typed narrowly
-// here (rather than importing ScrollView's own type) so the same helper
-// works for both a direct ScrollView ref and a FlatList's
-// getScrollResponder() result — see the comment at its call site in
-// emergency-contacts.tsx for why that one needs a cast to this shape.
-export type ScrollResponderHandle = {
+// The subset of ScrollView's imperative API this needs, typed narrowly so a
+// FlatList's getScrollResponder() result fits as well as a ScrollView ref.
+type ScrollResponderHandle = {
   scrollResponderScrollNativeHandleToKeyboard: (
     nodeHandle: unknown,
     additionalOffset?: number,
