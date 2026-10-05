@@ -76,7 +76,7 @@ export async function triggerSosOffline(params: {
     };
   }
 
-  const available = await SMS.isAvailableAsync();
+  const available = await SMS.isAvailableAsync().catch(() => false);
   if (!available) {
     return { ok: false, message: t('smsNotAvailableMessage') };
   }
@@ -92,10 +92,14 @@ export async function triggerSosOffline(params: {
     location: locationText,
   });
 
-  await SMS.sendSMSAsync(
-    emergencyContacts.map((contact) => contact.phone),
-    message
-  );
+  try {
+    await SMS.sendSMSAsync(
+      emergencyContacts.map((contact) => contact.phone),
+      message
+    );
+  } catch {
+    return { ok: false, message: t('smsComposerFailedMessage') };
+  }
 
   // No retry queue, no "was it actually sent" tracking — the native SMS
   // composer requires the user's own tap on Send (a platform restriction

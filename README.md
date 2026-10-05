@@ -270,9 +270,13 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the details.
   root is picked up automatically by both apps (Prettier searches parent
   directories for config).
 - **PR checks**: [`.github/workflows/pr-checks.yml`](.github/workflows/pr-checks.yml)
-  runs `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test:rls`
-  and `pnpm test:auth-identifier` on every pull request. It needs no
-  secrets; neither test suite touches the live project.
+  runs `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test:rls`,
+  `pnpm test:auth-identifier` and `pnpm test:mobile` on every pull request.
+  It needs no secrets; none of the test suites touch the live project.
+- **Mobile unit tests**: plain Node suites (`node:test`) in
+  [`mobile/tests/`](mobile/tests/) for logic kept free of React Native
+  imports, such as the offline SOS contacts cache. They're excluded from
+  the mobile typecheck and run with `pnpm test:mobile`.
 
 ## What's intentionally not here yet
 
