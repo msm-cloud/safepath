@@ -1,3 +1,4 @@
+import type { KeyValueStorage } from '@/lib/key-value-storage';
 import type { EmergencyContact } from '@/lib/sos-trigger';
 
 // The offline SOS fallback has to work on a cold start with no network, so
@@ -11,12 +12,7 @@ export type SosContacts = {
   fullName: string | null;
 };
 
-export type SosContactsStorage = {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  getAllKeys(): Promise<readonly string[]>;
-  multiRemove(keys: readonly string[]): Promise<void>;
-};
+export type SosContactsStorage = KeyValueStorage;
 
 export type SosContactsDeps = {
   storage: SosContactsStorage;

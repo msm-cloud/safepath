@@ -2,6 +2,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useS
 import { AppState } from 'react-native';
 
 import { useAuth } from '@/lib/auth-context';
+import { profileCache } from '@/lib/device-profile-cache';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@safepath/shared-types';
 
@@ -19,6 +20,12 @@ type UserSettingsContextValue = {
   // the location-history reconcile) must not act on them.
   loaded: boolean;
   loadState: SettingsLoadState;
+  // True once the values below are the person's own, either from the
+  // server or from the on-device copy of the last load (see
+  // lib/profile-cache.ts). Only the display values are restored from that
+  // copy — fakeCallEnabled, fakeCallCallerName, fullName, avatarPath — so
+  // this is for showing them offline, never a substitute for `loaded`.
+  displayReady: boolean;
   shakeSosEnabled: boolean;
   fakeCallEnabled: boolean;
   // Guardian-only device preference — whether a new SOS alert plays
@@ -47,7 +54,7 @@ type UserSettingsContextValue = {
   // here for the avatar shown on their own screens (Settings header, Home
   // header, guardian header). full_name is edited on the dashboard, not
   // in the mobile app; avatar_url is set via SettingsScreen (see
-  // setAvatarPathLocal). Both null until `loaded`.
+  // setAvatarPathLocal). Both null until `displayReady`.
   fullName: string | null;
   avatarPath: string | null;
   // Every setter below updates local state at once, awaits the write and
@@ -114,6 +121,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
   // Keyed by user so a previous account's state never counts as loaded
   // for the next one.
   const [load, setLoad] = useState<{ userId: string; state: SettingsLoadState } | null>(null);
+  const [restoredForUserId, setRestoredForUserId] = useState<string | null>(null);
 
   // A failed fetch must never fall back to the defaults: the location
   // history reconcile treats `locationHistoryEnabled` as the truth and
@@ -180,7 +188,20 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
       report('missing');
     }
 
+    // Display values from the last successful load, for an offline start.
+    // Skipped if the server has already answered.
+    async function restoreDisplayValues() {
+      const cached = await profileCache.readDisplay(id);
+      if (cancelled || !cached || state === 'loaded') return;
+      setFakeCallEnabledState(cached.fakeCallEnabled);
+      setFakeCallCallerNameState(cached.fakeCallCallerName);
+      setFullNameState(cached.fullName);
+      setAvatarPathState(cached.avatarPath);
+      setRestoredForUserId(id);
+    }
+
     report('loading');
+    void restoreDisplayValues();
     void fetchSettings();
 
     // Coming back online usually coincides with coming back to the app,
@@ -200,6 +221,18 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
   }, [userId]);
 
   const loadState: SettingsLoadState = load && load.userId === userId ? load.state : 'loading';
+
+  // Refreshes the on-device copy whenever the confirmed display values
+  // change, from a load or from one of the setters below.
+  useEffect(() => {
+    if (!userId || loadState !== 'loaded') return;
+    void profileCache.writeDisplay(userId, {
+      fakeCallEnabled,
+      fakeCallCallerName,
+      fullName,
+      avatarPath,
+    });
+  }, [userId, loadState, fakeCallEnabled, fakeCallCallerName, fullName, avatarPath]);
 
   const setShakeSosEnabled = useCallback(
     async (value: boolean): Promise<boolean> => {
@@ -273,6 +306,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
       value={{
         loaded: !!userId && loadState === 'loaded',
         loadState,
+        displayReady: !!userId && (loadState === 'loaded' || restoredForUserId === userId),
         shakeSosEnabled,
         fakeCallEnabled,
         fakeCallCallerName,

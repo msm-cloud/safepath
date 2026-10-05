@@ -275,8 +275,8 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the details.
   It needs no secrets; none of the test suites touch the live project.
 - **Mobile unit tests**: plain Node suites (`node:test`) in
   [`mobile/tests/`](mobile/tests/) for logic kept free of React Native
-  imports, such as the offline SOS contacts cache. They're excluded from
-  the mobile typecheck and run with `pnpm test:mobile`.
+  imports, such as the offline SOS contacts and profile caches. They're
+  excluded from the mobile typecheck and run with `pnpm test:mobile`.
 
 ## What's intentionally not here yet
 

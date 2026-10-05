@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 import { useAuth } from '@/lib/auth-context';
+import { profileCache } from '@/lib/device-profile-cache';
 import { supabase } from '@/lib/supabase';
 import { t as translate, type Language, type TranslationKey } from '@/lib/translations';
 
@@ -27,18 +28,25 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (!userId || loadedForUserId === userId) return;
 
     let cancelled = false;
-    supabase
-      .from('profiles')
-      .select('preferred_language')
-      .eq('id', userId)
-      .single()
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.preferred_language) {
-          setLanguageState(data.preferred_language);
-        }
-        setLoadedForUserId(userId);
-      });
+    (async () => {
+      // The on-device copy first, so an offline start still shows the
+      // person's own language; the server's answer, when it comes, wins.
+      const cached = await profileCache.readLanguage(userId);
+      if (cancelled) return;
+      if (cached) setLanguageState(cached);
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('preferred_language')
+        .eq('id', userId)
+        .single();
+      if (cancelled) return;
+      if (data?.preferred_language) {
+        setLanguageState(data.preferred_language);
+        void profileCache.writeLanguage(userId, data.preferred_language);
+      }
+      setLoadedForUserId(userId);
+    })();
 
     return () => {
       cancelled = true;
@@ -62,6 +70,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         setLanguageState((current) => (current === next ? previous : current));
         return false;
       }
+      void profileCache.writeLanguage(userId, next);
       return true;
     },
     [language, session?.user.id]

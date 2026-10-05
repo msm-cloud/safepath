@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 
 import { stopLiveSharing, stopLiveSharingOnDevice } from '@/lib/live-sharing';
+import { profileCache } from '@/lib/device-profile-cache';
 import { resetLocationHistoryOnDevice } from '@/lib/location-history';
 import { clearSosContactsCache } from '@/lib/sos-contacts';
 import { supabase } from '@/lib/supabase';
@@ -108,11 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.warn('[auth] location-history teardown on sign-out failed:', err);
     }
-    // The offline SOS copy holds the previous user's contacts and name.
-    try {
-      await clearSosContactsCache();
-    } catch (err) {
-      console.warn('[auth] SOS contacts cache clear on sign-out failed:', err);
+    // The on-device copies hold the previous user's contacts, name and
+    // preferences.
+    const cleared = await Promise.allSettled([clearSosContactsCache(), profileCache.clear()]);
+    for (const result of cleared) {
+      if (result.status === 'rejected') {
+        console.warn('[auth] offline cache clear on sign-out failed:', result.reason);
+      }
     }
     await supabase.auth.signOut();
   };
