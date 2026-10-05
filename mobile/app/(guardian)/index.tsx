@@ -1,5 +1,6 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useAudioPlayer } from 'expo-audio';
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,19 +14,26 @@ import {
   View,
 } from 'react-native';
 
-import Avatar from '@/components/ui/Avatar';
 import GuardianLiveSharing from '@/components/GuardianLiveSharing';
+import LocationToggleCard, { type LocationToggleNotice } from '@/components/LocationToggleCard';
 import OnboardingScreen from '@/components/OnboardingScreen';
+import Avatar from '@/components/ui/Avatar';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import IconTile from '@/components/ui/IconTile';
 import PhoneNotSavedNotice from '@/components/ui/PhoneNotSavedNotice';
-import RoleBadge from '@/components/ui/RoleBadge';
+import Screen from '@/components/ui/Screen';
 import SettingsLoadNotice from '@/components/ui/SettingsLoadNotice';
+import ThemedText from '@/components/ui/Text';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import type { TranslationKey } from '@/lib/translations';
 import { useGuardianLinkRevoked } from '@/lib/use-guardian-link-revoked';
+import { useLocationHistory } from '@/lib/use-location-history';
 import { usePendingOnboarding } from '@/lib/use-pending-onboarding';
 import { useUserSettings } from '@/lib/user-settings-context';
+import { useTheme } from '@/theme';
 
 // Repeating vibration pattern for an unacknowledged alert, as
 // [wait, vibrate, wait, vibrate, ...] milliseconds. Handed to the OS
@@ -39,6 +47,12 @@ import { useUserSettings } from '@/lib/user-settings-context';
 // the same way the expo-audio loop does.
 const ALARM_VIBRATION_PATTERN = [0, 600, 400];
 const FLASH_HALF_CYCLE_MS = 400;
+
+const ICONS = {
+  invite: { ios: 'plus', android: 'add', web: 'add' },
+  allClear: { ios: 'checkmark.shield.fill', android: 'verified_user', web: 'verified_user' },
+  shareLocation: { ios: 'location.fill', android: 'location_on', web: 'location_on' },
+} as const;
 
 type ActiveAlert = {
   id: string;
@@ -73,9 +87,14 @@ type AlertsChangeRow = {
 // status callback that logs any non-SUBSCRIBED state clearly instead of
 // failing silently.
 export default function GuardianActiveAlertsScreen() {
+  const router = useRouter();
   const { session } = useAuth();
   const { t } = useLanguage();
+  const { colors, spacing } = useTheme();
   const { fullName, avatarPath, alarmSoundEnabled } = useUserSettings();
+  // The guardian's own reciprocal sharing (same hook and flag as the
+  // share-location screen), so it is visible and reconciled from Home.
+  const locationHistory = useLocationHistory();
   const {
     checking: checkingOnboarding,
     show: showOnboarding,
@@ -365,91 +384,163 @@ export default function GuardianActiveAlertsScreen() {
   // normal Active Alerts content) avoids flashing it before onboarding
   // takes over. Doesn't affect sign-in at all: the flag is only ever set
   // by a successful sign-up, never present for a returning account.
+  const handleShareLocationToggle = (next: boolean) => {
+    if (locationHistory.busy || locationHistory.loading) return;
+    if (next) {
+      locationHistory.start();
+    } else {
+      locationHistory.stop();
+    }
+  };
+
   if (checkingOnboarding) return null;
   if (showOnboarding) {
     return <OnboardingScreen role="guardian" onFinish={dismissOnboarding} />;
   }
 
+  const shareLocationWarnings: LocationToggleNotice[] = [];
+  if (locationHistory.enabled && locationHistory.mode === 'foreground') {
+    shareLocationWarnings.push({
+      message: t('guardianShareLocationForegroundWarning'),
+      openSettings: true,
+    });
+  }
+  if (locationHistory.error === 'permission-denied') {
+    shareLocationWarnings.push({
+      message: t('guardianShareLocationPermissionDenied'),
+      openSettings: true,
+    });
+  }
+  const shareLocationError =
+    locationHistory.error === 'start-failed'
+      ? t('guardianShareLocationStartError')
+      : locationHistory.error === 'stop-failed'
+        ? t('guardianShareLocationStopError')
+        : locationHistory.error === 'save-failed'
+          ? t('guardianShareLocationSaveError')
+          : null;
+
   return (
-    <View style={styles.container}>
-      {isAlarming && (
-        <Pressable
-          style={styles.flashOverlay}
-          onPress={() => setAcknowledged(true)}
-          accessibilityRole="button"
-          accessibilityLabel={t('tapToSilenceAlarmHint')}
-        >
-          <Animated.View
-            style={[StyleSheet.absoluteFill, { backgroundColor: flashBackgroundColor }]}
-            pointerEvents="none"
-          />
-          <Text style={styles.flashHintText}>{t('tapToSilenceAlarmHint')}</Text>
-        </Pressable>
-      )}
-      <FlatList
-        data={alerts}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ListHeaderComponent={
-          <View>
-            <RoleBadge style={styles.roleBadge} />
-            <View style={styles.headerRow}>
-              <Avatar name={fullName} url={avatarPath} size={36} />
-              <Text style={styles.title}>{t('guardianActiveAlertsTitle')}</Text>
-            </View>
-            <PhoneNotSavedNotice />
-            <SettingsLoadNotice />
-            {/* Renders nothing unless a linked person is actively sharing
-                their live location — its own data + Realtime lifecycle. */}
-            <GuardianLiveSharing />
-            {loading && <ActivityIndicator style={styles.loadingIndicator} />}
-            {!loading && alerts.length === 0 && (
-              <Text style={styles.emptyState}>{t('noActiveAlertsMessage')}</Text>
-            )}
-          </View>
-        }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>
-              {item.trigger_type === 'journey_overdue'
-                ? t('missedCheckinTypeLabel')
-                : t('sosAlertTypeLabel')}
-            </Text>
-            <View style={styles.cardNameRow}>
-              <Avatar name={item.full_name} url={item.avatar_url} size={40} />
-              <View style={styles.cardNameText}>
-                <Text style={styles.cardName}>{item.full_name}</Text>
-                <Text style={styles.cardTime}>{relativeTime(item.created_at, now, t)}</Text>
-              </View>
-            </View>
-
-            {item.last_lat != null && item.last_lng != null ? (
-              <Pressable
-                onPress={() =>
-                  Linking.openURL(`https://www.google.com/maps?q=${item.last_lat},${item.last_lng}`)
-                }
-              >
-                <Text style={styles.link}>{t('viewLastKnownLocationLink')}</Text>
-              </Pressable>
-            ) : (
-              <Text style={styles.noLocation}>{t('noLocationAvailableYet')}</Text>
-            )}
-
-            <Pressable
-              style={[styles.resolveButton, resolvingId === item.id && styles.buttonDisabled]}
-              onPress={() => handleResolve(item.id)}
-              disabled={resolvingId === item.id}
-            >
-              {resolvingId === item.id ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.resolveButtonText}>{t('markResolvedButton')}</Text>
-              )}
-            </Pressable>
-          </View>
+    <Screen scroll={false} padded={false} edges={['top']}>
+      <View style={styles.container}>
+        {isAlarming && (
+          <Pressable
+            style={styles.flashOverlay}
+            onPress={() => setAcknowledged(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('tapToSilenceAlarmHint')}
+          >
+            <Animated.View
+              style={[StyleSheet.absoluteFill, { backgroundColor: flashBackgroundColor }]}
+              pointerEvents="none"
+            />
+            <Text style={styles.flashHintText}>{t('tapToSilenceAlarmHint')}</Text>
+          </Pressable>
         )}
-      />
-    </View>
+        <FlatList
+          data={alerts}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{
+            padding: spacing.xl,
+            paddingTop: spacing.lg,
+            gap: spacing.md,
+          }}
+          ListHeaderComponent={
+            <View style={{ gap: spacing.lg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <Avatar name={fullName} url={avatarPath} size={36} />
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="caption" color="textMuted">
+                    {t('guardianHomeEyebrow')}
+                  </ThemedText>
+                  <ThemedText variant="h2">{t('guardianHomeTitle')}</ThemedText>
+                </View>
+                <Button
+                  title={t('guardianHomeInviteButton')}
+                  icon={ICONS.invite}
+                  variant="primary"
+                  size="small"
+                  fullWidth={false}
+                  onPress={() => router.navigate('/link')}
+                />
+              </View>
+              <PhoneNotSavedNotice />
+              <SettingsLoadNotice />
+              {loading && <ActivityIndicator color={colors.primary} />}
+              {!loading && alerts.length === 0 && (
+                <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                  <IconTile icon={ICONS.allClear} tone="success" size={40} />
+                  <ThemedText variant="bodySm" color="textSecondary" style={{ flex: 1 }}>
+                    {t('noActiveAlertsMessage')}
+                  </ThemedText>
+                </Card>
+              )}
+            </View>
+          }
+          ListFooterComponent={
+            <View style={{ gap: spacing.lg, marginTop: spacing.sm }}>
+              {/* Its own data + Realtime lifecycle; shows an empty state when
+                nobody is sharing. */}
+              <GuardianLiveSharing />
+              <LocationToggleCard
+                title={t('guardianShareLocationTitle')}
+                hint={t('guardianShareLocationSubtitle')}
+                icon={ICONS.shareLocation}
+                value={locationHistory.enabled}
+                busy={locationHistory.busy}
+                loading={locationHistory.loading}
+                onValueChange={handleShareLocationToggle}
+                onStatus={t('guardianShareLocationOnStatus')}
+                warnings={shareLocationWarnings}
+                error={shareLocationError}
+              />
+            </View>
+          }
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>
+                {item.trigger_type === 'journey_overdue'
+                  ? t('missedCheckinTypeLabel')
+                  : t('sosAlertTypeLabel')}
+              </Text>
+              <View style={styles.cardNameRow}>
+                <Avatar name={item.full_name} url={item.avatar_url} size={40} />
+                <View style={styles.cardNameText}>
+                  <Text style={styles.cardName}>{item.full_name}</Text>
+                  <Text style={styles.cardTime}>{relativeTime(item.created_at, now, t)}</Text>
+                </View>
+              </View>
+
+              {item.last_lat != null && item.last_lng != null ? (
+                <Pressable
+                  onPress={() =>
+                    Linking.openURL(
+                      `https://www.google.com/maps?q=${item.last_lat},${item.last_lng}`
+                    )
+                  }
+                >
+                  <Text style={styles.link}>{t('viewLastKnownLocationLink')}</Text>
+                </Pressable>
+              ) : (
+                <Text style={styles.noLocation}>{t('noLocationAvailableYet')}</Text>
+              )}
+
+              <Pressable
+                style={[styles.resolveButton, resolvingId === item.id && styles.buttonDisabled]}
+                onPress={() => handleResolve(item.id)}
+                disabled={resolvingId === item.id}
+              >
+                {resolvingId === item.id ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.resolveButtonText}>{t('markResolvedButton')}</Text>
+                )}
+              </Pressable>
+            </View>
+          )}
+        />
+      </View>
+    </Screen>
   );
 }
 
@@ -492,31 +583,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
     overflow: 'hidden',
-  },
-  listContent: {
-    padding: 20,
-    gap: 12,
-  },
-  roleBadge: {
-    alignSelf: 'flex-start',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  loadingIndicator: {
-    marginTop: 12,
-  },
-  emptyState: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#666',
   },
   card: {
     borderWidth: 2,

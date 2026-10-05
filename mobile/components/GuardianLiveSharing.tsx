@@ -1,18 +1,23 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, View } from 'react-native';
 
 import Avatar from '@/components/ui/Avatar';
+import Card from '@/components/ui/Card';
+import IconTile from '@/components/ui/IconTile';
+import Text from '@/components/ui/Text';
 import { useLanguage } from '@/lib/language-context';
 import { supabase } from '@/lib/supabase';
 import { useGuardianLinkRevoked } from '@/lib/use-guardian-link-revoked';
 import type { TranslationKey } from '@/lib/translations';
+import { useTheme } from '@/theme';
 
 // The guardian-side view of a linked person's consent-based live location
-// sharing. Only ever renders a card while that person's session is
-// active — the card is removed the instant they toggle off (Realtime
-// UPDATE), so a guardian never sees a stale marker without it being
-// labelled as the current position.
+// sharing. A person's card only shows while their session is active — it
+// is removed the instant they toggle off (Realtime UPDATE), so a guardian
+// never sees a stale marker without it being labelled as the current
+// position. With nobody sharing, the section says so rather than
+// disappearing.
 //
 // Self-contained data lifecycle (initial fetch + its own Realtime
 // channel), like the web dashboard's <ActiveAlerts />. Rendered inside the
@@ -31,6 +36,18 @@ import type { TranslationKey } from '@/lib/translations';
 // means the phone has almost certainly lost connectivity or been
 // suspended. The card then stops implying a current position.
 const STALE_AFTER_MS = 3 * 60 * 1000;
+
+const LIVE_ICON = { ios: 'location.fill', android: 'location_on', web: 'location_on' } as const;
+const RETRY_ICON = {
+  ios: 'arrow.clockwise',
+  android: 'refresh',
+  web: 'refresh',
+} as const;
+const NOT_SHARING_ICON = {
+  ios: 'location.slash',
+  android: 'location_off',
+  web: 'location_off',
+} as const;
 
 type LiveShare = {
   sessionId: string;
@@ -59,6 +76,7 @@ type LocationChangeRow = {
 
 export default function GuardianLiveSharing() {
   const { t } = useLanguage();
+  const { colors, radius, spacing } = useTheme();
   // Same reason as app/(guardian)/index.tsx: the Realtime effect below has
   // an empty dep array on purpose and must not re-run on a language
   // change; this ref keeps its closures on the current t().
@@ -68,6 +86,11 @@ export default function GuardianLiveSharing() {
   }, [t]);
 
   const [shares, setShares] = useState<LiveShare[]>([]);
+  // The empty state only shows once a fetch has actually succeeded, so it
+  // never flashes before a running share loads and never stands in for a
+  // failed request. Bumping loadAttempt re-runs the fetch.
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [loadAttempt, setLoadAttempt] = useState(0);
   useGuardianLinkRevoked((userId) =>
     setShares((prev) => prev.filter((share) => share.userId !== userId))
   );
@@ -96,8 +119,13 @@ export default function GuardianLiveSharing() {
         .order('started_at', { ascending: false });
 
       if (cancelled) return;
-      if (!sessions || sessions.length === 0) {
+      if (!sessions) {
+        setLoadStatus('error');
+        return;
+      }
+      if (sessions.length === 0) {
         setShares([]);
+        setLoadStatus('loaded');
         return;
       }
 
@@ -139,10 +167,18 @@ export default function GuardianLiveSharing() {
           };
         })
       );
+      setLoadStatus('loaded');
     }
 
-    loadInitial();
+    void loadInitial();
 
+    return () => {
+      cancelled = true;
+    };
+  }, [loadAttempt]);
+
+  useEffect(() => {
+    let cancelled = false;
     let channel: RealtimeChannel | null = null;
 
     async function setupRealtimeSubscription() {
@@ -236,27 +272,49 @@ export default function GuardianLiveSharing() {
     };
   }, []);
 
-  if (shares.length === 0) return null;
+  if (loadStatus === 'loading' && shares.length === 0) return null;
+
+  const retry = () => {
+    setLoadStatus('loading');
+    setLoadAttempt((n) => n + 1);
+  };
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{t('guardianLiveLocationTitle')}</Text>
+    <View style={{ gap: spacing.sm + 2 }}>
+      <Text variant="title">{t('guardianLiveLocationTitle')}</Text>
+      {loadStatus === 'error' && shares.length === 0 && (
+        <Card
+          onPress={retry}
+          accessibilityLabel={t('guardianLiveLocationLoadError')}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}
+        >
+          <IconTile icon={RETRY_ICON} tone="warning" size={40} />
+          <Text variant="bodySm" color="textSecondary" style={{ flex: 1 }}>
+            {t('guardianLiveLocationLoadError')}
+          </Text>
+        </Card>
+      )}
+      {loadStatus === 'loaded' && shares.length === 0 && (
+        <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <IconTile icon={NOT_SHARING_ICON} size={40} />
+          <Text variant="bodySm" color="textSecondary" style={{ flex: 1 }}>
+            {t('guardianLiveLocationEmpty')}
+          </Text>
+        </Card>
+      )}
       {shares.map((share) => {
         const stale =
           share.recordedAt != null && now - new Date(share.recordedAt).getTime() > STALE_AFTER_MS;
 
         return (
-          <View key={share.sessionId} style={[styles.card, stale && styles.cardStale]}>
-            <View style={[styles.badge, stale && styles.badgeStale]}>
-              <Text style={styles.badgeText}>
-                {stale ? t('guardianLiveLocationStaleBadge') : t('guardianLiveLocationBadge')}
-              </Text>
-            </View>
-            <View style={styles.nameRow}>
+          <Card key={share.sessionId} style={{ gap: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
               <Avatar name={share.fullName} url={share.avatarUrl} size={40} />
-              <View style={styles.nameText}>
-                <Text style={styles.name}>{share.fullName}</Text>
-                <Text style={[styles.status, stale && styles.statusStale]}>
+              <View style={{ flex: 1, gap: spacing.xxs }}>
+                <Text variant="body" weight="semibold">
+                  {share.fullName}
+                </Text>
+                <Text variant="caption" color={stale ? 'dangerText' : 'textMuted'}>
                   {!share.recordedAt
                     ? t('guardianLiveLocationWaiting')
                     : stale
@@ -268,6 +326,18 @@ export default function GuardianLiveSharing() {
                         })}
                 </Text>
               </View>
+              <View
+                style={{
+                  paddingVertical: spacing.xxs,
+                  paddingHorizontal: spacing.sm,
+                  borderRadius: radius.pill,
+                  backgroundColor: stale ? colors.warningSoft : colors.successSoft,
+                }}
+              >
+                <Text variant="micro" color={stale ? 'onWarningSoft' : 'onSuccessSoft'}>
+                  {stale ? t('guardianLiveLocationStaleBadge') : t('guardianLiveLocationBadge')}
+                </Text>
+              </View>
             </View>
 
             {share.lat != null && share.lng != null && (
@@ -275,11 +345,16 @@ export default function GuardianLiveSharing() {
                 onPress={() =>
                   Linking.openURL(`https://www.google.com/maps?q=${share.lat},${share.lng}`)
                 }
+                accessibilityRole="link"
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
               >
-                <Text style={styles.link}>{t('viewOnMapLink')}</Text>
+                <IconTile icon={LIVE_ICON} tone="primarySoft" size={32} />
+                <Text variant="label" color="primary">
+                  {t('viewOnMapLink')}
+                </Text>
               </Pressable>
             )}
-          </View>
+          </Card>
         );
       })}
     </View>
@@ -298,68 +373,3 @@ function relativeTime(
   const hours = Math.floor(minutes / 60);
   return t('hoursAgo', { n: hours });
 }
-
-const styles = StyleSheet.create({
-  section: {
-    gap: 10,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  card: {
-    borderWidth: 2,
-    borderColor: '#1a7f37',
-    backgroundColor: '#e6f4ea',
-    borderRadius: 10,
-    padding: 16,
-    gap: 8,
-  },
-  cardStale: {
-    borderColor: '#b8860b',
-    backgroundColor: '#fff4e5',
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#1a7f37',
-    borderRadius: 6,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-  },
-  badgeStale: {
-    backgroundColor: '#b8860b',
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  nameText: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  status: {
-    fontSize: 13,
-    color: '#3a6a47',
-  },
-  statusStale: {
-    color: '#7a4a00',
-    fontWeight: '600',
-  },
-  link: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2f95dc',
-  },
-});

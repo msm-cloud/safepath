@@ -171,6 +171,20 @@ export const translations = {
 
   // --- Home ---
   homeTitle: { en: 'Home', bn: 'হোম' },
+  homeGreetingMorning: { en: 'Good morning', bn: 'শুভ সকাল' },
+  homeGreetingAfternoon: { en: 'Good afternoon', bn: 'শুভ অপরাহ্ন' },
+  homeGreetingEvening: { en: 'Good evening', bn: 'শুভ সন্ধ্যা' },
+  homeAddGuardian: { en: 'Add a guardian', bn: 'অভিভাবক যোগ করুন' },
+  homeGuardianCountOne: { en: '1 guardian', bn: '১ জন অভিভাবক' },
+  homeGuardianCountOther: { en: '{n} guardians', bn: '{n} জন অভিভাবক' },
+  homeSosShortcutLabel: { en: 'Open the SOS screen', bn: 'SOS স্ক্রিন খুলুন' },
+  homeSosShortcutHint: {
+    en: 'Hold the button there to send an alert.',
+    bn: 'সতর্কবার্তা পাঠাতে সেখানে বোতামটি চেপে ধরুন।',
+  },
+  homeSosShortcutCaption: { en: 'Open SOS', bn: 'SOS খুলুন' },
+  homeStatusOnline: { en: 'Online', bn: 'অনলাইন' },
+  homeStatusOffline: { en: 'Offline', bn: 'অফলাইন' },
 
   // --- Journeys (Home screen) ---
   startJourneyTitle: { en: 'Start a Journey', bn: 'যাত্রা শুরু করুন' },
@@ -180,6 +194,7 @@ export const translations = {
   },
   journeyDurationLabel: { en: 'Expected in', bn: 'প্রত্যাশিত সময়' },
   journeyDurationMinutesOption: { en: '{n} min', bn: '{n} মিনিট' },
+  journeyDestinationNoteLabel: { en: 'Destination', bn: 'গন্তব্য' },
   destinationNotePlaceholder: {
     en: 'Where are you headed? (optional)',
     bn: 'আপনি কোথায় যাচ্ছেন? (ঐচ্ছিক)',
@@ -687,6 +702,9 @@ export const translations = {
   // --- Guardian experience ---
   unnamedUser: { en: 'Unnamed user', bn: 'নামহীন ব্যবহারকারী' },
   guardianActiveAlertsTitle: { en: 'Active Alerts', bn: 'সক্রিয় অ্যালার্ট' },
+  guardianHomeEyebrow: { en: 'Guardian', bn: 'অভিভাবক' },
+  guardianHomeTitle: { en: 'Your family', bn: 'আপনার পরিবার' },
+  guardianHomeInviteButton: { en: 'Invite', bn: 'আমন্ত্রণ' },
   tapToSilenceAlarmHint: {
     en: 'Tap anywhere to silence — the alert stays until marked resolved',
     bn: 'নিঃশব্দ করতে যেকোনো জায়গায় ট্যাপ করুন — সমাধান হিসেবে চিহ্নিত না করা পর্যন্ত অ্যালার্ট থাকবে',
@@ -705,6 +723,14 @@ export const translations = {
   // disappears the moment they stop (Realtime), so a guardian never sees a
   // stale position without it being labelled current.
   guardianLiveLocationTitle: { en: 'Live location', bn: 'লাইভ লোকেশন' },
+  guardianLiveLocationLoadError: {
+    en: "Couldn't load live locations. Tap to retry.",
+    bn: 'লাইভ লোকেশন লোড করা যায়নি। আবার চেষ্টা করতে ট্যাপ করুন।',
+  },
+  guardianLiveLocationEmpty: {
+    en: 'No one is sharing their live location right now.',
+    bn: 'এই মুহূর্তে কেউ লাইভ লোকেশন শেয়ার করছেন না।',
+  },
   guardianLiveLocationBadge: { en: 'SHARING LIVE', bn: 'লাইভ শেয়ারিং' },
   guardianLiveLocationWaiting: {
     en: 'Waiting for the first location…',

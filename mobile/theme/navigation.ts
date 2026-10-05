@@ -1,6 +1,6 @@
 import { DarkTheme, DefaultTheme, type Theme } from 'expo-router';
 
-import { colors, type ColorScheme } from './colors';
+import { colors, type ColorScheme, type ThemeColors } from './colors';
 import { fontFamily, type Script } from './typography';
 
 // React Navigation draws headers, tab bars and the screen behind each route
@@ -34,5 +34,15 @@ export function navigationTheme(scheme: ColorScheme, script: Script): Theme {
       bold: font('bold'),
       heavy: font('bold'),
     },
+  };
+}
+
+// Shared by both tab groups: the bar is a surface with a hairline on top,
+// the active tab in the primary colour, as on the Home boards.
+export function tabBarScreenOptions(c: ThemeColors) {
+  return {
+    tabBarActiveTintColor: c.primary,
+    tabBarInactiveTintColor: c.textMuted,
+    tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border },
   };
 }

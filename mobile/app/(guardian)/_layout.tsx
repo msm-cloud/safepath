@@ -2,17 +2,17 @@ import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
 import { useEffect } from 'react';
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useLanguage } from '@/lib/language-context';
+import { useTheme } from '@/theme';
+import { tabBarScreenOptions } from '@/theme/navigation';
 import { stopLiveSharingOnDevice } from '@/lib/live-sharing';
 
 // The guardian counterpart to app/(tabs)/_layout.tsx — a parallel tab
 // group, routed to instead of (tabs) when profile.role === 'guardian' (see
 // app/_layout.tsx). Does not touch or reuse any of the student screens.
 export default function GuardianTabLayout() {
-  const colorScheme = useColorScheme();
+  const { colors } = useTheme();
   const { t } = useLanguage();
 
   // Guardians never live-share, and useLiveSharing's reconcile (the only
@@ -27,7 +27,7 @@ export default function GuardianTabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme].tint,
+        ...tabBarScreenOptions(colors),
         // Disable the static render of the header on web
         // to prevent a hydration error in React Navigation.
         headerShown: useClientOnlyValue(false, true),
@@ -37,6 +37,8 @@ export default function GuardianTabLayout() {
         name="index"
         options={{
           title: t('guardianActiveAlertsTitle'),
+          // Home draws its own greeting header, as on the boards.
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'exclamationmark.triangle.fill', android: 'warning', web: 'warning' }}

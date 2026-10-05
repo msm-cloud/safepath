@@ -1,53 +1,42 @@
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Linking,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  Vibration,
-  View,
-} from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Linking, type ScrollView, type TextInput, View } from 'react-native';
 
-import Avatar from '@/components/ui/Avatar';
+import FakeCallFlow from '@/components/FakeCallFlow';
+import HomeHeader from '@/components/HomeHeader';
+import JourneyCard from '@/components/JourneyCard';
+import LocationToggleCard, { type LocationToggleNotice } from '@/components/LocationToggleCard';
 import OnboardingScreen from '@/components/OnboardingScreen';
+import SosShortcut from '@/components/SosShortcut';
+import ActionTile from '@/components/ui/ActionTile';
 import PhoneNotSavedNotice from '@/components/ui/PhoneNotSavedNotice';
-import RoleBadge from '@/components/ui/RoleBadge';
+import Screen from '@/components/ui/Screen';
 import SettingsLoadNotice from '@/components/ui/SettingsLoadNotice';
+import Text from '@/components/ui/Text';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { getBestEffortLocation } from '@/lib/location';
+import { isOnline } from '@/lib/network';
 import { cancelScheduledNotification, scheduleArrivalCheckNotification } from '@/lib/notifications';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
-import { useKeyboardHeight } from '@/lib/use-keyboard-height';
+import { useAcceptedGuardians } from '@/lib/use-accepted-guardians';
 import { useLiveSharing } from '@/lib/use-live-sharing';
 import { useLocationHistory } from '@/lib/use-location-history';
 import { usePendingOnboarding } from '@/lib/use-pending-onboarding';
 import { useUserSettings } from '@/lib/user-settings-context';
+import { useTheme } from '@/theme';
 
 const DURATION_OPTIONS_MINUTES = [15, 30, 45, 60];
 const EXTEND_MINUTES = 15;
 
-// Fake call escape — delay options (seconds) shown when "Fake Call" is
-// tapped, plus the repeating vibration pattern ([wait, buzz, pause] in ms)
-// used for the ringing. This replaced a setInterval + Haptics.
-// notificationAsync loop — see the identical fix and rationale in
-// app/(guardian)/index.tsx's ALARM_VIBRATION_PATTERN comment: RN suspends
-// JS timers once the Activity leaves the foreground, so a locked/backgrounded
-// phone would silently stop "ringing". Vibration.vibrate(pattern, true)
-// loops natively via the OS vibrator service instead.
-const FAKE_CALL_DELAY_OPTIONS_SECONDS = [0, 10, 30];
-const FAKE_CALL_RING_VIBRATION_PATTERN = [0, 500, 300];
-
-type FakeCallState = 'idle' | 'ringing' | 'in_call';
+const ICONS = {
+  police: { ios: 'shield.lefthalf.filled', android: 'local_police', web: 'local_police' },
+  hospital: { ios: 'cross.case.fill', android: 'local_hospital', web: 'local_hospital' },
+  fakeCall: { ios: 'phone.fill', android: 'call', web: 'call' },
+  liveSharing: { ios: 'location.fill', android: 'location_on', web: 'location_on' },
+  locationHistory: { ios: 'clock.arrow.circlepath', android: 'history', web: 'history' },
+} as const;
 
 type JourneyStatus = 'active' | 'arrived_safe' | 'alert_triggered' | 'cancelled';
 
@@ -60,15 +49,11 @@ type Journey = {
 };
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { session } = useAuth();
   const { t } = useLanguage();
-  const {
-    loaded: settingsLoaded,
-    fakeCallEnabled,
-    fakeCallCallerName,
-    fullName,
-    avatarPath,
-  } = useUserSettings();
+  const { colors, spacing } = useTheme();
+  const { loaded: settingsLoaded, fakeCallEnabled, fullName, avatarPath } = useUserSettings();
   const userId = session?.user.id;
   const {
     checking: checkingOnboarding,
@@ -78,6 +63,7 @@ export default function HomeScreen() {
 
   const liveSharing = useLiveSharing();
   const locationHistory = useLocationHistory();
+  const { guardians, loaded: guardiansLoaded } = useAcceptedGuardians(userId);
 
   const [journey, setJourney] = useState<Journey | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,6 +75,8 @@ export default function HomeScreen() {
   // `journey` is actually loaded (an async fetch) the effect below has
   // already run and set a real value, so there's no visible flash.
   const [now, setNow] = useState(0);
+  // null until the first check, so the status line never flashes "offline".
+  const [online, setOnline] = useState<boolean | null>(null);
 
   const [selectedDuration, setSelectedDuration] = useState(30);
   const [destinationNote, setDestinationNote] = useState('');
@@ -97,7 +85,6 @@ export default function HomeScreen() {
 
   const scrollViewRef = useRef<ScrollView>(null);
   const destinationNoteInputRef = useRef<TextInput>(null);
-  const keyboardHeight = useKeyboardHeight();
 
   const [actionPending, setActionPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -110,71 +97,7 @@ export default function HomeScreen() {
   // cron job, which doesn't depend on this at all.
   const [notificationId, setNotificationId] = useState<string | null>(null);
 
-  // --- Fake call escape ---
-  const [showDelayPicker, setShowDelayPicker] = useState(false);
-  const [fakeCallState, setFakeCallState] = useState<FakeCallState>('idle');
-  const [callElapsedSeconds, setCallElapsedSeconds] = useState(0);
-  const ringTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const stopRingHaptics = useCallback(() => {
-    Vibration.cancel();
-  }, []);
-
-  // Clears every pending timer on unmount — the delay picker's setTimeout,
-  // the ringing vibration loop, and the in-call elapsed-time ticker are
-  // otherwise all capable of outliving the component.
-  useEffect(() => {
-    return () => {
-      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current);
-      stopRingHaptics();
-      if (callTimerRef.current) clearInterval(callTimerRef.current);
-    };
-  }, [stopRingHaptics]);
-
-  const startRinging = useCallback(() => {
-    setFakeCallState('ringing');
-    // Hands one repeating pattern to the OS vibrator service, which loops
-    // it natively — approximates a ringtone's repeated buzz using only
-    // what's already available (no audio library in this environment; see
-    // Settings toggle hint / PR notes for why a synthesized tone was
-    // skipped rather than pulled in as a new dep), and keeps ringing even
-    // if the app is backgrounded while the delay/ringing is in progress.
-    Vibration.vibrate(FAKE_CALL_RING_VIBRATION_PATTERN, true);
-  }, []);
-
-  const handleFakeCallDelaySelected = (delaySeconds: number) => {
-    setShowDelayPicker(false);
-    if (delaySeconds === 0) {
-      startRinging();
-      return;
-    }
-    // The delay is the whole point — organic-looking, not an obvious
-    // instant response to the person's own tap.
-    ringTimeoutRef.current = setTimeout(startRinging, delaySeconds * 1000);
-  };
-
-  const handleAcceptFakeCall = () => {
-    stopRingHaptics();
-    setCallElapsedSeconds(0);
-    setFakeCallState('in_call');
-    callTimerRef.current = setInterval(() => {
-      setCallElapsedSeconds((prev) => prev + 1);
-    }, 1000);
-  };
-
-  const handleDeclineFakeCall = () => {
-    stopRingHaptics();
-    setFakeCallState('idle');
-  };
-
-  const handleEndFakeCall = () => {
-    if (callTimerRef.current) {
-      clearInterval(callTimerRef.current);
-      callTimerRef.current = null;
-    }
-    setFakeCallState('idle');
-  };
+  const [showFakeCallPicker, setShowFakeCallPicker] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -184,6 +107,18 @@ export default function HomeScreen() {
       setNow(Date.now());
       const id = setInterval(() => setNow(Date.now()), 30000);
       return () => clearInterval(id);
+    }, [])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void isOnline().then((result) => {
+        if (!cancelled) setOnline(result);
+      });
+      return () => {
+        cancelled = true;
+      };
     }, [])
   );
 
@@ -352,606 +287,170 @@ export default function HomeScreen() {
     return <OnboardingScreen role="user" onFinish={dismissOnboarding} />;
   }
 
+  const liveSharingWarnings: LocationToggleNotice[] = [];
+  if (liveSharing.isSharing && liveSharing.mode === 'foreground') {
+    liveSharingWarnings.push({ message: t('liveSharingForegroundWarning'), openSettings: true });
+  }
+  if (liveSharing.error === 'permission-denied') {
+    liveSharingWarnings.push({ message: t('liveSharingPermissionDenied'), openSettings: true });
+  }
+  if (liveSharing.error === 'already-sharing-elsewhere') {
+    liveSharingWarnings.push({ message: t('liveSharingAlreadyElsewhere') });
+  }
+  const liveSharingError =
+    liveSharing.error === 'start-failed'
+      ? t('liveSharingStartError')
+      : liveSharing.error === 'stop-failed'
+        ? t('liveSharingStopError')
+        : null;
+
+  const locationHistoryWarnings: LocationToggleNotice[] = [];
+  if (locationHistory.enabled && locationHistory.mode === 'foreground') {
+    locationHistoryWarnings.push({
+      message: t('locationHistoryForegroundWarning'),
+      openSettings: true,
+    });
+  }
+  if (locationHistory.error === 'permission-denied') {
+    locationHistoryWarnings.push({
+      message: t('locationHistoryPermissionDenied'),
+      openSettings: true,
+    });
+  }
+  const locationHistoryError =
+    locationHistory.error === 'start-failed'
+      ? t('locationHistoryStartError')
+      : locationHistory.error === 'stop-failed'
+        ? t('locationHistoryStopError')
+        : locationHistory.error === 'save-failed'
+          ? t('locationHistorySaveError')
+          : null;
+
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      // See components/SettingsScreen.tsx's comment for the full
-      // investigation: on Android, KeyboardAvoidingView unconditionally
-      // triggers LayoutAnimation on every keyboard show/hide event
-      // regardless of `behavior`, which can knock a focused TextInput out
-      // of focus and cause a show/hide loop. enabled={false} on Android
-      // doesn't change this component's rendered output there at all, so
-      // this is safe everywhere it's used.
-      enabled={Platform.OS === 'ios'}
-    >
-      <ScrollView
-        ref={scrollViewRef}
-        contentContainerStyle={[styles.container, { paddingBottom: keyboardHeight }]}
-      >
-        <RoleBadge style={styles.roleBadge} />
-        <View style={styles.headerRow}>
-          <Avatar name={fullName} url={avatarPath} size={36} />
-          <Text style={styles.title}>{t('homeTitle')}</Text>
-        </View>
-        <PhoneNotSavedNotice />
-        <SettingsLoadNotice />
+    <Screen edges={['top']} scrollRef={scrollViewRef} contentStyle={{ gap: spacing.lg }}>
+      <HomeHeader
+        fullName={fullName}
+        avatarPath={avatarPath}
+        now={now}
+        guardians={guardians}
+        guardiansLoaded={guardiansLoaded}
+        onGuardiansPress={() => router.navigate('/contacts')}
+      />
+      <PhoneNotSavedNotice />
+      <SettingsLoadNotice />
 
-        {loading ? (
-          <ActivityIndicator style={styles.loadingIndicator} />
-        ) : (
-          <View style={styles.journeySection}>
-            {journey?.status === 'alert_triggered' && (
-              <View style={styles.overdueBanner}>
-                <Text style={styles.overdueBannerText}>{t('journeyAlertTriggeredBanner')}</Text>
-              </View>
-            )}
-
-            {journey?.status === 'active' ? (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>{t('journeyActiveLabel')}</Text>
-                {journey.destination_note && (
-                  <Text style={styles.cardSubtitle}>
-                    {t('journeyDestinationLabel', { note: journey.destination_note })}
-                  </Text>
-                )}
-                <Text style={styles.cardSubtitle}>
-                  {minutesUntil >= 0
-                    ? t('journeyTimeRemaining', { n: minutesUntil })
-                    : t('journeyOverdueByMinutes', { n: Math.abs(minutesUntil) })}
-                </Text>
-
-                {actionError && <Text style={styles.error}>{actionError}</Text>}
-
-                <Pressable
-                  style={[styles.button, actionPending && styles.buttonDisabled]}
-                  onPress={handleArrivedSafely}
-                  disabled={actionPending}
-                >
-                  <Text style={styles.buttonText}>{t('arrivedSafelyButton')}</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.buttonSecondary, actionPending && styles.buttonDisabled]}
-                  onPress={handleAddTime}
-                  disabled={actionPending}
-                >
-                  <Text style={styles.buttonSecondaryText}>{t('addFifteenMinutesButton')}</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>{t('startJourneyTitle')}</Text>
-                <Text style={styles.cardSubtitle}>{t('startJourneySubtitle')}</Text>
-
-                <Text style={styles.fieldLabel}>{t('journeyDurationLabel')}</Text>
-                <View style={styles.durationRow}>
-                  {DURATION_OPTIONS_MINUTES.map((minutes) => (
-                    <Pressable
-                      key={minutes}
-                      style={[
-                        styles.durationOption,
-                        selectedDuration === minutes && styles.durationOptionActive,
-                      ]}
-                      onPress={() => setSelectedDuration(minutes)}
-                    >
-                      <Text
-                        style={[
-                          styles.durationOptionText,
-                          selectedDuration === minutes && styles.durationOptionTextActive,
-                        ]}
-                      >
-                        {t('journeyDurationMinutesOption', { n: minutes })}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-
-                <TextInput
-                  ref={destinationNoteInputRef}
-                  style={styles.input}
-                  placeholder={t('destinationNotePlaceholder')}
-                  value={destinationNote}
-                  onChangeText={setDestinationNote}
-                  onFocus={() =>
-                    scrollInputIntoView(scrollViewRef.current, destinationNoteInputRef)
-                  }
-                />
-
-                {createError && <Text style={styles.error}>{createError}</Text>}
-
-                <Pressable
-                  style={[styles.button, starting && styles.buttonDisabled]}
-                  onPress={handleStart}
-                  disabled={starting}
-                >
-                  {starting ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.buttonText}>{t('startJourneyButton')}</Text>
-                  )}
-                </Pressable>
-              </View>
-            )}
+      <View style={{ alignItems: 'center', gap: spacing.sm + 2, paddingVertical: spacing.xs }}>
+        <SosShortcut onPress={() => router.navigate('/sos')} />
+        {online !== null && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <View
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: online ? colors.info : colors.textMuted,
+              }}
+            />
+            <Text variant="caption" color="textSecondary">
+              {online ? t('homeStatusOnline') : t('homeStatusOffline')}
+            </Text>
           </View>
         )}
+      </View>
 
-        {/* Live location sharing — consent-based, always visible while on.
-            The DB session (via useLiveSharing) is the source of truth, so
-            this reflects reality after an app kill/reopen or a stop from
-            another device, not just this screen's local state. */}
-        <View style={styles.liveSharingCard}>
-          <View style={styles.liveSharingHeader}>
-            <View style={styles.liveSharingHeaderText}>
-              <Text style={styles.cardTitle}>{t('liveSharingTitle')}</Text>
-              <Text style={styles.cardSubtitle}>{t('liveSharingSubtitle')}</Text>
-            </View>
-            {liveSharing.busy ? (
-              <ActivityIndicator />
-            ) : (
-              <Switch
-                value={liveSharing.isSharing}
-                onValueChange={handleLiveSharingToggle}
-                disabled={liveSharing.loading}
-              />
-            )}
-          </View>
+      {loading ? (
+        <ActivityIndicator color={colors.primary} />
+      ) : (
+        <JourneyCard
+          journey={
+            journey ? { destinationNote: journey.destination_note, status: journey.status } : null
+          }
+          minutesUntil={minutesUntil}
+          durationOptions={DURATION_OPTIONS_MINUTES}
+          selectedDuration={selectedDuration}
+          onSelectDuration={setSelectedDuration}
+          destinationNote={destinationNote}
+          onChangeDestinationNote={setDestinationNote}
+          destinationNoteRef={destinationNoteInputRef}
+          onDestinationNoteFocus={() =>
+            scrollInputIntoView(scrollViewRef.current, destinationNoteInputRef)
+          }
+          starting={starting}
+          createError={createError}
+          onStart={handleStart}
+          actionPending={actionPending}
+          actionError={actionError}
+          onArrivedSafely={handleArrivedSafely}
+          onAddTime={handleAddTime}
+        />
+      )}
 
-          {liveSharing.isSharing && (
-            <View style={styles.liveSharingOnBanner}>
-              <Text style={styles.liveSharingOnBannerText}>{t('liveSharingOnStatus')}</Text>
-            </View>
-          )}
-
-          {liveSharing.isSharing && liveSharing.mode === 'foreground' && (
-            <Pressable style={styles.liveSharingWarnBanner} onPress={() => Linking.openSettings()}>
-              <Text style={styles.liveSharingWarnBannerText}>
-                {t('liveSharingForegroundWarning')}
-              </Text>
-            </Pressable>
-          )}
-
-          {liveSharing.error === 'permission-denied' && (
-            <View style={styles.liveSharingWarnBanner}>
-              <Text style={styles.liveSharingWarnBannerText}>
-                {t('liveSharingPermissionDenied')}
-              </Text>
-              <Pressable onPress={() => Linking.openSettings()}>
-                <Text style={styles.liveSharingSettingsLink}>{t('openSettings')}</Text>
-              </Pressable>
-            </View>
-          )}
-
-          {liveSharing.error === 'already-sharing-elsewhere' && (
-            <View style={styles.liveSharingWarnBanner}>
-              <Text style={styles.liveSharingWarnBannerText}>
-                {t('liveSharingAlreadyElsewhere')}
-              </Text>
-            </View>
-          )}
-
-          {liveSharing.error === 'start-failed' && (
-            <Text style={styles.error}>{t('liveSharingStartError')}</Text>
-          )}
-          {liveSharing.error === 'stop-failed' && (
-            <Text style={styles.error}>{t('liveSharingStopError')}</Text>
-          )}
+      <View style={{ gap: spacing.sm + 2 }}>
+        <View style={{ flexDirection: 'row', gap: spacing.sm + 2 }}>
+          <ActionTile
+            icon={ICONS.police}
+            label={t('nearestPoliceButton')}
+            onPress={() => openNearbySearch('police station')}
+          />
+          <ActionTile
+            icon={ICONS.hospital}
+            label={t('nearestHospitalButton')}
+            onPress={() => openNearbySearch('hospital')}
+          />
         </View>
-
-        {/* Location history recording — independent of live sharing above.
-            The DB flag (via useLocationHistory) is the source of truth, and
-            an Android foreground-service notification runs the whole time
-            it's on, so this is never covert. */}
-        <View style={styles.liveSharingCard}>
-          <View style={styles.liveSharingHeader}>
-            <View style={styles.liveSharingHeaderText}>
-              <Text style={styles.cardTitle}>{t('locationHistoryTitle')}</Text>
-              <Text style={styles.cardSubtitle}>{t('locationHistorySubtitle')}</Text>
-            </View>
-            {locationHistory.busy ? (
-              <ActivityIndicator />
-            ) : (
-              <Switch
-                value={locationHistory.enabled}
-                onValueChange={handleLocationHistoryToggle}
-                disabled={locationHistory.loading}
-              />
-            )}
-          </View>
-
-          {locationHistory.enabled && (
-            <View style={styles.liveSharingOnBanner}>
-              <Text style={styles.liveSharingOnBannerText}>{t('locationHistoryOnStatus')}</Text>
-            </View>
-          )}
-
-          {locationHistory.enabled && locationHistory.mode === 'foreground' && (
-            <Pressable style={styles.liveSharingWarnBanner} onPress={() => Linking.openSettings()}>
-              <Text style={styles.liveSharingWarnBannerText}>
-                {t('locationHistoryForegroundWarning')}
-              </Text>
-            </Pressable>
-          )}
-
-          {locationHistory.error === 'permission-denied' && (
-            <View style={styles.liveSharingWarnBanner}>
-              <Text style={styles.liveSharingWarnBannerText}>
-                {t('locationHistoryPermissionDenied')}
-              </Text>
-              <Pressable onPress={() => Linking.openSettings()}>
-                <Text style={styles.liveSharingSettingsLink}>{t('openSettings')}</Text>
-              </Pressable>
-            </View>
-          )}
-
-          {locationHistory.error === 'start-failed' && (
-            <Text style={styles.error}>{t('locationHistoryStartError')}</Text>
-          )}
-          {locationHistory.error === 'stop-failed' && (
-            <Text style={styles.error}>{t('locationHistoryStopError')}</Text>
-          )}
-          {locationHistory.error === 'save-failed' && (
-            <Text style={styles.error}>{t('locationHistorySaveError')}</Text>
-          )}
-        </View>
-
-        <View style={styles.nearbySection}>
-          <Pressable style={styles.nearbyButton} onPress={() => openNearbySearch('police station')}>
-            <Text style={styles.nearbyButtonText}>{t('nearestPoliceButton')}</Text>
-          </Pressable>
-          <Pressable style={styles.nearbyButton} onPress={() => openNearbySearch('hospital')}>
-            <Text style={styles.nearbyButtonText}>{t('nearestHospitalButton')}</Text>
-          </Pressable>
-          {/* Entirely absent from the tree when off, not just disabled —
+        {/* Entirely absent from the tree when off, not just disabled —
             per Settings, someone who doesn't want this feature shouldn't
             even see the button. */}
-          {settingsLoaded && fakeCallEnabled && (
-            <Pressable style={styles.nearbyButton} onPress={() => setShowDelayPicker(true)}>
-              <Text style={styles.nearbyButtonText}>{t('fakeCallButton')}</Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* Delay picker — a small modal, not a full-screen overlay; the
-          full-screen treatment is reserved for the ringing/in-call states
-          below, which need to look convincing. */}
-        <Modal
-          visible={showDelayPicker}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowDelayPicker(false)}
-        >
-          <Pressable style={styles.modalBackdrop} onPress={() => setShowDelayPicker(false)}>
-            <View style={styles.delayPickerCard}>
-              <Text style={styles.delayPickerTitle}>{t('fakeCallDelayPickerTitle')}</Text>
-              {FAKE_CALL_DELAY_OPTIONS_SECONDS.map((seconds) => (
-                <Pressable
-                  key={seconds}
-                  style={styles.delayOption}
-                  onPress={() => handleFakeCallDelaySelected(seconds)}
-                >
-                  <Text style={styles.delayOptionText}>
-                    {seconds === 0
-                      ? t('fakeCallDelayNow')
-                      : t('fakeCallDelaySeconds', { n: seconds })}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </Pressable>
-        </Modal>
-
-        {/* Fake incoming call — full-screen, mimics a real call screen. */}
-        <Modal visible={fakeCallState === 'ringing'} animationType="fade">
-          <View style={styles.fakeCallScreen}>
-            <Text style={styles.fakeCallStatusLabel}>{t('fakeCallIncomingLabel')}</Text>
-            <Text style={styles.fakeCallerName}>
-              {fakeCallCallerName || t('fakeCallDefaultCallerName')}
-            </Text>
-            <View style={styles.fakeCallActionsRow}>
-              <Pressable
-                style={[styles.fakeCallActionButton, styles.fakeCallDeclineButton]}
-                onPress={handleDeclineFakeCall}
-              >
-                <Text style={styles.fakeCallActionButtonText}>{t('fakeCallDeclineButton')}</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.fakeCallActionButton, styles.fakeCallAcceptButton]}
-                onPress={handleAcceptFakeCall}
-              >
-                <Text style={styles.fakeCallActionButtonText}>{t('fakeCallAcceptButton')}</Text>
-              </Pressable>
-            </View>
+        {settingsLoaded && fakeCallEnabled && (
+          <View style={{ flexDirection: 'row', gap: spacing.sm + 2 }}>
+            <ActionTile
+              icon={ICONS.fakeCall}
+              label={t('fakeCallButton')}
+              onPress={() => setShowFakeCallPicker(true)}
+            />
+            <View style={{ flex: 1 }} />
           </View>
-        </Modal>
+        )}
+      </View>
 
-        {/* Fake in-call screen. */}
-        <Modal visible={fakeCallState === 'in_call'} animationType="fade">
-          <View style={styles.fakeCallScreen}>
-            <Text style={styles.fakeCallStatusLabel}>{t('fakeCallInCallLabel')}</Text>
-            <Text style={styles.fakeCallerName}>
-              {fakeCallCallerName || t('fakeCallDefaultCallerName')}
-            </Text>
-            <Text style={styles.fakeCallTimer}>{formatCallDuration(callElapsedSeconds)}</Text>
-            <Pressable
-              style={[
-                styles.fakeCallActionButton,
-                styles.fakeCallDeclineButton,
-                styles.fakeCallEndButtonWrap,
-              ]}
-              onPress={handleEndFakeCall}
-            >
-              <Text style={styles.fakeCallActionButtonText}>{t('fakeCallEndButton')}</Text>
-            </Pressable>
-          </View>
-        </Modal>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      {/* Live location sharing — consent-based, always visible while on.
+          The DB session (via useLiveSharing) is the source of truth, so
+          this reflects reality after an app kill/reopen or a stop from
+          another device, not just this screen's local state. */}
+      <LocationToggleCard
+        title={t('liveSharingTitle')}
+        hint={t('liveSharingSubtitle')}
+        icon={ICONS.liveSharing}
+        value={liveSharing.isSharing}
+        busy={liveSharing.busy}
+        loading={liveSharing.loading}
+        onValueChange={handleLiveSharingToggle}
+        onStatus={t('liveSharingOnStatus')}
+        warnings={liveSharingWarnings}
+        error={liveSharingError}
+      />
+
+      {/* Location history recording — independent of live sharing above.
+          The DB flag (via useLocationHistory) is the source of truth, and
+          an Android foreground-service notification runs the whole time
+          it's on, so this is never covert. */}
+      <LocationToggleCard
+        title={t('locationHistoryTitle')}
+        hint={t('locationHistorySubtitle')}
+        icon={ICONS.locationHistory}
+        value={locationHistory.enabled}
+        busy={locationHistory.busy}
+        loading={locationHistory.loading}
+        onValueChange={handleLocationHistoryToggle}
+        onStatus={t('locationHistoryOnStatus')}
+        warnings={locationHistoryWarnings}
+        error={locationHistoryError}
+      />
+
+      <FakeCallFlow
+        pickerVisible={showFakeCallPicker}
+        onPickerClose={() => setShowFakeCallPicker(false)}
+      />
+    </Screen>
   );
 }
-
-function formatCallDuration(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    padding: 20,
-    gap: 16,
-  },
-  roleBadge: {
-    alignSelf: 'flex-start',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  loadingIndicator: {
-    marginTop: 12,
-  },
-  journeySection: {
-    gap: 12,
-  },
-  overdueBanner: {
-    backgroundColor: '#fdecea',
-    borderRadius: 10,
-    padding: 12,
-  },
-  overdueBannerText: {
-    color: '#a32a1f',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  card: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    padding: 16,
-    gap: 10,
-  },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-  },
-  cardSubtitle: {
-    fontSize: 13,
-    color: '#666',
-  },
-  liveSharingCard: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    padding: 16,
-    gap: 10,
-  },
-  liveSharingHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  liveSharingHeaderText: {
-    flex: 1,
-    gap: 4,
-  },
-  liveSharingOnBanner: {
-    backgroundColor: '#e6f4ea',
-    borderRadius: 10,
-    padding: 12,
-  },
-  liveSharingOnBannerText: {
-    color: '#1a7f37',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  liveSharingWarnBanner: {
-    backgroundColor: '#fff4e5',
-    borderRadius: 10,
-    padding: 12,
-    gap: 6,
-  },
-  liveSharingWarnBannerText: {
-    color: '#7a4a00',
-    fontSize: 13,
-  },
-  liveSharingSettingsLink: {
-    color: '#2f95dc',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#444',
-    marginTop: 4,
-  },
-  durationRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  durationOption: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    alignItems: 'center',
-  },
-  durationOptionActive: {
-    backgroundColor: '#2f95dc',
-    borderColor: '#2f95dc',
-  },
-  durationOptionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#444',
-  },
-  durationOptionTextActive: {
-    color: '#fff',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: '#000',
-    backgroundColor: '#fff',
-  },
-  error: {
-    color: '#d33',
-    fontSize: 13,
-  },
-  button: {
-    backgroundColor: '#2f95dc',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  buttonSecondary: {
-    borderWidth: 1,
-    borderColor: '#2f95dc',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  buttonSecondaryText: {
-    color: '#2f95dc',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  nearbySection: {
-    gap: 8,
-  },
-  nearbyButton: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  nearbyButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  delayPickerCard: {
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    gap: 10,
-  },
-  delayPickerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  delayOption: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  delayOptionText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-  },
-  fakeCallScreen: {
-    flex: 1,
-    backgroundColor: '#1c1c1e',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  fakeCallStatusLabel: {
-    color: '#aaa',
-    fontSize: 14,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  fakeCallerName: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: 'bold',
-  },
-  fakeCallTimer: {
-    color: '#ccc',
-    fontSize: 18,
-    marginTop: 4,
-  },
-  fakeCallActionsRow: {
-    flexDirection: 'row',
-    gap: 24,
-    marginTop: 48,
-  },
-  fakeCallActionButton: {
-    borderRadius: 999,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    minWidth: 130,
-    alignItems: 'center',
-  },
-  fakeCallAcceptButton: {
-    backgroundColor: '#1a7f37',
-  },
-  fakeCallDeclineButton: {
-    backgroundColor: '#d33',
-  },
-  fakeCallEndButtonWrap: {
-    marginTop: 48,
-  },
-  fakeCallActionButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
