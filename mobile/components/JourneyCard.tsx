@@ -148,6 +148,7 @@ function StartJourney({
       <View style={{ gap: spacing.xs + 2 }}>
         <Text variant="label">{t('journeyDurationLabel')}</Text>
         <SegmentedControl
+          fullWidth
           accessibilityLabel={t('journeyDurationLabel')}
           options={durationOptions.map((minutes) => ({
             value: String(minutes),
