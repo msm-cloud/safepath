@@ -1,5 +1,5 @@
 import type { SymbolViewProps } from 'expo-symbols';
-import { ActivityIndicator, Linking, View } from 'react-native';
+import { Linking, View } from 'react-native';
 
 import Banner from '@/components/ui/Banner';
 import Card from '@/components/ui/Card';
@@ -45,7 +45,7 @@ export default function LocationToggleCard({
   error,
 }: LocationToggleCardProps) {
   const { t } = useLanguage();
-  const { colors, spacing } = useTheme();
+  const { spacing } = useTheme();
   const hasFooter = value || warnings.length > 0 || error != null;
 
   return (
@@ -57,15 +57,10 @@ export default function LocationToggleCard({
         iconTone="primarySoft"
         value={value}
         onValueChange={onValueChange}
-        disabled={busy || loading}
+        // Until the saved value is known the switch would read "off", so it
+        // shows the same spinner as a start/stop in flight.
+        busy={busy || loading}
       />
-      {busy && (
-        <ActivityIndicator
-          color={colors.primary}
-          style={{ paddingBottom: spacing.md }}
-          accessibilityLabel={title}
-        />
-      )}
       {hasFooter && (
         <View style={{ gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
           {value && <Banner tone="success" message={onStatus} />}
