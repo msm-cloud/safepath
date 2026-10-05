@@ -20,6 +20,7 @@ import Avatar from '@/components/ui/Avatar';
 import OnboardingScreen from '@/components/OnboardingScreen';
 import PhoneNotSavedNotice from '@/components/ui/PhoneNotSavedNotice';
 import RoleBadge from '@/components/ui/RoleBadge';
+import SettingsLoadNotice from '@/components/ui/SettingsLoadNotice';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { getBestEffortLocation } from '@/lib/location';
@@ -374,6 +375,7 @@ export default function HomeScreen() {
           <Text style={styles.title}>{t('homeTitle')}</Text>
         </View>
         <PhoneNotSavedNotice />
+        <SettingsLoadNotice />
 
         {loading ? (
           <ActivityIndicator style={styles.loadingIndicator} />

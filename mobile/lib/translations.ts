@@ -578,6 +578,19 @@ export const translations = {
     bn: 'আপনি যাকে নিরাপত্তা দিচ্ছেন তিনি SOS অ্যালার্ট পাঠালে, আপনি স্বীকার না করা পর্যন্ত আপনার ফোনে বারবার অ্যালার্ম শব্দ ও কম্পন হতে থাকবে। স্ক্রিনে ফ্ল্যাশ যেকোনো ক্ষেত্রেই দেখাবে।',
   },
   // Shown when a settings change couldn't be saved; the change is undone.
+  settingsLoadRetrying: {
+    en: "Couldn't load your settings. Retrying…",
+    bn: 'আপনার সেটিংস লোড করা যায়নি। আবার চেষ্টা করা হচ্ছে…',
+  },
+  settingsProfileMissing: {
+    en: "Your account isn't set up correctly. Please contact support.",
+    bn: 'আপনার অ্যাকাউন্ট সঠিকভাবে সেট আপ করা হয়নি। অনুগ্রহ করে সাপোর্টের সাথে যোগাযোগ করুন।',
+  },
+  settingsProfileMissingWithEmail: {
+    en: "Your account isn't set up correctly. Please contact support at {email}.",
+    bn: 'আপনার অ্যাকাউন্ট সঠিকভাবে সেট আপ করা হয়নি। অনুগ্রহ করে {email} ঠিকানায় সাপোর্টের সাথে যোগাযোগ করুন।',
+  },
+  emailSupportButton: { en: 'Email support', bn: 'সাপোর্টে ইমেইল করুন' },
   settingSaveFailedTitle: { en: 'Not saved', bn: 'সেভ হয়নি' },
   settingSaveFailedMessage: {
     en: "Couldn't save this setting. Check your internet connection and try again.",
