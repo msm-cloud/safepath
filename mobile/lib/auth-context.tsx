@@ -3,6 +3,7 @@ import { createContext, type ReactNode, useContext, useEffect, useState } from '
 
 import { stopLiveSharing, stopLiveSharingOnDevice } from '@/lib/live-sharing';
 import { resetLocationHistoryOnDevice } from '@/lib/location-history';
+import { clearSosContactsCache } from '@/lib/sos-contacts';
 import { supabase } from '@/lib/supabase';
 
 export type ProfileRole = 'user' | 'guardian';
@@ -106,6 +107,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await resetLocationHistoryOnDevice();
     } catch (err) {
       console.warn('[auth] location-history teardown on sign-out failed:', err);
+    }
+    // The offline SOS copy holds the previous user's contacts and name.
+    try {
+      await clearSosContactsCache();
+    } catch (err) {
+      console.warn('[auth] SOS contacts cache clear on sign-out failed:', err);
     }
     await supabase.auth.signOut();
   };

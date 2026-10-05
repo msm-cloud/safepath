@@ -457,6 +457,11 @@ export const translations = {
     en: 'SMS is not available on this device.',
     bn: 'এই ডিভাইসে এসএমএস উপলব্ধ নেই।',
   },
+  smsComposerFailedMessage: {
+    en: 'Could not open the SMS app to message your emergency contacts.',
+    bn: 'জরুরি যোগাযোগদের বার্তা পাঠাতে এসএমএস অ্যাপ খোলা যায়নি।',
+  },
+  callEmergencyNumber: { en: 'Call {number}', bn: '{number}-এ কল করুন' },
   emergencySmsMessage: {
     en: 'EMERGENCY: I need help. {name} triggered an SOS via SafePath at {time}. Last known location: {location}',
     bn: 'জরুরি: আমার সাহায্য দরকার। {name} {time}-এ সেফপাথের মাধ্যমে SOS চালু করেছে। সর্বশেষ জানা অবস্থান: {location}',

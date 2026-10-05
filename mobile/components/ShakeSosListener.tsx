@@ -4,17 +4,19 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Linking,
   Modal,
   Pressable,
   StyleSheet,
   Text,
 } from 'react-native';
 
+import { EMERGENCY_NUMBER } from '@/constants/Emergency';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { useShakeDetector } from '@/lib/shake-detector';
+import { loadSosContacts } from '@/lib/sos-contacts';
 import { triggerSos as triggerSosShared, type EmergencyContact } from '@/lib/sos-trigger';
-import { supabase } from '@/lib/supabase';
 import { useUserSettings } from '@/lib/user-settings-context';
 
 const COUNTDOWN_SECONDS = 3;
@@ -34,11 +36,11 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 // disabled otherwise, it's genuinely not listening.
 //
 // Calls the exact same lib/sos-trigger.ts function the hold button on
-// app/(tabs)/sos.tsx uses — this component fetches its own
-// emergencyContacts/fullName cache (mirroring what that screen already
-// does) since the two aren't sharing React state, but the actual
-// alert-creation/offline-SMS logic is one shared function, not a second
-// copy of it. Once an alert is created this way, the SOS screen picks it
+// app/(tabs)/sos.tsx uses — this component loads its own copy of the
+// emergency contacts through the same lib/sos-contacts.ts helper (so it
+// also falls back to the on-device cache offline) since the two aren't
+// sharing React state, but the actual alert-creation/offline-SMS logic is
+// one shared function, not a second copy of it. Once an alert is created this way, the SOS screen picks it
 // up automatically next time it's focused via its own existing
 // active-alert resync effect — no extra plumbing needed for that.
 export default function ShakeSosListener() {
@@ -54,22 +56,11 @@ export default function ShakeSosListener() {
     if (!userId) return;
     let cancelled = false;
 
-    supabase
-      .from('emergency_contacts')
-      .select('id, name, phone')
-      .eq('user_id', userId)
-      .then(({ data }) => {
-        if (!cancelled) setEmergencyContacts(data ?? []);
-      });
-
-    supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', userId)
-      .single()
-      .then(({ data }) => {
-        if (!cancelled) setFullName(data?.full_name ?? null);
-      });
+    loadSosContacts(userId).then(({ contacts, fullName: name }) => {
+      if (cancelled) return;
+      setEmergencyContacts(contacts);
+      setFullName(name);
+    });
 
     return () => {
       cancelled = true;
@@ -116,7 +107,13 @@ export default function ShakeSosListener() {
             : Haptics.NotificationFeedbackType.Success
         );
         if (result.mode === 'failed') {
-          Alert.alert(t('sosCreateError'), result.message);
+          Alert.alert(t('sosCreateError'), result.message, [
+            { text: t('cancelButton'), style: 'cancel' },
+            {
+              text: t('callEmergencyNumber', { number: EMERGENCY_NUMBER }),
+              onPress: () => Linking.openURL(`tel:${EMERGENCY_NUMBER}`),
+            },
+          ]);
         }
       })();
       return;

@@ -10,10 +10,12 @@ import {
   View,
 } from 'react-native';
 
+import { EMERGENCY_NUMBER } from '@/constants/Emergency';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { getBestEffortLocation } from '@/lib/location';
 import { supabase } from '@/lib/supabase';
+import { loadSosContacts } from '@/lib/sos-contacts';
 import { triggerSos as triggerSosShared, type EmergencyContact } from '@/lib/sos-trigger';
 import { useLocationPermission } from '@/lib/use-location-permission';
 
@@ -39,6 +41,9 @@ export default function SosScreen() {
   const [activeAlert, setActiveAlert] = useState<ActiveAlert | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
+  // Set only when the SOS itself couldn't go out by any route, so a call is
+  // the one remaining option; never for errors like a failed resolve.
+  const [offerEmergencyCall, setOfferEmergencyCall] = useState(false);
 
   // Cached proactively (not fetched lazily at trigger-time) so the offline
   // SMS fallback below has this data available WITHOUT needing a fresh
@@ -128,31 +133,20 @@ export default function SosScreen() {
     }, [phase, activeAlert])
   );
 
-  // Refreshes the cached emergency contacts + display name on every focus —
-  // same "resync on focus" pattern as the two effects above, so the offline
-  // fallback below is always working from a reasonably fresh snapshot
-  // rather than data from whenever the app first launched.
+  // Refreshes emergency contacts + display name on every focus. Offline (or
+  // on a failed fetch) this falls back to the on-device copy from the last
+  // successful load, so the SMS fallback still works after a cold start
+  // without network.
   useFocusEffect(
     useCallback(() => {
       if (!userId) return;
       let cancelled = false;
 
-      supabase
-        .from('emergency_contacts')
-        .select('id, name, phone')
-        .eq('user_id', userId)
-        .then(({ data }) => {
-          if (!cancelled) setEmergencyContacts(data ?? []);
-        });
-
-      supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', userId)
-        .single()
-        .then(({ data }) => {
-          if (!cancelled) setFullName(data?.full_name ?? null);
-        });
+      loadSosContacts(userId).then(({ contacts, fullName: name }) => {
+        if (cancelled) return;
+        setEmergencyContacts(contacts);
+        setFullName(name);
+      });
 
       return () => {
         cancelled = true;
@@ -171,6 +165,7 @@ export default function SosScreen() {
   const triggerSos = useCallback(async () => {
     if (!userId) return;
     setErrorMessage(null);
+    setOfferEmergencyCall(false);
     setPhase('creating');
 
     const result = await triggerSosShared({ userId, emergencyContacts, fullName, t });
@@ -183,6 +178,7 @@ export default function SosScreen() {
     } else {
       setPhase('idle');
       setErrorMessage(result.message);
+      setOfferEmergencyCall(true);
     }
   }, [userId, emergencyContacts, fullName, t]);
 
@@ -287,6 +283,18 @@ export default function SosScreen() {
 
       {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
 
+      {offerEmergencyCall && (
+        <Pressable
+          style={styles.callButton}
+          onPress={() => Linking.openURL(`tel:${EMERGENCY_NUMBER}`)}
+          accessibilityRole="button"
+        >
+          <Text style={styles.callButtonText}>
+            {t('callEmergencyNumber', { number: EMERGENCY_NUMBER })}
+          </Text>
+        </Pressable>
+      )}
+
       {phase === 'creating' ? (
         <View style={styles.sosButtonOuter}>
           <ActivityIndicator color="#fff" size="large" />
@@ -358,6 +366,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#2f95dc',
+  },
+  callButton: {
+    backgroundColor: '#d33',
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+  },
+  callButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   sosButtonOuter: {
     width: 220,
