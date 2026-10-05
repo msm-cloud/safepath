@@ -53,7 +53,7 @@ export default function HomeScreen() {
   const { session } = useAuth();
   const { t } = useLanguage();
   const { colors, spacing } = useTheme();
-  const { loaded: settingsLoaded, fakeCallEnabled, fullName, avatarPath } = useUserSettings();
+  const { displayReady: settingsReady, fakeCallEnabled, fullName, avatarPath } = useUserSettings();
   const userId = session?.user.id;
   const {
     checking: checkingOnboarding,
@@ -401,7 +401,7 @@ export default function HomeScreen() {
         {/* Entirely absent from the tree when off, not just disabled —
             per Settings, someone who doesn't want this feature shouldn't
             even see the button. */}
-        {settingsLoaded && fakeCallEnabled && (
+        {settingsReady && fakeCallEnabled && (
           <View style={{ flexDirection: 'row', gap: spacing.sm + 2 }}>
             <ActionTile
               icon={ICONS.fakeCall}
