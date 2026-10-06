@@ -457,6 +457,7 @@ export type Database = {
     }
     Functions: {
       check_overdue_journeys: { Args: never; Returns: undefined }
+      expire_guardian_invites: { Args: never; Returns: undefined }
       generate_invite_code: { Args: never; Returns: string }
       normalize_phone: { Args: { p_phone: string }; Returns: string }
       purge_expired_location_history: { Args: never; Returns: undefined }

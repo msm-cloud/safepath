@@ -482,8 +482,8 @@ export const translations = {
   inviteGuardianButton: { en: 'Invite guardian', bn: 'অভিভাবককে আমন্ত্রণ জানান' },
   inviteCodeTitle: { en: 'Your invite code', bn: 'আপনার আমন্ত্রণ কোড' },
   inviteCodeHint: {
-    en: 'Works once. Share it only with someone you trust.',
-    bn: 'একবারই কাজ করে। শুধু বিশ্বস্ত কারো সাথে শেয়ার করুন।',
+    en: 'Works once, within 24 hours. Share it only with someone you trust.',
+    bn: '২৪ ঘণ্টার মধ্যে একবারই কাজ করে। শুধু বিশ্বস্ত কারো সাথে শেয়ার করুন।',
   },
   shareCodeButton: { en: 'Share code', bn: 'কোড শেয়ার করুন' },
   copyButton: { en: 'Copy', bn: 'কপি করুন' },
@@ -494,7 +494,7 @@ export const translations = {
     bn: 'আপনার অভিভাবক সেফপাথ খুলে "কারো সাথে যুক্ত হন"-এ ট্যাপ করে এই কোডটি লিখবেন। কোড লেখার সাথে সাথেই তিনি আপনার সাথে যুক্ত হবেন। আপনি যেকোনো সময় একজন অভিভাবককে সরিয়ে দিতে পারেন।',
   },
   unusedCodesLabel: { en: 'Codes not used yet', bn: 'এখনো ব্যবহার না হওয়া কোড' },
-  unusedCodeMeta: { en: 'Created {date}', bn: '{date}-এ তৈরি' },
+  unusedCodeExpires: { en: 'Expires {time}', bn: 'মেয়াদ শেষ {time}' },
   cancelCodeButton: { en: 'Cancel', bn: 'বাতিল করুন' },
   cancelCodeLabel: { en: 'Cancel code {code}', bn: '{code} কোডটি বাতিল করুন' },
   yourGuardiansCount: { en: 'Your guardians · {n}', bn: 'আপনার অভিভাবক · {n}' },
@@ -802,8 +802,8 @@ export const translations = {
   inviteCodeLabel: { en: 'Invite code', bn: 'আমন্ত্রণ কোড' },
   enterInviteCode: { en: 'Enter an invite code.', bn: 'একটি আমন্ত্রণ কোড লিখুন।' },
   invalidOrUsedCode: {
-    en: 'That invite code is invalid or has already been used.',
-    bn: 'এই আমন্ত্রণ কোডটি সঠিক নয় অথবা ইতিমধ্যে ব্যবহৃত হয়েছে।',
+    en: 'That invite code is invalid, expired or already used. Ask for a new code.',
+    bn: 'এই আমন্ত্রণ কোডটি সঠিক নয়, মেয়াদোত্তীর্ণ অথবা ইতিমধ্যে ব্যবহৃত। একটি নতুন কোড চেয়ে নিন।',
   },
   alreadyLinkedCode: {
     en: "You're already linked to this person, so this code wasn't used.",

@@ -1,11 +1,5 @@
 import { supabase } from '@/lib/supabase';
 
-// Codes are 8 characters; two groups of four are easier to read aloud and
-// to type. The stored code has no space.
-export function formatInviteCode(code: string): string {
-  return code.length === 8 ? `${code.slice(0, 4)} ${code.slice(4)}` : code;
-}
-
 type RevokeResult =
   { success: true } | { success: false; error: 'not_found' | 'not_authenticated' };
 
