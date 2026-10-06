@@ -2418,6 +2418,28 @@ console.log('\n--- invite codes expire after 24 hours ---');
       (await redeem(db, fresh.invite_code)).success === true
     );
   });
+
+  const userEG3 = await mkUser('EG3', 'guardian');
+  await asUser(userEG3, async () => {
+    check(
+      'a code redeemed within 24 hours cannot be redeemed again',
+      (await redeem(db, fresh.invite_code)).error === 'invalid_or_used_code'
+    );
+  });
+}
+
+console.log('\n--- invite code format ---');
+{
+  // generate_invite_code() takes each character from gen_random_bytes; 32
+  // symbols divide 256 evenly, so there is no modulo bias to test for.
+  const codes = (
+    await db.query(`select public.generate_invite_code() as code from generate_series(1, 200)`)
+  ).rows.map((r) => r.code);
+  check(
+    'generated codes are 8 characters from the 32-symbol alphabet',
+    codes.every((code) => /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/.test(code))
+  );
+  check('200 generated codes are all different', new Set(codes).size === codes.length);
 }
 
 console.log('\n--- one accepted link per user and guardian ---');

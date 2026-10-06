@@ -11,7 +11,8 @@ import Screen from '@/components/ui/Screen';
 import SegmentedControl from '@/components/ui/SegmentedControl';
 import Text from '@/components/ui/Text';
 import { useAuth } from '@/lib/auth-context';
-import { formatInviteCode, inviteCodeExpiresAt, revokeGuardianLink } from '@/lib/guardian-links';
+import { revokeGuardianLink } from '@/lib/guardian-links';
+import { formatInviteCode, inviteCodeExpiresAt, isInviteCodeExpired } from '@/lib/invite-code';
 import { useLanguage } from '@/lib/language-context';
 import {
   DEFAULT_RETENTION_HOURS,
@@ -73,10 +74,9 @@ export default function GuardiansScreen() {
     setError(null);
     // An expired code stays pending until the expiry job revokes it; it
     // can't be redeemed any more, so don't list it.
-    const now = Date.now();
     setLinks(
       ((data ?? []) as GuardianLinkRow[]).filter(
-        (link) => link.status !== 'pending' || inviteCodeExpiresAt(link.created_at).getTime() > now
+        (link) => link.status !== 'pending' || !isInviteCodeExpired(link.created_at)
       )
     );
 
