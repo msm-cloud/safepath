@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import AuthHeader from '@/components/AuthHeader';
+import LocationPrivacyNote from '@/components/LocationPrivacyNote';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import IconTile from '@/components/ui/IconTile';
@@ -88,16 +89,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={{ marginTop: 'auto', gap: spacing.md }}>
-        <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
-          <SymbolView
-            name={{ ios: 'lock', android: 'lock', web: 'lock' }}
-            tintColor={colors.onOverlay}
-            size={18}
-          />
-          <Text variant="caption" style={{ flex: 1 }}>
-            {t('locationPrivacyNote')}
-          </Text>
-        </View>
+        <LocationPrivacyNote />
         <Button
           title={t('continueAsPersona', { persona: t(PERSONA_LABEL[persona]) })}
           onPress={() => router.push({ pathname: '/(auth)/sign-up', params: { persona } })}

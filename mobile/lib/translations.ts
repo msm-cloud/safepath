@@ -45,6 +45,14 @@ export const translations = {
   },
   continueAsPersona: { en: 'Continue as {persona}', bn: '{persona} হিসেবে এগিয়ে যান' },
   haveAccountPrompt: { en: 'Already have an account?', bn: 'আগে থেকেই অ্যাকাউন্ট আছে?' },
+  // Sign-up privacy line: prefix, link text, suffix (word order differs in
+  // Bangla, so the link sits between two strings).
+  signUpPrivacyPrefix: {
+    en: 'By creating an account, you agree to the',
+    bn: 'অ্যাকাউন্ট তৈরি করে আপনি',
+  },
+  privacyPolicyLink: { en: 'Privacy Policy', bn: 'গোপনীয়তা নীতি' },
+  signUpPrivacySuffix: { en: '.', bn: ' মেনে নিচ্ছেন।' },
   logInLink: { en: 'Log in', bn: 'লগ ইন' },
   backLabel: { en: 'Back', bn: 'ফিরে যান' },
   languageSwitchLabel: { en: 'Language', bn: 'ভাষা' },
@@ -632,32 +640,60 @@ export const translations = {
   // on demand from Settings via helpAndTutorialLink above. ---
   onboardingSkipButton: { en: 'Skip', bn: 'এড়িয়ে যান' },
   onboardingNextButton: { en: 'Next', bn: 'পরবর্তী' },
-  onboardingGetStartedButton: { en: 'Get Started', bn: 'শুরু করুন' },
-  // Student
-  onboardingStudentWelcomeTitle: { en: 'Welcome to SafePath', bn: 'সেফপাথে স্বাগতম' },
-  onboardingStudentWelcomeBody: {
+  onboardingLaterButton: { en: 'I will do this later', bn: 'পরে করব' },
+  onboardingStepCount: { en: '{n} of {total}', bn: '{total}টির মধ্যে {n}' },
+  // Student / working woman (the persona saved on this device picks the
+  // first slide; without one the neutral welcome is shown)
+  onboardingStudentIntroTitle: {
+    en: 'Safer trips to campus and back',
+    bn: 'ক্যাম্পাসে যাওয়া-আসা আরও নিরাপদ',
+  },
+  onboardingStudentIntroBody: {
+    en: 'For classes, coaching and the commute home. The people you trust can find you in one tap.',
+    bn: 'ক্লাস, কোচিং আর বাড়ি ফেরার পথে। এক ট্যাপেই আপনার বিশ্বস্ত মানুষেরা আপনাকে খুঁজে পাবেন।',
+  },
+  onboardingWorkingIntroTitle: {
+    en: 'Safer late shifts and rides home',
+    bn: 'দেরির শিফট আর বাড়ি ফেরা আরও নিরাপদ',
+  },
+  onboardingWorkingIntroBody: {
+    en: 'For late shifts, rides and travel for work. The people you trust can find you in one tap.',
+    bn: 'দেরির শিফট, রাইড আর কাজের যাতায়াতে। এক ট্যাপেই আপনার বিশ্বস্ত মানুষেরা আপনাকে খুঁজে পাবেন।',
+  },
+  onboardingUserWelcomeTitle: { en: 'Welcome to SafePath', bn: 'সেফপাথে স্বাগতম' },
+  onboardingUserWelcomeBody: {
     en: 'SafePath helps you stay safe and keeps the people you trust close by — with one tap in an emergency.',
     bn: 'সেফপাথ আপনাকে নিরাপদ রাখতে সাহায্য করে এবং আপনার বিশ্বাসের মানুষদের কাছাকাছি রাখে — জরুরি অবস্থায় একটি ট্যাপেই।',
   },
-  onboardingStudentSosTitle: { en: 'Hold for SOS', bn: 'SOS-এর জন্য ধরে রাখুন' },
-  onboardingStudentSosBody: {
-    en: 'Hold the SOS button for 2 seconds to instantly alert your guardian with your location.',
-    bn: 'আপনার অবস্থানসহ তাৎক্ষণিকভাবে আপনার অভিভাবককে সতর্ক করতে SOS বাটনটি ২ সেকেন্ড ধরে রাখুন।',
+  onboardingSosJourneyTitle: { en: 'SOS and journey check-ins', bn: 'SOS আর যাত্রা চেক-ইন' },
+  onboardingSosJourneyBody: {
+    en: "Hold SOS for 2 seconds to alert your guardians with your location. Before heading out, start a journey: if you don't check in on time, they are told automatically.",
+    bn: 'আপনার অবস্থানসহ অভিভাবকদের সতর্ক করতে SOS ২ সেকেন্ড ধরে রাখুন। বের হওয়ার আগে একটি যাত্রা শুরু করুন: সময়মতো চেক-ইন না করলে তাদের স্বয়ংক্রিয়ভাবে জানানো হবে।',
   },
-  onboardingStudentGuardianTitle: { en: 'Add a Guardian', bn: 'একজন অভিভাবক যোগ করুন' },
-  onboardingStudentGuardianBody: {
-    en: "Invite someone you trust as a guardian, so they're notified the moment you need help.",
-    bn: 'আপনার বিশ্বাসের কাউকে অভিভাবক হিসেবে আমন্ত্রণ জানান, যাতে আপনার সাহায্য দরকার হলে তারা সাথে সাথে জানতে পারেন।',
+  onboardingContactsTitle: {
+    en: 'Add your guardian and emergency contacts',
+    bn: 'আপনার অভিভাবক ও জরুরি যোগাযোগ যুক্ত করুন',
   },
-  onboardingStudentContactsTitle: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },
-  onboardingStudentContactsBody: {
-    en: 'Add emergency contacts so an offline SOS can still reach someone by text, even with no internet.',
-    bn: 'জরুরি যোগাযোগ যোগ করুন, যাতে ইন্টারনেট না থাকলেও অফলাইন SOS এসএমএসের মাধ্যমে কারো কাছে পৌঁছাতে পারে।',
+  onboardingGuardiansRowTitle: {
+    en: 'Guardians use SafePath',
+    bn: 'অভিভাবকেরা সেফপাথ ব্যবহার করেন',
   },
-  onboardingStudentJourneyTitle: { en: 'Journey Check-ins', bn: 'যাত্রা চেক-ইন' },
-  onboardingStudentJourneyBody: {
-    en: "Optional: start a journey before heading out, and your guardian is notified automatically if you don't check in safely.",
-    bn: 'ঐচ্ছিক: বের হওয়ার আগে একটি যাত্রা শুরু করুন, আপনি নিরাপদে চেক-ইন না করলে আপনার অভিভাবক স্বয়ংক্রিয়ভাবে জানতে পারবেন।',
+  onboardingGuardiansRowHint: {
+    en: 'They get your SOS and journey check-ins in the app',
+    bn: 'তারা অ্যাপে আপনার SOS আর যাত্রা চেক-ইনের খবর পান',
+  },
+  onboardingContactsRowTitle: {
+    en: 'Emergency contacts: any phone',
+    bn: 'জরুরি যোগাযোগ: যেকোনো ফোন',
+  },
+  onboardingContactsRowHint: {
+    en: 'They get an SMS if you send SOS without internet',
+    bn: 'ইন্টারনেট ছাড়া SOS পাঠালে তারা এসএমএস পান',
+  },
+  onboardingAddGuardianButton: { en: 'Add a guardian', bn: 'অভিভাবক যোগ করুন' },
+  onboardingAddContactsButton: {
+    en: 'Add emergency contacts',
+    bn: 'জরুরি যোগাযোগ যোগ করুন',
   },
   // Guardian
   onboardingGuardianWelcomeTitle: { en: 'Welcome, Guardian', bn: 'স্বাগতম, অভিভাবক' },
@@ -665,16 +701,38 @@ export const translations = {
     en: "As a guardian, you'll be the first to know if someone you care about needs help.",
     bn: 'একজন অভিভাবক হিসেবে, আপনি যাকে নিয়ে চিন্তিত তার সাহায্য দরকার হলে আপনিই প্রথম জানবেন।',
   },
-  onboardingGuardianLinkTitle: { en: 'Link to Someone', bn: 'কারো সাথে যুক্ত হন' },
-  onboardingGuardianLinkBody: {
-    en: 'Ask the person you support for their invite code, then enter it here to connect your accounts.',
-    bn: 'যাকে আপনি সহায়তা করছেন তার কাছ থেকে আমন্ত্রণ কোড চান, তারপর আপনার অ্যাকাউন্ট যুক্ত করতে এখানে সেটি লিখুন।',
-  },
   onboardingGuardianAlertsTitle: { en: 'Active Alerts', bn: 'সক্রিয় অ্যালার্ট' },
   onboardingGuardianAlertsBody: {
     en: "You'll see alerts live here and get an email too, so you don't need to keep the app open all the time.",
     bn: 'আপনি এখানে সরাসরি অ্যালার্ট দেখতে পাবেন এবং একটি ইমেইলও পাবেন, তাই সবসময় অ্যাপ খোলা রাখার দরকার নেই।',
   },
+  onboardingGuardianLinkTitle: {
+    en: 'Link your children or family members',
+    bn: 'আপনার সন্তান বা পরিবারের সদস্যদের যুক্ত করুন',
+  },
+  onboardingGuardianStep1Title: { en: 'Ask for their invite code', bn: 'তাদের আমন্ত্রণ কোড চান' },
+  onboardingGuardianStep1Hint: {
+    en: 'They create it in SafePath › Guardians',
+    bn: 'তারা সেফপাথ › অভিভাবক থেকে কোডটি তৈরি করেন',
+  },
+  onboardingGuardianStep2Title: {
+    en: 'Enter it in Link to Someone',
+    bn: '"কারো সাথে যুক্ত হন"-এ কোডটি লিখুন',
+  },
+  onboardingGuardianStep2Hint: {
+    en: 'Each code works once, within 24 hours',
+    bn: 'প্রতিটি কোড ২৪ ঘণ্টার মধ্যে একবারই কাজ করে',
+  },
+  onboardingGuardianStep3Title: { en: 'You are linked', bn: 'আপনারা যুক্ত হয়ে গেলেন' },
+  onboardingGuardianStep3Hint: {
+    en: 'You get their SOS alerts and missed check-ins',
+    bn: 'আপনি তাদের SOS অ্যালার্ট আর মিস হওয়া চেক-ইনের খবর পাবেন',
+  },
+  onboardingGuardianLocationNote: {
+    en: 'You see their location only when they share it: during SOS, a journey, live sharing, or history they turn on.',
+    bn: 'তারা শেয়ার করলেই শুধু আপনি তাদের অবস্থান দেখতে পান: SOS, যাত্রা, লাইভ শেয়ারিং বা তাদের চালু করা হিস্ট্রির সময়।',
+  },
+  onboardingEnterCodeButton: { en: 'Enter invite code', bn: 'আমন্ত্রণ কোড লিখুন' },
 
   // --- Emergency contacts screen ---
   emergencyContactsTitle: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },
@@ -835,6 +893,15 @@ export const translations = {
 } as const satisfies Record<string, Entry>;
 
 export type TranslationKey = keyof typeof translations;
+
+const BENGALI_DIGITS = '০১২৩৪৫৬৭৮৯';
+
+// For numbers built at runtime; Bangla strings write their own digits in
+// Bengali, so a count dropped into one should match.
+export function localizeDigits(value: number, language: Language): string {
+  const text = String(value);
+  return language === 'bn' ? text.replace(/[0-9]/g, (d) => BENGALI_DIGITS[Number(d)]) : text;
+}
 
 export function t(
   language: Language,

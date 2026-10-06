@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { View, type ScrollView, type TextInput } from 'react-native';
 
 import AuthHeader from '@/components/AuthHeader';
+import LocationPrivacyNote from '@/components/LocationPrivacyNote';
 import Banner from '@/components/ui/Banner';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -137,6 +138,7 @@ export default function SignInScreen() {
       </View>
 
       <View style={{ marginTop: 'auto', gap: spacing.md }}>
+        <LocationPrivacyNote />
         <Button
           title={t('logInButton')}
           loading={submitting}

@@ -2,7 +2,9 @@
 // maps, lists and settings must stay on plain surfaces so nothing competes
 // with the information on them; keeping this union closed makes that a
 // type error rather than a review comment.
-export type ScreenBackground = 'welcome' | 'auth' | 'onboarding' | 'empty';
+// Onboarding has one photo per persona (see components/OnboardingScreen.tsx).
+export type ScreenBackground =
+  'welcome' | 'auth' | 'onboardingStudent' | 'onboardingWorking' | 'onboardingGuardian' | 'empty';
 
 // The `overlay` colour token uses the lower bound. A brighter photo can ask
 // for a darker overlay, chosen so every text pair on it passes WCAG AA;
@@ -29,7 +31,9 @@ export function clampOverlayOpacity(value: number): number {
 export const backgroundPhotoSpecs: Record<ScreenBackground, BackgroundPhotoSpec | null> = {
   welcome: { file: 'welcome.webp', overlayOpacity: 0.58 },
   auth: { file: 'auth.webp', overlayOpacity: 0.58 },
-  onboarding: null,
+  onboardingStudent: { file: 'onboarding-student.webp', overlayOpacity: 0.55 },
+  onboardingWorking: { file: 'onboarding-working.webp', overlayOpacity: 0.58 },
+  onboardingGuardian: { file: 'onboarding-guardian.webp', overlayOpacity: 0.55 },
   empty: null,
 };
 
