@@ -1,15 +1,14 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Linking,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
+import { useIsFocused } from 'expo-router/react-navigation';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Linking, Pressable, ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import Banner from '@/components/ui/Banner';
+import Button from '@/components/ui/Button';
+import Screen from '@/components/ui/Screen';
+import Text from '@/components/ui/Text';
 import { EMERGENCY_NUMBER } from '@/constants/Emergency';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
@@ -18,9 +17,22 @@ import { supabase } from '@/lib/supabase';
 import { loadSosContacts } from '@/lib/sos-contacts';
 import { triggerSos as triggerSosShared, type EmergencyContact } from '@/lib/sos-trigger';
 import { useLocationPermission } from '@/lib/use-location-permission';
+import { useTheme } from '@/theme';
 
 const HOLD_DURATION_MS = 2000;
 const LOCATION_INTERVAL_MS = 15000;
+
+const PHONE_ICON = { ios: 'phone.fill', android: 'call', web: 'call' } as const;
+
+// Hold button: two soft rings around the button, as on the Home SOS board.
+const HOLD_OUTER_RING = 272;
+const HOLD_INNER_RING = 232;
+const HOLD_BUTTON = 192;
+const HOLD_BUTTON_BORDER = 6;
+
+// Decorative rings behind the SOS active heading, from the SOS active board.
+const ACTIVE_RINGS = [220, 340, 470];
+const ACTIVE_RINGS_CENTER_Y = 230;
 
 type Phase = 'idle' | 'creating' | 'active';
 
@@ -36,6 +48,9 @@ export default function SosScreen() {
   const locationPermission = useLocationPermission();
 
   const router = useRouter();
+  const navigation = useNavigation();
+  const isFocused = useIsFocused();
+  const { colors, radius, sizes, spacing } = useTheme();
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [activeAlert, setActiveAlert] = useState<ActiveAlert | null>(null);
@@ -238,216 +253,258 @@ export default function SosScreen() {
     outputRange: ['0%', '100%'],
   });
 
-  if (phase === 'active' && activeAlert) {
+  const isActive = phase === 'active' && activeAlert !== null;
+
+  // The active screen is a full red page, so the tab header steps aside.
+  useEffect(() => {
+    navigation.setOptions({ headerShown: !isActive });
+  }, [navigation, isActive]);
+
+  // Display-only clock for the elapsed time in the status pill.
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    if (!isActive) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- captures wall-clock time into state (render must stay pure), same pattern as the guardian home's relative times.
+    setNow(Date.now());
+    const tickId = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tickId);
+  }, [isActive]);
+
+  const callEmergencyNumber = () => Linking.openURL(`tel:${EMERGENCY_NUMBER}`);
+  const callEmergencyTitle = t('callEmergencyNumber', { number: EMERGENCY_NUMBER });
+
+  if (isActive && activeAlert) {
+    const elapsedMs = now ? now - new Date(activeAlert.createdAt).getTime() : 0;
+
     return (
-      <View style={styles.container}>
-        <View style={styles.activeBadge}>
-          <Text style={styles.activeBadgeText}>{t('alertActiveLabel')}</Text>
-        </View>
-        <Text style={styles.subtitle}>
-          {t('alertActiveSubtitle', {
-            time: new Date(activeAlert.createdAt).toLocaleTimeString(),
-          })}
-        </Text>
+      <View style={{ flex: 1, backgroundColor: colors.danger }}>
+        {isFocused && <StatusBar style="light" />}
+        {ACTIVE_RINGS.map((size) => (
+          <View
+            key={size}
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              borderWidth: 2,
+              borderColor: colors.onDangerFaint,
+              left: '50%',
+              marginLeft: -size / 2,
+              top: ACTIVE_RINGS_CENTER_Y - size / 2,
+            }}
+          />
+        ))}
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <ScrollView
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingHorizontal: sizes.screenGutter,
+              paddingTop: spacing.lg,
+              paddingBottom: spacing.xl,
+              gap: spacing.xl,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: spacing.sm,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.md,
+                  borderRadius: radius.pill,
+                  backgroundColor: colors.dangerPressed,
+                }}
+              >
+                <View
+                  style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: colors.onDanger }}
+                />
+                <Text variant="label" color="onDanger">
+                  {t('sosActivePill', { elapsed: formatElapsed(elapsedMs) })}
+                </Text>
+              </View>
+              {locationPermission === 'granted' && (
+                <Text variant="caption" weight="semibold" color="onDanger">
+                  {t('sosSharingLocation')}
+                </Text>
+              )}
+            </View>
 
-        {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+            <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
+              <Text variant="display" color="onDanger" accessibilityRole="header">
+                {t('sosActiveHeading')}
+              </Text>
+              <Text variant="body" color="onDanger">
+                {t('alertActiveSubtitle', {
+                  time: new Date(activeAlert.createdAt).toLocaleTimeString(),
+                })}
+              </Text>
+            </View>
 
-        <Pressable
-          style={[styles.safeButton, resolving && styles.buttonDisabled]}
-          onPress={handleResolve}
-          disabled={resolving}
-        >
-          {resolving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.safeButtonText}>{t('imSafeNow')}</Text>
-          )}
-        </Pressable>
+            {errorMessage && <Banner tone="danger" message={errorMessage} />}
+
+            <View style={{ marginTop: 'auto', gap: spacing.md }}>
+              <Button
+                variant="emergencyCall"
+                icon={PHONE_ICON}
+                title={callEmergencyTitle}
+                onPress={callEmergencyNumber}
+              />
+              <Button
+                variant="onDangerOutline"
+                title={t('imSafeNow')}
+                onPress={handleResolve}
+                loading={resolving}
+              />
+            </View>
+          </ScrollView>
+        </SafeAreaView>
       </View>
     );
   }
 
+  const ring = (size: number) => ({
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  });
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t('sosTitle')}</Text>
-      <Text style={styles.subtitle}>{t('sosSubtitle')}</Text>
+    <Screen edges={[]} contentStyle={{ alignItems: 'center', gap: spacing.lg }}>
+      <Text variant="bodySm" color="textSecondary" align="center">
+        {t('sosSubtitle')}
+      </Text>
 
       {locationPermission === 'denied' && (
-        <View style={styles.permissionBanner}>
-          <Text style={styles.permissionBannerText}>{t('locationDeniedBanner')}</Text>
-          <Pressable onPress={() => Linking.openSettings()}>
-            <Text style={styles.permissionBannerLink}>{t('openSettings')}</Text>
-          </Pressable>
+        <View style={{ alignSelf: 'stretch' }}>
+          <Banner
+            tone="warning"
+            message={t('locationDeniedBanner')}
+            action={{ label: t('openSettings'), onPress: () => Linking.openSettings() }}
+          />
         </View>
       )}
 
-      {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+      {errorMessage && (
+        <View style={{ alignSelf: 'stretch' }}>
+          <Banner tone="danger" message={errorMessage} />
+        </View>
+      )}
 
       {offerEmergencyCall && (
-        <Pressable
-          style={styles.callButton}
-          onPress={() => Linking.openURL(`tel:${EMERGENCY_NUMBER}`)}
-          accessibilityRole="button"
-        >
-          <Text style={styles.callButtonText}>
-            {t('callEmergencyNumber', { number: EMERGENCY_NUMBER })}
-          </Text>
-        </Pressable>
+        <Button
+          variant="danger"
+          icon={PHONE_ICON}
+          title={callEmergencyTitle}
+          onPress={callEmergencyNumber}
+        />
       )}
 
-      {phase === 'creating' ? (
-        <View style={styles.sosButtonOuter}>
-          <ActivityIndicator color="#fff" size="large" />
+      <View
+        style={[
+          ring(HOLD_OUTER_RING),
+          { marginTop: spacing.sm, backgroundColor: colors.dangerSoft },
+        ]}
+      >
+        <View style={[ring(HOLD_INNER_RING), { backgroundColor: colors.dangerBorder }]}>
+          {phase === 'creating' ? (
+            <View
+              style={[
+                ring(HOLD_BUTTON),
+                {
+                  borderWidth: HOLD_BUTTON_BORDER,
+                  borderColor: colors.surface,
+                  backgroundColor: colors.dangerPressed,
+                },
+              ]}
+            >
+              <ActivityIndicator color={colors.onDanger} size="large" />
+            </View>
+          ) : (
+            <Pressable
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              accessibilityRole="button"
+              accessibilityLabel={t('sosTitle')}
+              accessibilityHint={t('holdHint')}
+              style={[
+                ring(HOLD_BUTTON),
+                {
+                  overflow: 'hidden',
+                  borderWidth: HOLD_BUTTON_BORDER,
+                  borderColor: colors.surface,
+                  backgroundColor: colors.danger,
+                },
+              ]}
+            >
+              <Animated.View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: fillHeight,
+                  backgroundColor: colors.dangerPressed,
+                }}
+              />
+              <View
+                pointerEvents="none"
+                style={{ alignItems: 'center', gap: spacing.xxs, paddingHorizontal: spacing.md }}
+              >
+                <Text variant="display" color="onDanger" script="latin">
+                  SOS
+                </Text>
+                <Text variant="label" color="onDanger" align="center">
+                  {t('sosHoldCaption')}
+                </Text>
+              </View>
+            </Pressable>
+          )}
         </View>
-      ) : (
-        <Pressable
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          style={styles.sosButtonOuter}
-        >
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.sosButtonFill, { height: fillHeight }]}
-          />
-          <View style={styles.sosButtonLabelWrap} pointerEvents="none">
-            <Text style={styles.sosButtonLabel}>{t('holdForSosLabel')}</Text>
-          </View>
-        </Pressable>
-      )}
+      </View>
 
-      <Text style={styles.holdHint}>{t('holdHint')}</Text>
+      <Text variant="caption" color="textMuted" align="center">
+        {t('holdHint')}
+      </Text>
 
       {emergencyContacts !== null && emergencyContacts.length === 0 && (
-        <Pressable style={styles.contactsNudge} onPress={() => router.push('/emergency-contacts')}>
-          <Text style={styles.contactsNudgeText}>
+        <Pressable
+          onPress={() => router.push('/emergency-contacts')}
+          accessibilityRole="link"
+          hitSlop={spacing.sm}
+          style={{ minHeight: sizes.minTouch, justifyContent: 'center' }}
+        >
+          <Text variant="caption" color="textMuted" align="center">
             {t('noContactsNudgeText')}{' '}
-            <Text style={styles.contactsNudgeLink}>{t('addContactsLink')}</Text>
+            <Text variant="caption" weight="bold" color="primary">
+              {t('addContactsLink')}
+            </Text>
           </Text>
         </Pressable>
       )}
-    </View>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  error: {
-    color: '#d33',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  permissionBanner: {
-    backgroundColor: '#fff4e5',
-    borderRadius: 10,
-    padding: 12,
-    gap: 6,
-    width: '100%',
-  },
-  permissionBannerText: {
-    fontSize: 13,
-    color: '#7a4a00',
-  },
-  permissionBannerLink: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2f95dc',
-  },
-  callButton: {
-    backgroundColor: '#d33',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-  },
-  callButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  sosButtonOuter: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: '#7a1212',
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-  },
-  sosButtonFill: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#ff3b30',
-  },
-  sosButtonLabelWrap: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sosButtonLabel: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    letterSpacing: 1,
-  },
-  holdHint: {
-    fontSize: 12,
-    color: '#888',
-  },
-  contactsNudge: {
-    marginTop: 8,
-  },
-  contactsNudgeText: {
-    fontSize: 12,
-    color: '#888',
-    textAlign: 'center',
-  },
-  contactsNudgeLink: {
-    color: '#2f95dc',
-    fontWeight: '600',
-  },
-  activeBadge: {
-    backgroundColor: '#d33',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  activeBadgeText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  safeButton: {
-    backgroundColor: '#1a7f37',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    marginTop: 16,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  safeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+// mm:ss, or h:mm:ss once it passes an hour.
+function formatElapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`;
+}

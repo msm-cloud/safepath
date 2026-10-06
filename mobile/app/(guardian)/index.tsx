@@ -6,14 +6,13 @@ import {
   ActivityIndicator,
   Animated,
   FlatList,
-  Linking,
   Pressable,
   StyleSheet,
-  Text,
   Vibration,
   View,
 } from 'react-native';
 
+import GuardianAlertCard from '@/components/GuardianAlertCard';
 import GuardianLiveSharing from '@/components/GuardianLiveSharing';
 import LocationToggleCard, { type LocationToggleNotice } from '@/components/LocationToggleCard';
 import OnboardingScreen from '@/components/OnboardingScreen';
@@ -90,7 +89,7 @@ export default function GuardianActiveAlertsScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const { t } = useLanguage();
-  const { colors, spacing } = useTheme();
+  const { colors, radius, spacing } = useTheme();
   const { fullName, avatarPath, alarmSoundEnabled } = useUserSettings();
   // The guardian's own reciprocal sharing (same hook and flag as the
   // share-location screen), so it is visible and reconciled from Home.
@@ -434,7 +433,19 @@ export default function GuardianActiveAlertsScreen() {
               style={[StyleSheet.absoluteFill, { backgroundColor: flashBackgroundColor }]}
               pointerEvents="none"
             />
-            <Text style={styles.flashHintText}>{t('tapToSilenceAlarmHint')}</Text>
+            <View
+              style={{
+                marginHorizontal: spacing.xl,
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.lg,
+                borderRadius: radius.pill,
+                backgroundColor: colors.surface,
+              }}
+            >
+              <ThemedText variant="label" align="center">
+                {t('tapToSilenceAlarmHint')}
+              </ThemedText>
+            </View>
           </Pressable>
         )}
         <FlatList
@@ -497,46 +508,12 @@ export default function GuardianActiveAlertsScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardLabel}>
-                {item.trigger_type === 'journey_overdue'
-                  ? t('missedCheckinTypeLabel')
-                  : t('sosAlertTypeLabel')}
-              </Text>
-              <View style={styles.cardNameRow}>
-                <Avatar name={item.full_name} url={item.avatar_url} size={40} />
-                <View style={styles.cardNameText}>
-                  <Text style={styles.cardName}>{item.full_name}</Text>
-                  <Text style={styles.cardTime}>{relativeTime(item.created_at, now, t)}</Text>
-                </View>
-              </View>
-
-              {item.last_lat != null && item.last_lng != null ? (
-                <Pressable
-                  onPress={() =>
-                    Linking.openURL(
-                      `https://www.google.com/maps?q=${item.last_lat},${item.last_lng}`
-                    )
-                  }
-                >
-                  <Text style={styles.link}>{t('viewLastKnownLocationLink')}</Text>
-                </Pressable>
-              ) : (
-                <Text style={styles.noLocation}>{t('noLocationAvailableYet')}</Text>
-              )}
-
-              <Pressable
-                style={[styles.resolveButton, resolvingId === item.id && styles.buttonDisabled]}
-                onPress={() => handleResolve(item.id)}
-                disabled={resolvingId === item.id}
-              >
-                {resolvingId === item.id ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.resolveButtonText}>{t('markResolvedButton')}</Text>
-                )}
-              </Pressable>
-            </View>
+            <GuardianAlertCard
+              alert={item}
+              timeAgo={relativeTime(item.created_at, now, t)}
+              resolving={resolvingId === item.id}
+              onResolve={() => handleResolve(item.id)}
+            />
           )}
         />
       </View>
@@ -572,74 +549,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: 48,
-  },
-  flashHintText: {
-    color: '#1a1a1a',
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  card: {
-    borderWidth: 2,
-    borderColor: '#d33',
-    backgroundColor: '#fdecea',
-    borderRadius: 10,
-    padding: 16,
-    gap: 4,
-  },
-  cardLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-    color: '#a32a1f',
-    textTransform: 'uppercase',
-  },
-  cardNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  cardNameText: {
-    flex: 1,
-  },
-  cardName: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  cardTime: {
-    fontSize: 13,
-    color: '#666',
-  },
-  link: {
-    marginTop: 4,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2f95dc',
-  },
-  noLocation: {
-    marginTop: 4,
-    fontSize: 13,
-    color: '#888',
-  },
-  resolveButton: {
-    marginTop: 10,
-    backgroundColor: '#d33',
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  resolveButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

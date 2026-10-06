@@ -114,6 +114,20 @@ const PAIRS: Pair[] = [
   { group: 'Switch', label: 'On thumb on track', fg: 'onPrimary', bg: 'primary', level: 'ui' },
   { group: 'Switch', label: 'On track vs card', fg: 'primary', bg: 'surface', level: 'ui' },
 
+  // SOS active screen and the guardian alert header: everything on the
+  // danger fill. Body text there is plain onDanger; nothing muted.
+  { group: 'SOS', label: 'Text on SOS fill', fg: 'onDanger', bg: 'danger', level: 'text' },
+  { group: 'SOS', label: 'Status pill', fg: 'onDanger', bg: 'dangerPressed', level: 'text' },
+  { group: 'SOS', label: 'Call button', fg: 'onEmergencyCall', bg: 'onDanger', level: 'text' },
+  {
+    group: 'SOS',
+    label: 'Call button (pressed)',
+    fg: 'onEmergencyCall',
+    bg: 'emergencyCallPressed',
+    level: 'text',
+  },
+  { group: 'SOS', label: 'Call button vs SOS fill', fg: 'onDanger', bg: 'danger', level: 'ui' },
+
   // Worst case for background images: a pure white pixel under the overlay.
   {
     group: 'Overlay',

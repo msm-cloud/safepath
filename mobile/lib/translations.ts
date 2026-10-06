@@ -423,7 +423,7 @@ export const translations = {
     bn: 'অবস্থানের অনুমতি দেওয়া হয়নি — আপনার SOS অ্যালার্ট তবুও কাজ করবে, কিন্তু তাতে আপনার অবস্থান থাকবে না।',
   },
   openSettings: { en: 'Open Settings', bn: 'সেটিংস খুলুন' },
-  holdForSosLabel: { en: 'HOLD\nFOR SOS', bn: 'SOS-এর জন্য\nধরে রাখুন' },
+  sosHoldCaption: { en: 'Hold 2 seconds', bn: '২ সেকেন্ড ধরে রাখুন' },
   holdHint: {
     en: 'Hold for 2 seconds. Release early to cancel.',
     bn: '২ সেকেন্ড ধরে রাখুন। বাতিল করতে আগেই ছেড়ে দিন।',
@@ -432,10 +432,15 @@ export const translations = {
     en: 'Could not send the SOS alert. Try again.',
     bn: 'SOS অ্যালার্ট পাঠানো যায়নি। আবার চেষ্টা করুন।',
   },
-  alertActiveLabel: { en: 'SOS ALERT ACTIVE', bn: 'SOS অ্যালার্ট সক্রিয়' },
+  sosActivePill: { en: 'SOS active · {elapsed}', bn: 'SOS সক্রিয় · {elapsed}' },
+  sosSharingLocation: { en: 'Sharing location', bn: 'অবস্থান শেয়ার হচ্ছে' },
+  sosActiveHeading: {
+    en: 'Your guardians have been alerted.',
+    bn: 'আপনার অভিভাবকদের জানানো হয়েছে।',
+  },
   alertActiveSubtitle: {
-    en: 'Sent at {time}. Your accepted guardians have been notified, and your location is being shared every 15 seconds while this screen stays open.',
-    bn: '{time}-এ পাঠানো হয়েছে। আপনার অনুমোদিত অভিভাবকদের জানানো হয়েছে, এবং এই স্ক্রিন খোলা থাকা অবস্থায় প্রতি ১৫ সেকেন্ডে আপনার অবস্থান শেয়ার করা হচ্ছে।',
+    en: 'Sent at {time}. Stay where it is safe if you can. Your location is shared every 15 seconds while this screen stays open.',
+    bn: '{time}-এ পাঠানো হয়েছে। সম্ভব হলে নিরাপদ জায়গায় থাকুন। এই স্ক্রিন খোলা থাকা অবস্থায় প্রতি ১৫ সেকেন্ডে আপনার অবস্থান শেয়ার করা হচ্ছে।',
   },
   imSafeNow: { en: "I'm safe now", bn: 'আমি এখন নিরাপদ' },
 
@@ -722,6 +727,11 @@ export const translations = {
   },
   sosAlertTypeLabel: { en: 'SOS', bn: 'SOS' },
   missedCheckinTypeLabel: { en: 'Missed Check-in', bn: 'চেক-ইন মিস হয়েছে' },
+  guardianAlertNeedsHelp: { en: '{name} needs help', bn: '{name}-এর সাহায্য দরকার' },
+  guardianAlertMissedCheckin: {
+    en: '{name} missed a check-in',
+    bn: '{name} চেক-ইন মিস করেছেন',
+  },
 
   // --- Guardian: live location sharing ---
   // Only shown while a linked person is actively sharing. A card

@@ -36,6 +36,12 @@ export type ThemeColors = {
   dangerBorder: string;
   dangerSoft: string;
   onDangerSoft: string;
+  // Controls drawn straight on a danger fill (SOS active, guardian alert
+  // header). The fill is the same in both schemes, so these are too.
+  onDangerBorder: string;
+  onDangerFaint: string;
+  emergencyCallPressed: string;
+  onEmergencyCall: string;
   success: string;
   successSoft: string;
   onSuccessSoft: string;
@@ -77,6 +83,10 @@ const light: ThemeColors = {
   dangerBorder: '#E7B7B3',
   dangerSoft: '#FBE4E2',
   onDangerSoft: '#9B1B14',
+  onDangerBorder: 'rgba(255,255,255,0.6)',
+  onDangerFaint: 'rgba(255,255,255,0.14)',
+  emergencyCallPressed: '#FBE4E2',
+  onEmergencyCall: '#9B1B14',
   success: '#1E8E3E',
   successSoft: '#DCE8E0',
   onSuccessSoft: '#17602C',
@@ -118,6 +128,10 @@ const dark: ThemeColors = {
   dangerBorder: '#6B2A2A',
   dangerSoft: '#3A1A1C',
   onDangerSoft: '#FFB4AB',
+  onDangerBorder: 'rgba(255,255,255,0.6)',
+  onDangerFaint: 'rgba(255,255,255,0.14)',
+  emergencyCallPressed: '#FBE4E2',
+  onEmergencyCall: '#9B1B14',
   success: '#4CC274',
   successSoft: '#16301F',
   onSuccessSoft: '#A6E3B5',
