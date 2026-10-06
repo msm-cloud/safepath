@@ -6,7 +6,15 @@ import { SurfaceToneContext, useSurfaceTone } from '@/theme/surface-tone';
 
 import Text, { type TextColor } from './Text';
 
-export type ButtonVariant = 'ink' | 'primary' | 'secondary' | 'ghost' | 'danger' | 'dangerOutline';
+export type ButtonVariant =
+  | 'ink'
+  | 'primary'
+  | 'secondary'
+  | 'ghost'
+  | 'danger'
+  | 'dangerOutline'
+  | 'emergencyCall'
+  | 'onDangerOutline';
 
 export type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   title: string;
@@ -38,6 +46,14 @@ const VARIANTS: Record<ButtonVariant, VariantColors> = {
     pressedBg: 'dangerSoft',
     label: 'dangerText',
     border: 'dangerBorder',
+  },
+  // The two variants below only sit on a danger fill (the SOS active screen).
+  emergencyCall: { bg: 'onDanger', pressedBg: 'emergencyCallPressed', label: 'onEmergencyCall' },
+  onDangerOutline: {
+    bg: 'transparent',
+    pressedBg: 'dangerPressed',
+    label: 'onDanger',
+    border: 'onDangerBorder',
   },
 };
 

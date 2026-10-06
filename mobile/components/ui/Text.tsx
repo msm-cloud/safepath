@@ -24,6 +24,7 @@ export type TextColor = Extract<
   | 'onInk'
   | 'onPrimary'
   | 'onDanger'
+  | 'onEmergencyCall'
   | 'onPrimarySoft'
   | 'onSuccessSoft'
   | 'onWarningSoft'
