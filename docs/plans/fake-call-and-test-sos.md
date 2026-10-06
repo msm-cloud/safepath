@@ -1,19 +1,49 @@
 # Plan: fake call setup, Test SOS and SOS PIN
 
-Status: agreed design, not built. Design boards: `User-FakeCallSetup`, `User-TestAlert`,
-`User-Home` and `User-SOS` in `docs/design/safepath-ui/`.
+Status: agreed design, not built. PR 4 builds the in-app part of fake call setup first.
+Design boards: `User-FakeCallSetup`, `User-TestAlert`, `User-Home` and `User-SOS` in
+`docs/design/safepath-ui/`.
 
 ## Build order
 
 1. PR 2: welcome and auth screens
 2. PR 3: invites
-3. Tier A push (FCM delivery to guardians, full-screen alarm, `safepath-push` native module)
-4. Fake call setup and Test SOS
-5. SOS PIN (separate feature, see below)
+3. PR 4: fake call setup screen with in-app ringing only (see "PR 4 scope" below)
+4. Tier A push (FCM delivery to guardians, full-screen alarm, `safepath-push` native module)
+5. Fake call background ringing and Test SOS
+6. SOS PIN (separate feature, see below)
 
-Fake call setup and Test SOS come after Tier A push: they reuse its native notification
+Background ringing and Test SOS come after Tier A push: they reuse its native notification
 module, and Test SOS can only report "delivered" once guardians receive pushes while the
 app is closed.
+
+### PR 4 scope
+
+Decided 2026-10-06. PR 4 ships the fake call setup screen with in-app ringing only:
+
+- Caller choice (Ammu, Abbu or another name), as in "Screen and settings" and "Data".
+- The longer delay options and the ring mode setting.
+- The last caller choice, delay and ring mode remembered on the device.
+- The caller-name field removed from Safety features.
+
+Ringing stays in-app, as `FakeCallFlow` does today: a JS timer, the native looping
+vibration and the in-app call screen. JS timers stop when the app is in the background, so
+in PR 4 a delayed call only rings while SafePath stays open; the setup screen says so.
+
+Deferred until after Tier A push:
+
+- Test SOS (the whole section below).
+- All background ringing: the `CallStyle` call notification, the exact alarm, the
+  `shortService` countdown service and the full-screen intent. The sections "Ringing in
+  the background", "The call", "Full-screen intent permission" and the open point below
+  describe that later work, not PR 4.
+
+### Emergency number
+
+`EMERGENCY_NUMBER` in `mobile/constants/Emergency.ts` is the agreed "number from config"
+for the "Call 999" action on the SOS screen and the shake countdown (decided 2026-10-06).
+It stays a code constant rather than an EAS env var so no build can ship without it. No
+code change is needed.
 
 ### Persona
 
@@ -149,8 +179,8 @@ delay (now, 30 s, 1 min, 5 min) and ring mode:
 - `mobile/app/(tabs)/index.tsx` (home tile and current fake call code), new setup and
   call screens, `mobile/components/SafetyFeaturesScreen.tsx`, `mobile/lib/translations.ts`,
   `mobile/lib/user-settings-context.tsx`
-- `mobile/modules/safepath-push` (from Tier A): channels, call notification, countdown
-  service, exact alarm
+- After Tier A only: `mobile/modules/safepath-push` (from Tier A): channels, call
+  notification, countdown service, exact alarm
 - No database migration.
 
 ## Test SOS
