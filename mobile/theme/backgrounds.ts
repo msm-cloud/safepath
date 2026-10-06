@@ -33,7 +33,7 @@ export const backgroundPhotoSpecs: Record<ScreenBackground, BackgroundPhotoSpec 
   auth: { file: 'auth.webp', overlayOpacity: 0.58 },
   onboardingStudent: { file: 'onboarding-student.webp', overlayOpacity: 0.55 },
   onboardingWorking: { file: 'onboarding-working.webp', overlayOpacity: 0.58 },
-  onboardingGuardian: { file: 'onboarding-guardian.webp', overlayOpacity: 0.58 },
+  onboardingGuardian: { file: 'onboarding-guardian.webp', overlayOpacity: 0.55 },
   empty: null,
 };
 
