@@ -83,6 +83,11 @@ when an account has no profile row and can't be fixed from the app. EAS
 builds and updates read it from an EAS environment variable of the same
 name; without it the message is shown with no address.
 
+`EXPO_PUBLIC_PRIVACY_POLICY_URL` is the public address of the dashboard's
+`/privacy` page, linked from the sign-up screen. Like the support address,
+EAS builds need it as an EAS environment variable; while it is empty the
+sign-up screen leaves the privacy line out.
+
 ### Run the mobile app (Expo)
 
 ```bash

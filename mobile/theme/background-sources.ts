@@ -13,6 +13,9 @@ export type BackgroundPhoto = BackgroundPhotoSpec & { source: ImageSource };
 const SOURCES: Partial<Record<ScreenBackground, ImageSource>> = {
   welcome: require('@/assets/backgrounds/welcome.webp'),
   auth: require('@/assets/backgrounds/auth.webp'),
+  onboardingStudent: require('@/assets/backgrounds/onboarding-student.webp'),
+  onboardingWorking: require('@/assets/backgrounds/onboarding-working.webp'),
+  onboardingGuardian: require('@/assets/backgrounds/onboarding-guardian.webp'),
 };
 
 export function backgroundPhoto(background: ScreenBackground): BackgroundPhoto | null {

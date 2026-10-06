@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { View, type ScrollView, type TextInput } from 'react-native';
+import { Linking, View, type ScrollView, type TextInput } from 'react-native';
 
 import AuthHeader from '@/components/AuthHeader';
 import Banner from '@/components/ui/Banner';
@@ -12,6 +12,7 @@ import Text from '@/components/ui/Text';
 import { useLanguage } from '@/lib/language-context';
 import { markOnboardingPending } from '@/lib/onboarding-storage';
 import { PERSONA_LABEL, parsePersona, personaRole } from '@/lib/personas';
+import { PRIVACY_POLICY_URL } from '@/lib/privacy';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { openUserGuide } from '@/lib/user-guide';
@@ -113,7 +114,7 @@ export default function SignUpScreen() {
     // lands in the app — see lib/onboarding-storage.ts. With email
     // confirmation that is usually a later sign-in, not this request.
     if (data.user) {
-      markOnboardingPending(data.user.id);
+      markOnboardingPending(data.user.id, persona);
     }
 
     if (!data.session) {
@@ -233,6 +234,22 @@ export default function SignUpScreen() {
         {error && <Banner tone="danger" message={error} />}
         {info && <Banner tone="success" message={info} />}
       </View>
+
+      {PRIVACY_POLICY_URL !== '' && (
+        <Text variant="caption">
+          {t('signUpPrivacyPrefix')}{' '}
+          <Text
+            variant="caption"
+            weight="bold"
+            accessibilityRole="link"
+            onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
+            style={{ textDecorationLine: 'underline' }}
+          >
+            {t('privacyPolicyLink')}
+          </Text>
+          {t('signUpPrivacySuffix')}
+        </Text>
+      )}
 
       <View style={{ marginTop: 'auto', gap: spacing.md }}>
         <Button
