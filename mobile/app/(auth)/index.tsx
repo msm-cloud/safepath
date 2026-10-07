@@ -27,9 +27,9 @@ const PERSONA_ICON: Record<Persona, SymbolViewProps['name']> = {
 };
 
 // The first screen anyone sees without a session (see the `!session` guard
-// in app/_layout.tsx). The persona only frames sign-up wording and picks the
-// role a new account is created with; an existing account is always routed
-// by its stored profile.role after log in.
+// in app/_layout.tsx). The persona frames sign-up wording and picks the
+// role a new account is created with. Log in checks it against the
+// account's stored profile.role and refuses the other card's accounts.
 export default function WelcomeScreen() {
   const { t } = useLanguage();
   const { colors, spacing } = useTheme();
@@ -99,7 +99,7 @@ export default function WelcomeScreen() {
           <Text
             weight="bold"
             accessibilityRole="link"
-            onPress={() => router.push('/(auth)/sign-in')}
+            onPress={() => router.push({ pathname: '/(auth)/sign-in', params: { persona } })}
             style={{ textDecorationLine: 'underline' }}
           >
             {t('logInLink')}

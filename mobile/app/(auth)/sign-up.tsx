@@ -3,15 +3,17 @@ import { useRef, useState } from 'react';
 import { Linking, View, type ScrollView, type TextInput } from 'react-native';
 
 import AuthHeader from '@/components/AuthHeader';
+import PersonaPill from '@/components/PersonaPill';
 import Banner from '@/components/ui/Banner';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import PasswordInput from '@/components/ui/PasswordInput';
 import Screen from '@/components/ui/Screen';
 import Text from '@/components/ui/Text';
+import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { markOnboardingPending } from '@/lib/onboarding-storage';
-import { PERSONA_LABEL, parsePersona, personaRole } from '@/lib/personas';
+import { parsePersona, personaRole, roleMismatchMessage } from '@/lib/personas';
 import { PRIVACY_POLICY_URL } from '@/lib/privacy';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
@@ -32,8 +34,9 @@ const EMAIL_CONFIRM_REDIRECT_URL = 'safepath://';
 
 export default function SignUpScreen() {
   const { t, language } = useLanguage();
-  const { colors, radius, spacing } = useTheme();
+  const { spacing } = useTheme();
   const router = useRouter();
+  const { signInAs } = useAuth();
   // Chosen on the welcome screen. A direct link without one signs up a
   // student, as before personas existed.
   const persona = parsePersona(useLocalSearchParams<{ persona?: string }>().persona);
@@ -82,44 +85,46 @@ export default function SignUpScreen() {
     // number is already in use, handle_new_user() creates the account
     // without it, and PhoneNotSavedNotice tells the owner after their
     // first sign-in.
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        emailRedirectTo: EMAIL_CONFIRM_REDIRECT_URL,
-        // This project requires email confirmation, so there is no session
-        // yet to update the profile with; handle_new_user() copies these
-        // from the signup metadata instead (see
-        // supabase/migrations/20260821190552_profiles.sql and
-        // 20260828091441_phone_survives_email_confirmation.sql). `language`
-        // is the current choice, including one made on the welcome screen.
-        data: {
-          full_name: fullName.trim(),
-          role,
-          preferred_language: language,
-          phone: trimmedPhone,
+    // Goes through signInAs like a log in: with email confirmation off,
+    // sign-up returns a session, which must match the card too.
+    const result = await signInAs(persona, async () => {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo: EMAIL_CONFIRM_REDIRECT_URL,
+          // This project requires email confirmation, so there is no session
+          // yet to update the profile with; handle_new_user() copies these
+          // from the signup metadata instead (see
+          // supabase/migrations/20260821190552_profiles.sql and
+          // 20260828091441_phone_survives_email_confirmation.sql). `language`
+          // is the current choice, including one made on the welcome screen.
+          data: {
+            full_name: fullName.trim(),
+            role,
+            preferred_language: language,
+            phone: trimmedPhone,
+          },
         },
-      },
-    });
-
-    if (signUpError) {
-      setSubmitting(false);
+      });
       // Supabase's own message (e.g. "User already registered") is more
       // useful than a generic one.
-      setError(signUpError.message);
-      return;
-    }
+      if (signUpError) return { error: signUpError.message };
 
-    // Shows the onboarding carousel once, the first time this account
-    // lands in the app — see lib/onboarding-storage.ts. With email
-    // confirmation that is usually a later sign-in, not this request.
-    if (data.user) {
-      markOnboardingPending(data.user.id, persona);
-    }
+      // Shows the onboarding carousel once, the first time this account
+      // lands in the app — see lib/onboarding-storage.ts. With email
+      // confirmation that is usually a later sign-in, not this request.
+      if (data.user) {
+        markOnboardingPending(data.user.id, persona);
+      }
+      return { error: null };
+    });
 
-    if (!data.session) {
+    if (result.kind !== 'signed_in') {
       setSubmitting(false);
-      setInfo(t('checkEmailConfirm'));
+      if (result.kind === 'no_session') setInfo(t('checkEmailConfirm'));
+      else if (result.kind === 'role_mismatch') setError(t(roleMismatchMessage(result.role)));
+      else setError(result.message ?? t('signInUnavailable'));
       return;
     }
 
@@ -131,7 +136,7 @@ export default function SignUpScreen() {
         phone: trimmedPhone,
         preferred_language: language,
       })
-      .eq('id', data.session.user.id);
+      .eq('id', result.userId);
 
     setSubmitting(false);
 
@@ -147,39 +152,12 @@ export default function SignUpScreen() {
     // root layout redirects into the app.
   };
 
-  const personaLabel = t(PERSONA_LABEL[persona]);
-
   return (
     <Screen background="auth" scrollRef={scrollRef} contentStyle={{ gap: spacing.xl }}>
       <AuthHeader leading="back" />
 
       <View style={{ gap: spacing.md }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            alignSelf: 'flex-start',
-            gap: spacing.sm,
-            paddingVertical: spacing.xs,
-            paddingHorizontal: spacing.md,
-            borderRadius: radius.pill,
-            backgroundColor: colors.primarySoft,
-          }}
-        >
-          <Text variant="label" color="onPrimarySoft">
-            {t('signingUpAs', { persona: personaLabel })}
-          </Text>
-          <Text
-            variant="label"
-            color="onPrimarySoft"
-            accessibilityRole="link"
-            accessibilityLabel={`${t('changeLink')}: ${personaLabel}`}
-            onPress={() => router.dismissTo('/(auth)')}
-            style={{ textDecorationLine: 'underline' }}
-          >
-            {t('changeLink')}
-          </Text>
-        </View>
+        <PersonaPill persona={persona} labelKey="signingUpAs" />
         <Text variant="display" accessibilityRole="header">
           {t('signUpTitle')}
         </Text>
@@ -263,7 +241,7 @@ export default function SignUpScreen() {
           <Text
             weight="bold"
             accessibilityRole="link"
-            onPress={() => router.replace('/(auth)/sign-in')}
+            onPress={() => router.replace({ pathname: '/(auth)/sign-in', params: { persona } })}
             style={{ textDecorationLine: 'underline' }}
           >
             {t('logInLink')}

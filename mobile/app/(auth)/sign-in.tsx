@@ -1,17 +1,20 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { View, type ScrollView, type TextInput } from 'react-native';
 
 import AuthHeader from '@/components/AuthHeader';
 import LocationPrivacyNote from '@/components/LocationPrivacyNote';
+import PersonaPill from '@/components/PersonaPill';
 import Banner from '@/components/ui/Banner';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import PasswordInput from '@/components/ui/PasswordInput';
 import Screen from '@/components/ui/Screen';
 import Text from '@/components/ui/Text';
+import { useAuth, type ProfileRole } from '@/lib/auth-context';
 import { phoneSignIn } from '@/lib/auth-identifier';
 import { useLanguage } from '@/lib/language-context';
+import { PERSONA_LABEL, parsePersona, personaForRole, roleMismatchMessage } from '@/lib/personas';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { openUserGuide } from '@/lib/user-guide';
@@ -22,9 +25,17 @@ export default function SignInScreen() {
   const { t } = useLanguage();
   const { spacing } = useTheme();
   const router = useRouter();
+  const { signInAs } = useAuth();
+  // The card picked on the welcome screen. Absent when sign-in is reached
+  // without one (after a password reset): the account then routes by its
+  // own role.
+  const personaParam = useLocalSearchParams<{ persona?: string }>().persona;
+  const persona = personaParam ? parsePersona(personaParam) : null;
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Set when the account belongs to the other card; offers to switch.
+  const [mismatchRole, setMismatchRole] = useState<ProfileRole | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -33,6 +44,7 @@ export default function SignInScreen() {
 
   const handleSignIn = async () => {
     setError(null);
+    setMismatchRole(null);
 
     const trimmed = identifier.trim();
     if (!isValidEmail(trimmed) && !isValidPhone(trimmed)) {
@@ -45,14 +57,34 @@ export default function SignInScreen() {
     }
 
     setSubmitting(true);
-    const errorMessage = isValidEmail(trimmed)
-      ? await signInWithEmail(trimmed)
-      : await signInWithPhone(trimmed);
+    const attempt = async () => ({
+      error: isValidEmail(trimmed)
+        ? await signInWithEmail(trimmed)
+        : await signInWithPhone(trimmed),
+    });
+    if (!persona) {
+      setError((await attempt()).error);
+      setSubmitting(false);
+      return;
+    }
+    const result = await signInAs(persona, attempt);
     setSubmitting(false);
-    setError(errorMessage);
+    if (result.kind === 'role_mismatch') {
+      setMismatchRole(result.role);
+      setError(t(roleMismatchMessage(result.role)));
+    } else if (result.kind === 'failed') {
+      setError(result.message ?? t('signInUnavailable'));
+    }
 
-    // No navigation on success: AuthProvider picks up the session and
-    // Stack.Protected in the root layout routes by the stored profile.role.
+    // No navigation on success: AuthProvider routes by the stored
+    // profile.role through Stack.Protected in the root layout.
+  };
+
+  // Keeps what was typed; only the card changes.
+  const switchPersona = (role: ProfileRole) => {
+    router.setParams({ persona: personaForRole(role) });
+    setMismatchRole(null);
+    setError(null);
   };
 
   // Each returns the message to show, or null on success.
@@ -90,6 +122,7 @@ export default function SignInScreen() {
       <AuthHeader leading="brand" />
 
       <View style={{ gap: spacing.xs }}>
+        {persona && <PersonaPill persona={persona} labelKey="loggingInAs" />}
         <Text variant="display" accessibilityRole="header">
           {t('logInHeadline')}
         </Text>
@@ -135,6 +168,15 @@ export default function SignInScreen() {
           </View>
         </View>
         {error && <Banner tone="danger" message={error} />}
+        {mismatchRole && (
+          <Button
+            title={t('switchToPersona', {
+              persona: t(PERSONA_LABEL[personaForRole(mismatchRole)]),
+            })}
+            variant="secondary"
+            onPress={() => switchPersona(mismatchRole)}
+          />
+        )}
       </View>
 
       <View style={{ marginTop: 'auto', gap: spacing.md }}>

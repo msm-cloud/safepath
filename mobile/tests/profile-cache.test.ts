@@ -9,6 +9,7 @@ import {
   createProfileCache,
   DISPLAY_KEY_PREFIX,
   LANGUAGE_KEY_PREFIX,
+  ROLE_KEY_PREFIX,
   type CachedProfileDisplay,
 } from '../lib/profile-cache.ts';
 
@@ -127,6 +128,7 @@ describe('profile cache: storage failures and sign-out', () => {
     await cache.writeLanguage(ALICE, 'en');
     await cache.writeDisplay(ALICE, ALICE_DISPLAY);
     await cache.writeLanguage(BOB, 'bn');
+    await cache.writeRole(BOB, 'guardian');
     storage.data.set('sos-contacts:user-alice', '{}');
 
     await cache.clear();
@@ -134,5 +136,28 @@ describe('profile cache: storage failures and sign-out', () => {
     assert.deepEqual([...storage.data.keys()], ['sos-contacts:user-alice']);
     assert.equal(await cache.readLanguage(ALICE), null);
     assert.equal(await cache.readDisplay(ALICE), null);
+    assert.equal(await cache.readRole(BOB), null);
+  });
+});
+
+describe('profile cache: role', () => {
+  it('returns the role that was written, per user', async () => {
+    const cache = createProfileCache(memoryStorage());
+    await cache.writeRole(ALICE, 'guardian');
+    await cache.writeRole(BOB, 'user');
+
+    assert.equal(await cache.readRole(ALICE), 'guardian');
+    assert.equal(await cache.readRole(BOB), 'user');
+  });
+
+  it('ignores a value that is not a role', async () => {
+    const storage = memoryStorage();
+    storage.data.set(ROLE_KEY_PREFIX + ALICE, 'admin');
+
+    assert.equal(await createProfileCache(storage).readRole(ALICE), null);
+  });
+
+  it('treats unreadable storage as no cached role', async () => {
+    assert.equal(await createProfileCache(failingStorage()).readRole(ALICE), null);
   });
 });

@@ -94,6 +94,17 @@ export const translations = {
     en: "Couldn't sign in right now. Check your connection and try again.",
     bn: 'এই মুহূর্তে সাইন ইন করা যাচ্ছে না। আপনার ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
   },
+  loggingInAs: { en: 'Logging in as {persona}', bn: '{persona} হিসেবে লগ ইন' },
+  // The welcome-screen card didn't match the account's profiles.role.
+  roleMismatchGuardian: {
+    en: 'This is a guardian account. Please sign in as Guardian.',
+    bn: 'এটি একটি অভিভাবক অ্যাকাউন্ট। অভিভাবক হিসেবে সাইন ইন করুন।',
+  },
+  roleMismatchUser: {
+    en: 'This is a Student or Working woman account. Please sign in as Student or Working woman.',
+    bn: 'এটি একটি শিক্ষার্থী বা কর্মজীবী নারীর অ্যাকাউন্ট। শিক্ষার্থী বা কর্মজীবী নারী হিসেবে সাইন ইন করুন।',
+  },
+  switchToPersona: { en: 'Sign in as {persona}', bn: '{persona} হিসেবে সাইন ইন করুন' },
   forgotPasswordLink: { en: 'Forgot password?', bn: 'পাসওয়ার্ড ভুলে গেছেন?' },
   userManualLink: {
     en: 'Need help? View the user guide',
