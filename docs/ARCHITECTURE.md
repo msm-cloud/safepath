@@ -121,8 +121,12 @@ someone" screen have moved too.
 
 The welcome screen asks for a persona (student, working woman or guardian, in
 `lib/personas.ts`). Only the role is stored: guardian creates a guardian account and the
-other two create a user account. The persona only changes wording on the signed-out
-screens. The old `PasswordInput` and `LanguageToggle` are gone; `constants/Colors.ts`
+other two create a user account. Apart from that the persona only changes wording.
+`profiles.role` decides the home: log in and sign-up go through `signInAs` in
+`lib/auth-context.tsx` (logic in `lib/sign-in-gate.ts`), which holds the new session back
+until its role matches the card and otherwise signs it out on this device and offers the
+right card. Student and working woman both accept a user account. A restored session
+routes by the role from the server, or the copy cached on the device when offline. The old `PasswordInput` and `LanguageToggle` are gone; `constants/Colors.ts`
 and the remaining components that use it are removed once nothing imports them. The dashboard will get the same values as Tailwind CSS
 variables when it is reworked.
 

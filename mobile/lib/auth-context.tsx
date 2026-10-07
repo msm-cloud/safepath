@@ -1,13 +1,35 @@
 import type { Session } from '@supabase/supabase-js';
-import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { stopLiveSharing, stopLiveSharingOnDevice } from '@/lib/live-sharing';
 import { profileCache } from '@/lib/device-profile-cache';
 import { resetLocationHistoryOnDevice } from '@/lib/location-history';
+import {
+  personaMatchesRole,
+  resolveSessionRole,
+  type Persona,
+  type ProfileRole,
+} from '@/lib/personas';
+import {
+  createSignInGate,
+  type AuthAttempt,
+  type SignInAsResult,
+  type SignInGate,
+} from '@/lib/sign-in-gate';
 import { clearSosContactsCache } from '@/lib/sos-contacts';
 import { supabase } from '@/lib/supabase';
 
-export type ProfileRole = 'user' | 'guardian';
+export type { ProfileRole } from '@/lib/personas';
+
+export type { AuthAttempt, SignInAsResult } from '@/lib/sign-in-gate';
 
 type AuthContextValue = {
   session: Session | null;
@@ -20,36 +42,68 @@ type AuthContextValue = {
   // layout hold the splash screen instead of flashing sign-in, or the
   // wrong tab group, before both are known.
   loading: boolean;
+  // Runs a sign-in or sign-up for the card picked on the welcome screen and
+  // only lets the new session into the app once profiles.role matches it.
+  signInAs: (persona: Persona, attempt: AuthAttempt) => Promise<SignInAsResult>;
   signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+async function fetchRole(userId: string): Promise<ProfileRole | null> {
+  const { data } = await supabase.from('profiles').select('role').eq('id', userId).single();
+  return data?.role ?? null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<ProfileRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
+  const gateRef = useRef<SignInGate<Session> | null>(null);
+
+  const applySession = useCallback(async (newSession: Session | null, knownRole?: ProfileRole) => {
+    if (!mountedRef.current) return;
+    setSession(newSession);
+    if (!newSession) {
+      setRole(null);
+      setLoading(false);
+      return;
+    }
+    // Re-armed for every session change, not just the first: rendering a
+    // session before its role is known makes every Stack.Protected guard
+    // in app/_layout.tsx false at once, which shows Expo Router's "This
+    // screen doesn't exist" fallback.
+    setLoading(true);
+    const userId = newSession.user.id;
+    let resolved = knownRole;
+    if (!resolved) {
+      const fetched = await fetchRole(userId);
+      // Offline, the role cached on this device keeps a guardian out of
+      // the student home.
+      const cached = fetched ? null : await profileCache.readRole(userId);
+      resolved = resolveSessionRole(fetched, cached);
+    }
+    void profileCache.writeRole(userId, resolved);
+    if (!mountedRef.current) return;
+    setRole(resolved);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    // Falls back to 'user' rather than leaving `role` null indefinitely on
-    // a fetch error — a stuck loading screen would be worse than a
-    // reasonable default, and profiles_select_own means this fetch should
-    // always succeed for a genuinely signed-in user anyway.
-    async function loadRole(userId: string) {
-      const { data } = await supabase.from('profiles').select('role').eq('id', userId).single();
-      if (!cancelled) setRole(data?.role ?? 'user');
-    }
-
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (cancelled) return;
-      setSession(data.session);
-      if (data.session) {
-        await loadRole(data.session.user.id);
-      }
-      if (!cancelled) setLoading(false);
+    mountedRef.current = true;
+    const gate = createSignInGate<Session>({
+      currentSession: async () => (await supabase.auth.getSession()).data.session,
+      fetchRole,
+      signOutLocal: async () => {
+        await supabase.auth.signOut({ scope: 'local' });
+      },
+      admit: applySession,
+      matchesRole: personaMatchesRole,
     });
+    gateRef.current = gate;
+
+    supabase.auth.getSession().then(({ data }) => applySession(data.session));
 
     // Keeps `session` (and `role`) in sync with sign-in, sign-out, and
     // token refresh — this is also what drives the Stack.Protected
@@ -57,37 +111,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // sign-out.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      if (cancelled) return;
-      setSession(newSession);
-      if (newSession) {
-        // Bug fixed here: `loading` used to only ever get set back to
-        // false, once, inside the initial getSession() handler above —
-        // never re-armed for a session change that happens *after* mount
-        // (a sign-in or sign-up). That left a real window where
-        // setSession() had already re-rendered the root layout with a
-        // truthy session but `role` still at its old (null) value, which
-        // makes every Stack.Protected guard in app/_layout.tsx false at
-        // once — no matching screen, hence Expo Router's generic
-        // "This screen doesn't exist" fallback. Re-arming loading here
-        // closes that window: the root layout returns null (same as the
-        // initial splash-holding state) until role is freshly known for
-        // this exact session, instead of ever rendering the
-        // session-without-role combination at all.
-        setLoading(true);
-        await loadRole(newSession.user.id);
-        if (!cancelled) setLoading(false);
-      } else {
-        setRole(null);
-        setLoading(false);
-      }
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (gate.park(newSession)) return;
+      void applySession(newSession);
     });
 
     return () => {
-      cancelled = true;
+      mountedRef.current = false;
+      gateRef.current = null;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [applySession]);
+
+  const signInAs = useCallback(
+    (persona: Persona, attempt: AuthAttempt): Promise<SignInAsResult> =>
+      // The auth screens only render after the effect above has run.
+      gateRef.current?.signInAs(persona, attempt) ??
+      Promise.resolve({ kind: 'failed', message: null }),
+    []
+  );
 
   // Location tasks and their AsyncStorage state are per-device, not
   // per-account, and outlive the auth session — left running, they carry
@@ -121,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, role, loading, signOut }}>
+    <AuthContext.Provider value={{ session, role, loading, signInAs, signOut }}>
       {children}
     </AuthContext.Provider>
   );

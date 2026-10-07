@@ -110,7 +110,7 @@ export default function OnboardingScreen({
   const { t } = useLanguage();
   const router = useRouter();
   const { session } = useAuth();
-  const { loading, persona } = useDevicePersona(session?.user.id);
+  const { loading, persona } = useDevicePersona(session?.user.id, role);
 
   // Leaves onboarding first, so going back from the target lands on the
   // screen onboarding was shown over.
