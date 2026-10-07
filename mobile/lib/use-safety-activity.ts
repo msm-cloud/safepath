@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
 
 const RECHECK_INTERVAL_MS = 30_000;
 
+let lastLoggedReasons: string | null = null;
+
 // True while anything safety-critical is running for this person: an
 // active SOS (their own, or a linked student's alert a guardian is
 // looking at), an active journey, or their own live location sharing.
@@ -60,6 +62,16 @@ async function isSafetyActivityRunning(userId: string): Promise<boolean> {
 
   // Unknown state (offline, server error) counts as busy: interrupting an
   // emergency is worse than showing a prompt a little later.
-  if (alerts.error || journeys.error || sharing.error) return true;
-  return alerts.data.length > 0 || journeys.data.length > 0 || sharing.data.length > 0;
+  const reasons = [
+    alerts.error || journeys.error || sharing.error ? 'check failed' : null,
+    alerts.data?.length ? 'sos' : null,
+    journeys.data?.length ? 'journey' : null,
+    sharing.data?.length ? 'live sharing' : null,
+  ].filter((reason) => reason !== null);
+  const summary = reasons.join(', ');
+  if (summary !== lastLoggedReasons) {
+    console.log(`[app-updates] prompts ${summary ? `held: ${summary}` : 'clear'}`);
+    lastLoggedReasons = summary;
+  }
+  return reasons.length > 0;
 }

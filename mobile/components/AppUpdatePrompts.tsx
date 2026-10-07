@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
 import { WhatsNew } from '@/constants/WhatsNew';
 import { useLanguage } from '@/lib/language-context';
+import { useForegroundSettled } from '@/lib/use-foreground-settled';
 import { useOtaUpdate } from '@/lib/use-ota-update';
 import { useSafetyActivity } from '@/lib/use-safety-activity';
 import { hasSeenWhatsNew, markWhatsNewSeen } from '@/lib/whats-new-storage';
@@ -14,7 +15,11 @@ import { useTheme } from '@/theme';
 // Mounted once at the root. Shows at most one of two dialogs: "update
 // ready" (restart now / later) and, once per WhatsNew.id, the what's new
 // note. Neither appears while an SOS, journey or live sharing is running,
-// and an open one is withdrawn if one starts.
+// and an open one is withdrawn if one starts. Both wait for the app to sit
+// in the foreground for a moment, and come back on the next foreground if
+// the app is left before they're answered.
+const SETTLE_DELAY_MS = 1500;
+
 export default function AppUpdatePrompts() {
   const { language, t } = useLanguage();
   const { spacing } = useTheme();
@@ -26,6 +31,7 @@ export default function AppUpdatePrompts() {
     if (!WhatsNew.id) return;
     let cancelled = false;
     hasSeenWhatsNew(WhatsNew.id).then((seen) => {
+      if (seen) console.log(`[app-updates] what's new ${WhatsNew.id} already seen`);
       if (!cancelled && !seen) setWhatsNewDue(true);
     });
     return () => {
@@ -34,10 +40,16 @@ export default function AppUpdatePrompts() {
   }, []);
 
   const showUpdate = isUpdateReady && !updateDeferred;
+  const settled = useForegroundSettled(SETTLE_DELAY_MS);
   const busy = useSafetyActivity(showUpdate || whatsNewDue);
-  if (busy !== false) return null;
+  const visible =
+    !settled || busy !== false ? null : showUpdate ? 'update' : whatsNewDue ? 'whatsNew' : null;
 
-  if (showUpdate) {
+  useEffect(() => {
+    if (visible) console.log(`[app-updates] showing ${visible}`);
+  }, [visible]);
+
+  if (visible === 'update') {
     const defer = () => setUpdateDeferred(true);
     return (
       <PromptModal onRequestClose={defer}>
@@ -53,13 +65,16 @@ export default function AppUpdatePrompts() {
     );
   }
 
-  if (whatsNewDue) {
-    const dismiss = () => {
+  if (visible === 'whatsNew') {
+    // Only OK marks the note as read. Back hides it for this run, so an
+    // accidental back gesture doesn't lose it for good.
+    const acknowledge = () => {
+      console.log(`[app-updates] what's new ${WhatsNew.id} acknowledged`);
       setWhatsNewDue(false);
       void markWhatsNewSeen(WhatsNew.id);
     };
     return (
-      <PromptModal onRequestClose={dismiss}>
+      <PromptModal onRequestClose={() => setWhatsNewDue(false)}>
         <Text variant="title">{t('whatsNewTitle')}</Text>
         <View style={{ gap: spacing.sm }}>
           {WhatsNew[language].map((line) => (
@@ -74,7 +89,7 @@ export default function AppUpdatePrompts() {
           ))}
         </View>
         <View style={{ marginTop: spacing.sm }}>
-          <Button title={t('whatsNewOk')} variant="primary" onPress={dismiss} />
+          <Button title={t('whatsNewOk')} variant="primary" onPress={acknowledge} />
         </View>
       </PromptModal>
     );
