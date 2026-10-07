@@ -126,6 +126,8 @@ describe('first auth resolution', () => {
     await app.auth.apply(app.session(GUARDIAN));
 
     assert.deepEqual(app.routes, ['user']);
+    // The guess isn't cached, so it can't stick on later offline starts.
+    assert.equal(app.cache.has(GUARDIAN), false);
   });
 
   it('corrects that fallback on the next refresh that reaches the server', async () => {

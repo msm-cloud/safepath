@@ -58,13 +58,17 @@ export function createAuthSession<S extends SessionLike>(deps: AuthSessionDeps<S
     deps.publish(next);
   };
 
+  // Only a role confirmed by the server is cached: the offline fallback is
+  // a guess and must not outlive the next launch that can check it.
   async function resolveRole(userId: string, knownRole?: ProfileRole): Promise<ProfileRole> {
-    if (knownRole) return knownRole;
-    const fetched = await deps.fetchRole(userId);
+    const fetched = knownRole ?? (await deps.fetchRole(userId));
+    if (fetched) {
+      void deps.writeCachedRole(userId, fetched);
+      return fetched;
+    }
     // Offline, the role cached on this device keeps a guardian out of the
     // student home.
-    const cached = fetched ? null : await deps.readCachedRole(userId);
-    return deps.resolveRole(fetched, cached);
+    return deps.resolveRole(null, await deps.readCachedRole(userId));
   }
 
   // Same account, role already known: swap in the new tokens at once and
@@ -100,7 +104,6 @@ export function createAuthSession<S extends SessionLike>(deps: AuthSessionDeps<S
       // Expo Router's "This screen doesn't exist" fallback.
       const role = await resolveRole(userId, knownRole);
       if (gen !== generation) return;
-      void deps.writeCachedRole(userId, role);
       publish({ session, role, loading: false });
     },
 
