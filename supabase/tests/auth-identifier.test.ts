@@ -23,9 +23,10 @@ const PASSWORD = 'correct-horse';
 const SALT = 'test-salt';
 const FORWARD_SECRET = 'dashboard-forward-secret';
 
-// Node timers can fire a fraction of a millisecond before performance.now()
-// says the delay has passed, so floor checks allow this much slack.
-const TIMER_SLACK_MS = 1;
+// Node timers can fire early relative to performance.now(), and on shared CI
+// runners the drift exceeds a millisecond. Still small next to the floors
+// under test, so a handler that skipped the floor would fail.
+const TIMER_SLACK_MS = 15;
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
