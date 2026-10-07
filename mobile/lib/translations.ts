@@ -901,6 +901,18 @@ export const translations = {
   notFoundTitle: { en: 'Oops!', bn: 'ওহো!' },
   notFoundMessage: { en: "This screen doesn't exist.", bn: 'এই স্ক্রিনটি নেই।' },
   goToHomeLink: { en: 'Go to home screen', bn: 'হোম স্ক্রিনে যান' },
+
+  // --- App updates (components/AppUpdatePrompts.tsx) ---
+  updateReadyTitle: { en: 'A new update is ready', bn: 'নতুন আপডেট এসেছে' },
+  updateReadyMessage: {
+    en: 'Restart SafePath to start using it. It takes a few seconds.',
+    bn: 'ব্যবহার শুরু করতে SafePath আবার চালু করুন। কয়েক সেকেন্ড লাগবে।',
+  },
+  updateRestartNow: { en: 'Restart now', bn: 'এখনই রিস্টার্ট করুন' },
+  updateLater: { en: 'Later', bn: 'পরে' },
+  whatsNewTitle: { en: "What's new", bn: 'নতুন যা আছে' },
+  whatsNewOk: { en: 'OK', bn: 'ঠিক আছে' },
+  appVersionLabel: { en: 'Version {version}', bn: 'সংস্করণ {version}' },
 } as const satisfies Record<string, Entry>;
 
 export type TranslationKey = keyof typeof translations;

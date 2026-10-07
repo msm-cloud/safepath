@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
+import AppUpdatePrompts from '@/components/AppUpdatePrompts';
 import ShakeSosListener from '@/components/ShakeSosListener';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
@@ -98,6 +99,10 @@ function RootLayoutNav() {
           subscription at all) while signed out or while the Settings
           toggle is off — see its own comments. */}
       <ShakeSosListener />
+
+      {/* Update-ready and what's-new dialogs; hidden while an SOS,
+          journey or live sharing is running — see its own comments. */}
+      <AppUpdatePrompts />
     </ThemeProvider>
   );
 }

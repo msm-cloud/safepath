@@ -261,6 +261,26 @@ use these instead of inline colours and styles; the older
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the details.
 
+## Releases and over-the-air updates (mobile)
+
+`runtimeVersion` follows `version` in `mobile/app.json`, so an OTA update only
+reaches builds of the same app version. JS-only changes ship with
+`eas update`; anything that adds or upgrades a native module needs a new
+`eas build`.
+
+```bash
+cd mobile
+eas build --platform android --profile preview   # installable APK, channel "preview"
+eas update --channel preview --message "..."     # OTA to preview builds
+```
+
+The app checks for an update on launch and when it returns to the
+foreground, downloads it in the background, and offers "Restart now" /
+"Later". The prompt never appears while an SOS, journey or live location
+sharing is active. Before an update users will notice, edit
+[`mobile/constants/WhatsNew.ts`](mobile/constants/WhatsNew.ts): a new `id`
+shows its bullets once per device; an empty `id` shows nothing.
+
 ## Tooling
 
 - **pnpm workspaces** link `mobile`, `dashboard`, and `packages/shared-types`
