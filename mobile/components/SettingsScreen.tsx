@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
@@ -18,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { useUserSettings } from '@/lib/user-settings-context';
 import { useTheme } from '@/theme';
 
+const APP_VERSION = Constants.expoConfig?.version ?? '';
 const AVATAR_SIZE = 88;
 const EDIT_BADGE_SIZE = 30;
 
@@ -235,6 +237,10 @@ export default function SettingsScreen() {
         loading={signingOut}
         onPress={handleSignOut}
       />
+
+      <Text variant="caption" color="textMuted" align="center">
+        {t('appVersionLabel', { version: APP_VERSION })}
+      </Text>
     </Screen>
   );
 }
