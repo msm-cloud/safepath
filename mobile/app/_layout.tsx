@@ -8,6 +8,7 @@ import AppUpdatePrompts from '@/components/AppUpdatePrompts';
 import ShakeSosListener from '@/components/ShakeSosListener';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { rootRoute } from '@/lib/auth-session';
 import { LanguageProvider, useLanguage } from '@/lib/language-context';
 import { UserSettingsProvider } from '@/lib/user-settings-context';
 import { useBrandFonts } from '@/theme/fonts';
@@ -46,8 +47,9 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { language } = useLanguage();
   const { session, role, loading } = useAuth();
+  const route = rootRoute({ session, role, loading });
   const fontsReady = useBrandFonts();
-  const ready = !loading && fontsReady;
+  const ready = route !== 'splash' && fontsReady;
 
   useEffect(() => {
     if (ready) {
@@ -75,14 +77,14 @@ function RootLayoutNav() {
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <Stack>
         {/* Existing student experience — completely unchanged. */}
-        <Stack.Protected guard={!!session && role === 'user'}>
+        <Stack.Protected guard={route === 'user'}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack.Protected>
         {/* New parallel guardian experience — see app/(guardian)/. */}
-        <Stack.Protected guard={!!session && role === 'guardian'}>
+        <Stack.Protected guard={route === 'guardian'}>
           <Stack.Screen name="(guardian)" options={{ headerShown: false }} />
         </Stack.Protected>
-        <Stack.Protected guard={!session}>
+        <Stack.Protected guard={route === 'auth'}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         </Stack.Protected>
         {/* Deliberately NOT inside any Stack.Protected block — see

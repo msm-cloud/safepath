@@ -126,7 +126,11 @@ other two create a user account. Apart from that the persona only changes wordin
 `lib/auth-context.tsx` (logic in `lib/sign-in-gate.ts`), which holds the new session back
 until its role matches the card and otherwise signs it out on this device and offers the
 right card. Student and working woman both accept a user account. A restored session
-routes by the role from the server, or the copy cached on the device when offline. The old `PasswordInput` and `LanguageToggle` are gone; `constants/Colors.ts`
+routes by the role from the server, or the copy cached on the device when offline.
+`lib/auth-session.ts` turns auth events into what the root layout routes on. The splash
+only covers the first auth resolution: token refreshes and app resumes for the same account
+swap in the new tokens without unmounting the navigator, and re-check the role in the
+background, so an SOS, journey, live sharing or fake call is never reset. The old `PasswordInput` and `LanguageToggle` are gone; `constants/Colors.ts`
 and the remaining components that use it are removed once nothing imports them. The dashboard will get the same values as Tailwind CSS
 variables when it is reworked.
 

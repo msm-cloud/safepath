@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 
+import { createAuthSession, INITIAL_AUTH_SNAPSHOT, type AuthSnapshot } from '@/lib/auth-session';
 import { stopLiveSharing, stopLiveSharingOnDevice } from '@/lib/live-sharing';
 import { profileCache } from '@/lib/device-profile-cache';
 import { resetLocationHistoryOnDevice } from '@/lib/location-history';
@@ -40,7 +41,8 @@ type AuthContextValue = {
   // True only while the initial getSession() check (and, if a session
   // exists, the role fetch that follows it) is in flight — lets the root
   // layout hold the splash screen instead of flashing sign-in, or the
-  // wrong tab group, before both are known.
+  // wrong tab group, before both are known. Never true again after that:
+  // the root layout unmounts every screen while it is.
   loading: boolean;
   // Runs a sign-in or sign-up for the card picked on the welcome screen and
   // only lets the new session into the app once profiles.role matches it.
@@ -56,42 +58,23 @@ async function fetchRole(userId: string): Promise<ProfileRole | null> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [role, setRole] = useState<ProfileRole | null>(null);
-  const [loading, setLoading] = useState(true);
-  const mountedRef = useRef(true);
+  const [{ session, role, loading }, setSnapshot] =
+    useState<AuthSnapshot<Session>>(INITIAL_AUTH_SNAPSHOT);
   const gateRef = useRef<SignInGate<Session> | null>(null);
 
-  const applySession = useCallback(async (newSession: Session | null, knownRole?: ProfileRole) => {
-    if (!mountedRef.current) return;
-    setSession(newSession);
-    if (!newSession) {
-      setRole(null);
-      setLoading(false);
-      return;
-    }
-    // Re-armed for every session change, not just the first: rendering a
-    // session before its role is known makes every Stack.Protected guard
-    // in app/_layout.tsx false at once, which shows Expo Router's "This
-    // screen doesn't exist" fallback.
-    setLoading(true);
-    const userId = newSession.user.id;
-    let resolved = knownRole;
-    if (!resolved) {
-      const fetched = await fetchRole(userId);
-      // Offline, the role cached on this device keeps a guardian out of
-      // the student home.
-      const cached = fetched ? null : await profileCache.readRole(userId);
-      resolved = resolveSessionRole(fetched, cached);
-    }
-    void profileCache.writeRole(userId, resolved);
-    if (!mountedRef.current) return;
-    setRole(resolved);
-    setLoading(false);
-  }, []);
-
   useEffect(() => {
-    mountedRef.current = true;
+    let mounted = true;
+    const auth = createAuthSession<Session>({
+      fetchRole,
+      readCachedRole: (userId) => profileCache.readRole(userId),
+      writeCachedRole: (userId, resolved) => profileCache.writeRole(userId, resolved),
+      resolveRole: resolveSessionRole,
+      publish: (next) => {
+        if (mounted) setSnapshot(next);
+      },
+    });
+    const applySession = auth.apply;
+
     const gate = createSignInGate<Session>({
       currentSession: async () => (await supabase.auth.getSession()).data.session,
       fetchRole,
@@ -108,7 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Keeps `session` (and `role`) in sync with sign-in, sign-out, and
     // token refresh — this is also what drives the Stack.Protected
     // redirect in the root layout after a successful sign-in/sign-up/
-    // sign-out.
+    // sign-out. Refreshes for the signed-in account never unmount the
+    // navigator; see lib/auth-session.ts.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -117,11 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      mountedRef.current = false;
+      mounted = false;
       gateRef.current = null;
       subscription.unsubscribe();
     };
-  }, [applySession]);
+  }, []);
 
   const signInAs = useCallback(
     (persona: Persona, attempt: AuthAttempt): Promise<SignInAsResult> =>
