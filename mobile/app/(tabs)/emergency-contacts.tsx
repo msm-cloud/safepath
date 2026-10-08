@@ -1,4 +1,4 @@
-import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,8 +17,8 @@ import Screen from '@/components/ui/Screen';
 import Text from '@/components/ui/Text';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
-import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
+import { useInputScroll } from '@/lib/use-input-scroll';
 import { isValidPhone } from '@/lib/validation';
 import { useTheme } from '@/theme';
 
@@ -70,8 +70,7 @@ export default function EmergencyContactsScreen() {
   const editNameInputRef = useRef<TextInput>(null);
   const editPhoneInputRef = useRef<TextInput>(null);
 
-  const scrollToInput = (inputRef: RefObject<TextInput | null>) =>
-    scrollInputIntoView(scrollRef.current, inputRef);
+  const { onInputFocus, onInputBlur } = useInputScroll(scrollRef);
 
   const fetchContacts = useCallback(async () => {
     if (!userId) return;
@@ -215,7 +214,8 @@ export default function EmergencyContactsScreen() {
               value={editName}
               error={fieldError(editError, 'name')}
               onChangeText={setEditName}
-              onFocus={() => scrollToInput(editNameInputRef)}
+              onFocus={() => onInputFocus(editNameInputRef)}
+              onBlur={() => onInputBlur(editNameInputRef)}
               onSubmitEditing={() => editPhoneInputRef.current?.focus()}
             />
             <Input
@@ -226,7 +226,8 @@ export default function EmergencyContactsScreen() {
               value={editPhone}
               error={fieldError(editError, 'phone')}
               onChangeText={setEditPhone}
-              onFocus={() => scrollToInput(editPhoneInputRef)}
+              onFocus={() => onInputFocus(editPhoneInputRef)}
+              onBlur={() => onInputBlur(editPhoneInputRef)}
               onSubmitEditing={handleSaveEdit}
             />
             {editError?.field === 'form' && <Banner tone="danger" message={editError.message} />}
@@ -298,7 +299,8 @@ export default function EmergencyContactsScreen() {
           value={newName}
           error={fieldError(addError, 'name')}
           onChangeText={setNewName}
-          onFocus={() => scrollToInput(newNameInputRef)}
+          onFocus={() => onInputFocus(newNameInputRef)}
+          onBlur={() => onInputBlur(newNameInputRef)}
           onSubmitEditing={() => newPhoneInputRef.current?.focus()}
         />
         <Input
@@ -309,7 +311,8 @@ export default function EmergencyContactsScreen() {
           value={newPhone}
           error={fieldError(addError, 'phone')}
           onChangeText={setNewPhone}
-          onFocus={() => scrollToInput(newPhoneInputRef)}
+          onFocus={() => onInputFocus(newPhoneInputRef)}
+          onBlur={() => onInputBlur(newPhoneInputRef)}
           onSubmitEditing={handleAdd}
         />
         {addError?.field === 'form' && <Banner tone="danger" message={addError.message} />}
