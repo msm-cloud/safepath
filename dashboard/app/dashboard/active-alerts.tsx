@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/lib/language-context';
 import { createClient } from '@/lib/supabase/client';
 import type { TranslationKey } from '@/lib/translations';
+import { buttonClasses } from '@/components/ui/Button';
 
 // Same synthesized siren asset as mobile (mobile/assets/sounds/sos-alarm.wav)
 // — served from public/ so a plain <audio src> can reach it. No vibration
@@ -316,12 +317,12 @@ export default function ActiveAlerts() {
       <audio ref={audioRef} src={ALARM_SOUND_SRC} preload="auto" className="hidden" />
 
       {!audioUnlocked && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-          <p className="text-sm text-amber-800">{t('enableSoundAlertsHint')}</p>
+        <div className="flex flex-col gap-3 rounded-md bg-warning-soft p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="type-body-sm text-on-warning-soft">{t('enableSoundAlertsHint')}</p>
           <button
             type="button"
             onClick={handleEnableSound}
-            className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white"
+            className={`shrink-0 ${buttonClasses({ size: 'small' })}`}
           >
             {t('enableSoundAlertsButton')}
           </button>
@@ -332,7 +333,7 @@ export default function ActiveAlerts() {
         <button
           type="button"
           onClick={() => setAcknowledged(true)}
-          className="self-start rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-semibold text-red-700"
+          className={`self-start ${buttonClasses({ variant: 'dangerOutline', size: 'small' })}`}
         >
           {t('silenceAlarmButton')}
         </button>
@@ -341,36 +342,36 @@ export default function ActiveAlerts() {
       {alerts.map((alert) => (
         <div
           key={alert.id}
-          className={`flex flex-col gap-3 rounded-lg border-2 border-red-600 bg-red-50 p-5 sm:flex-row sm:items-center sm:justify-between ${
+          className={`flex flex-col gap-4 rounded-xl bg-danger p-4 text-on-danger shadow-sos sm:flex-row sm:items-center sm:justify-between sm:p-5 ${
             isAlarming ? 'sos-alert-pulse' : ''
           }`}
         >
           <div>
-            <p className="text-sm font-bold tracking-wide text-red-700 uppercase">
+            <p className="type-label tracking-wide uppercase">
               {alert.trigger_type === 'journey_overdue'
                 ? t('missedCheckinLabel')
                 : t('activeAlertLabel')}
             </p>
-            <p className="mt-1 text-lg font-semibold text-zinc-900">{alert.full_name}</p>
-            <p className="text-sm text-zinc-600">{relativeTime(alert.created_at, t)}</p>
+            <p className="mt-1 type-title">{alert.full_name}</p>
+            <p className="type-body-sm">{relativeTime(alert.created_at, t)}</p>
             {alert.last_lat != null && alert.last_lng != null ? (
               <a
                 href={`https://www.google.com/maps?q=${alert.last_lat},${alert.last_lng}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm font-medium text-blue-700 underline"
+                className="type-label underline"
               >
                 {t('viewLastKnownLocation')}
               </a>
             ) : (
-              <p className="text-sm text-zinc-500">{t('noLocationAvailableYet')}</p>
+              <p className="type-body-sm">{t('noLocationAvailableYet')}</p>
             )}
           </div>
           <button
             type="button"
             onClick={() => handleResolve(alert.id)}
             disabled={resolvingId === alert.id}
-            className="shrink-0 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className={`shrink-0 ${buttonClasses({ variant: 'emergencyCall', size: 'small', loading: resolvingId === alert.id })}`}
           >
             {resolvingId === alert.id ? t('markingResolvedButton') : t('markResolvedButton')}
           </button>

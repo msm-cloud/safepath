@@ -70,29 +70,29 @@ export default async function PastAlerts({ language }: { language: Language }) {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold tracking-tight">{t(language, 'pastAlertsTitle')}</h2>
+      <h2 className="type-title text-text">{t(language, 'pastAlertsTitle')}</h2>
 
-      {error && <p className="text-sm text-red-600">{error.message}</p>}
+      {error && <p className="type-body-sm text-danger-text">{error.message}</p>}
 
       {!error && alerts.length === 0 && (
-        <p className="text-sm text-zinc-500">{t(language, 'noResolvedAlertsYet')}</p>
+        <p className="type-body-sm text-text-muted">{t(language, 'noResolvedAlertsYet')}</p>
       )}
 
       {!error && alerts.length > 0 && (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border-[1.5px] border-border bg-surface shadow-sm">
           {alerts.map((alert) => (
             <li
               key={alert.id}
-              className="flex flex-col gap-1 rounded-md border border-zinc-200 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
             >
               <div>
                 {alert.trigger_type === 'journey_overdue' && (
-                  <p className="text-xs font-bold tracking-wide text-amber-700 uppercase">
+                  <p className="type-micro tracking-wide text-on-warning-soft uppercase">
                     {t(language, 'missedCheckinLabel')}
                   </p>
                 )}
-                <p className="font-medium text-zinc-900">{alert.full_name}</p>
-                <p className="text-zinc-500">
+                <p className="type-body-sm font-bold text-text">{alert.full_name}</p>
+                <p className="type-caption text-text-muted">
                   {new Date(alert.created_at).toLocaleString()}
                   {alert.resolved_at
                     ? ` — ${formatDuration(alert.created_at, alert.resolved_at, language)}`
@@ -104,12 +104,14 @@ export default async function PastAlerts({ language }: { language: Language }) {
                   href={`https://www.google.com/maps?q=${alert.last_lat},${alert.last_lng}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sm font-medium text-blue-700 underline"
+                  className="shrink-0 type-label text-primary underline hover:text-primary-pressed"
                 >
                   {t(language, 'viewLastKnownLocation')}
                 </a>
               ) : (
-                <p className="text-sm text-zinc-400">{t(language, 'noLocationRecorded')}</p>
+                <p className="shrink-0 type-caption text-text-muted">
+                  {t(language, 'noLocationRecorded')}
+                </p>
               )}
             </li>
           ))}

@@ -187,6 +187,12 @@ instead of `Input`; buttons use `buttonClasses({ loading })` so a pending submit
 colours. Until a page moves it
 keeps its old Tailwind classes, but it already picks up the new fonts and page colours.
 
+The signed-in shell (`app/dashboard/dashboard-header.tsx`) is one element for both sizes: a
+top bar below the `lg` breakpoint and the board's ink sidebar from `lg` up (surface-coloured
+in dark mode, where ink is near-white). It links only to pages that exist: the overview,
+labelled with `dashboardTitle`, and settings. Active alerts stay the first section of the
+overview at every width; the SOS card is the solid danger fill with a 1-second pulse.
+
 ## Guardian links
 
 A `guardian_links` row goes `pending` (the student created an invite code) → `accepted`

@@ -9,13 +9,13 @@ export default function LanguageToggle() {
   const { language, setLanguage, t } = useLanguage();
 
   return (
-    <div className="flex items-center gap-1 rounded-full border border-zinc-300 p-0.5 text-xs">
+    <div className="flex w-fit shrink-0 items-center gap-0.5 rounded-pill bg-track p-1">
       <button
         type="button"
         onClick={() => setLanguage('bn')}
         aria-pressed={language === 'bn'}
-        className={`rounded-full px-2 py-1 font-medium transition-colors ${
-          language === 'bn' ? 'bg-blue-600 text-white' : 'text-zinc-600'
+        className={`min-h-9 rounded-pill px-3 type-label transition-colors ${
+          language === 'bn' ? 'bg-ink text-on-ink' : 'text-text hover:bg-surface-muted'
         }`}
       >
         {t('languageBn')}
@@ -24,8 +24,8 @@ export default function LanguageToggle() {
         type="button"
         onClick={() => setLanguage('en')}
         aria-pressed={language === 'en'}
-        className={`rounded-full px-2 py-1 font-medium transition-colors ${
-          language === 'en' ? 'bg-blue-600 text-white' : 'text-zinc-600'
+        className={`min-h-9 rounded-pill px-3 type-label transition-colors ${
+          language === 'en' ? 'bg-ink text-on-ink' : 'text-text hover:bg-surface-muted'
         }`}
       >
         {t('languageEn')}
