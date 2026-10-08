@@ -1,14 +1,12 @@
-import { useAudioPlayer } from 'expo-audio';
+import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
+import { AppState, Modal, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
 
 import { useLanguage } from '@/lib/language-context';
 
 // Repeating vibration pattern ([wait, buzz, pause] in ms) for the ringing.
-// Vibration.vibrate(pattern, true) loops natively via the OS vibrator
-// service, so it keeps buzzing even if the app is backgrounded mid-ring; a
-// JS timer loop would stop there (see ALARM_VIBRATION_PATTERN in
-// app/(guardian)/index.tsx for the same fix).
+// Vibration.vibrate(pattern, true) loops natively, so the ringing doesn't
+// depend on JS timers.
 const FAKE_CALL_RING_VIBRATION_PATTERN = [0, 500, 300];
 
 export type FakeCall = {
@@ -29,8 +27,14 @@ export default function FakeCallFlow({ call, onEnd }: FakeCallFlowProps) {
   const { t } = useLanguage();
 
   const [answered, setAnswered] = useState(false);
+  // Set when the app leaves the foreground mid-ring (power button, home):
+  // the call stays on screen but rings no more, as a real phone does after
+  // the power button. Android cancels app vibrations on a power-button
+  // screen-off anyway, so this keeps the sound consistent with that.
+  const [silenced, setSilenced] = useState(false);
   const [callElapsedSeconds, setCallElapsedSeconds] = useState(0);
   const ringing = call !== null && !answered;
+  const audible = ringing && !silenced;
   const ringOutLoud = call?.ringOutLoud ?? false;
 
   // Synthesized tone, see scripts/gen-fake-call-ring.mjs. It plays on the
@@ -43,7 +47,11 @@ export default function FakeCallFlow({ call, onEnd }: FakeCallFlowProps) {
   }, [ringPlayer]);
 
   useEffect(() => {
-    if (!ringing) return;
+    if (!audible) return;
+    // expo-audio pauses players when the app goes to the background and
+    // resumes them on return, which would bring the tone back on unlock.
+    // Opting out while ringing leaves the stopping to the listener below.
+    void setAudioModeAsync({ shouldPlayInBackground: true }).catch(() => {});
     Vibration.vibrate(FAKE_CALL_RING_VIBRATION_PATTERN, true);
     if (ringOutLoud) {
       ringPlayer.seekTo(0);
@@ -52,8 +60,22 @@ export default function FakeCallFlow({ call, onEnd }: FakeCallFlowProps) {
     return () => {
       Vibration.cancel();
       ringPlayer.pause();
+      void setAudioModeAsync({ shouldPlayInBackground: false }).catch(() => {});
     };
-  }, [ringing, ringOutLoud, ringPlayer]);
+  }, [audible, ringOutLoud, ringPlayer]);
+
+  useEffect(() => {
+    if (!audible) return;
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') return;
+      // Stopped here rather than through the effect above: React may not
+      // commit the state change until the app is back in the foreground.
+      Vibration.cancel();
+      ringPlayer.pause();
+      setSilenced(true);
+    });
+    return () => subscription.remove();
+  }, [audible, ringPlayer]);
 
   useEffect(() => {
     if (!answered) return;
@@ -68,6 +90,7 @@ export default function FakeCallFlow({ call, onEnd }: FakeCallFlowProps) {
 
   const handleEndFakeCall = () => {
     setAnswered(false);
+    setSilenced(false);
     onEnd();
   };
 
