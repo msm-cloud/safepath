@@ -5,6 +5,17 @@ import { useActionState } from 'react';
 
 import { forgotPasswordAction, type ForgotPasswordState } from '@/lib/auth-actions';
 import { useLanguage } from '@/lib/language-context';
+import {
+  publicCard,
+  publicError,
+  publicForm,
+  publicLink,
+  publicSubtitle,
+  publicSuccess,
+  publicTitle,
+} from '@/components/public-page-styles';
+import { buttonClasses } from '@/components/ui/Button';
+import { inputClasses } from '@/components/ui/Input';
 
 const initialState: ForgotPasswordState = { status: 'idle' };
 
@@ -14,41 +25,39 @@ export default function ForgotPasswordPage() {
   const [state, formAction, pending] = useActionState(forgotPasswordAction, initialState);
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 p-16">
-      <h1 className="text-2xl font-semibold tracking-tight">{t('forgotPasswordTitle')}</h1>
-      <p className="max-w-sm text-center text-sm text-zinc-500">{t('forgotPasswordSubtitle')}</p>
+    <main className={publicCard}>
+      <h1 className={publicTitle}>{t('forgotPasswordTitle')}</h1>
+      <p className={publicSubtitle}>{t('forgotPasswordSubtitle')}</p>
 
       {state.status === 'sent' ? (
-        <p className="max-w-sm text-center text-sm text-green-700">{t('resetLinkSentMessage')}</p>
+        <p className={publicSuccess}>{t('resetLinkSentMessage')}</p>
       ) : (
-        <form action={formAction} className="flex w-full max-w-sm flex-col gap-3">
+        <form action={formAction} className={publicForm}>
           <input
             type="text"
             name="identifier"
             placeholder={t('emailOrPhonePlaceholder')}
             autoComplete="username"
             required
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+            className={inputClasses()}
           />
 
-          {state.status === 'invalid' && (
-            <p className="text-sm text-red-600">{t('invalidEmailOrPhone')}</p>
-          )}
+          {state.status === 'invalid' && <p className={publicError}>{t('invalidEmailOrPhone')}</p>}
           {state.status === 'rate_limited' && (
-            <p className="text-sm text-red-600">{t('tooManyAttemptsMessage')}</p>
+            <p className={publicError}>{t('tooManyAttemptsMessage')}</p>
           )}
 
           <button
             type="submit"
             disabled={pending}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className={buttonClasses({ fullWidth: true, loading: pending })}
           >
             {pending ? t('sendingResetLinkButton') : t('sendResetLinkButton')}
           </button>
         </form>
       )}
 
-      <Link href="/login" className="text-sm font-medium text-blue-600 underline">
+      <Link href="/login" className={`self-center ${publicLink}`}>
         {t('backToSignInLink')}
       </Link>
     </main>
