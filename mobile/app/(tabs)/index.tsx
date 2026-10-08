@@ -2,7 +2,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, type ScrollView, type TextInput, View } from 'react-native';
 
-import FakeCallFlow from '@/components/FakeCallFlow';
 import HomeHeader from '@/components/HomeHeader';
 import JourneyCard from '@/components/JourneyCard';
 import LocationToggleCard, { type LocationToggleNotice } from '@/components/LocationToggleCard';
@@ -96,8 +95,6 @@ export default function HomeScreen() {
   // case, not a safety gap, since the real mechanism is the server-side
   // cron job, which doesn't depend on this at all.
   const [notificationId, setNotificationId] = useState<string | null>(null);
-
-  const [showFakeCallPicker, setShowFakeCallPicker] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -406,7 +403,7 @@ export default function HomeScreen() {
             <ActionTile
               icon={ICONS.fakeCall}
               label={t('fakeCallButton')}
-              onPress={() => setShowFakeCallPicker(true)}
+              onPress={() => router.push('/fake-call')}
             />
             <View style={{ flex: 1 }} />
           </View>
@@ -445,11 +442,6 @@ export default function HomeScreen() {
         onStatus={t('locationHistoryOnStatus')}
         warnings={locationHistoryWarnings}
         error={locationHistoryError}
-      />
-
-      <FakeCallFlow
-        pickerVisible={showFakeCallPicker}
-        onPickerClose={() => setShowFakeCallPicker(false)}
       />
     </Screen>
   );

@@ -1,6 +1,7 @@
 # Plan: fake call setup, Test SOS and SOS PIN
 
-Status: agreed design, not built. PR 4 builds the in-app part of fake call setup first.
+Status: agreed design. PR 4 builds the in-app part of fake call setup ("Now" only); the
+rest is not built.
 Design boards: `User-FakeCallSetup`, `User-TestAlert`, `User-Home` and `User-SOS` in
 `docs/design/safepath-ui/`.
 
@@ -19,19 +20,26 @@ app is closed.
 
 ### PR 4 scope
 
-Decided 2026-10-06. PR 4 ships the fake call setup screen with in-app ringing only:
+Decided 2026-10-06, timing narrowed 2026-10-08. PR 4 ships the fake call setup screen
+with in-app ringing only:
 
 - Caller choice (Ammu, Abbu or another name), as in "Screen and settings" and "Data".
-- The longer delay options and the ring mode setting.
-- The last caller choice, delay and ring mode remembered on the device.
+- "Now" only. The call rings as soon as the user taps the button; the setup screen has no
+  delay options.
+- The ring mode setting. Ring out loud plays a bundled ring tone on the media stream with
+  the looping vibration; off vibrates only.
+- The last caller choice and ring mode remembered on the device.
 - The caller-name field removed from Safety features.
 
-Ringing stays in-app, as `FakeCallFlow` does today: a JS timer, the native looping
-vibration and the in-app call screen. JS timers stop when the app is in the background, so
-in PR 4 a delayed call only rings while SafePath stays open; the setup screen says so.
+Ringing stays in-app, as `FakeCallFlow` does today: the native looping vibration and the
+in-app call screen. A delayed call would rely on a JS timer, which stops when the app is
+in the background, so it would only ring while SafePath stays open. That is too
+unreliable for a safety feature, so the delay options (30 s, 1 min, 5 min) are deferred
+until background ringing exists after Tier A.
 
 Deferred until after Tier A push:
 
+- The delay options and the countdown notification.
 - Test SOS (the whole section below).
 - All background ringing: the `CallStyle` call notification, the exact alarm, the
   `shortService` countdown service and the full-screen intent. The sections "Ringing in

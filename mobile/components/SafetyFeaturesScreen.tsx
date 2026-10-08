@@ -1,15 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import { Alert, type ScrollView, type TextInput, View } from 'react-native';
+import { Alert } from 'react-native';
 
-import Card from '@/components/ui/Card';
-import Input from '@/components/ui/Input';
 import ListGroup from '@/components/ui/ListGroup';
 import Screen from '@/components/ui/Screen';
 import SettingsLoadNotice from '@/components/ui/SettingsLoadNotice';
 import SwitchRow from '@/components/ui/SwitchRow';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
-import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { useUserSettings } from '@/lib/user-settings-context';
 import { useTheme } from '@/theme';
 
@@ -38,11 +34,9 @@ export default function SafetyFeaturesScreen() {
     loaded,
     shakeSosEnabled,
     fakeCallEnabled,
-    fakeCallCallerName,
     alarmSoundEnabled,
     setShakeSosEnabled,
     setFakeCallEnabled,
-    setFakeCallCallerName,
     setAlarmSoundEnabled,
   } = useUserSettings();
 
@@ -56,25 +50,8 @@ export default function SafetyFeaturesScreen() {
     });
   };
 
-  const scrollViewRef = useRef<ScrollView>(null);
-  const callerNameInputRef = useRef<TextInput>(null);
-
-  // Local draft so every keystroke doesn't hit the network — persisted via
-  // setFakeCallCallerName (which itself updates context immediately) only
-  // on blur. useState's initializer alone isn't enough here:
-  // fakeCallCallerName arrives asynchronously (fetched from the database
-  // after mount), so this effect re-syncs the draft once that real value
-  // actually loads, and again if a failed save rolls the name back —
-  // without it, the field would be stuck showing empty even for someone
-  // who'd previously saved a name.
-  const [callerNameDraft, setCallerNameDraft] = useState(fakeCallCallerName ?? '');
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the local draft once the real value arrives asynchronously from useUserSettings; without this the field would be stuck empty for anyone who'd previously saved a name.
-    setCallerNameDraft(fakeCallCallerName ?? '');
-  }, [fakeCallCallerName]);
-
   return (
-    <Screen edges={[]} scrollRef={scrollViewRef} contentStyle={{ gap: spacing.xl }}>
+    <Screen edges={[]} contentStyle={{ gap: spacing.xl }}>
       <SettingsLoadNotice />
       <ListGroup>
         <SwitchRow
@@ -110,23 +87,6 @@ export default function SafetyFeaturesScreen() {
           />
         )}
       </ListGroup>
-
-      {fakeCallEnabled && (
-        <Card>
-          <View>
-            <Input
-              ref={callerNameInputRef}
-              label={t('fakeCallCallerNameLabel')}
-              placeholder={t('fakeCallDefaultCallerName')}
-              value={callerNameDraft}
-              onChangeText={setCallerNameDraft}
-              editable={loaded}
-              onFocus={() => scrollInputIntoView(scrollViewRef.current, callerNameInputRef)}
-              onBlur={() => reportIfUnsaved(setFakeCallCallerName(callerNameDraft.trim() || null))}
-            />
-          </View>
-        </Card>
-      )}
     </Screen>
   );
 }
