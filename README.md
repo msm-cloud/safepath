@@ -250,8 +250,9 @@ use these instead of inline colours and styles; the older
   `@expo-google-fonts/*` packages.
 - **Contrast**: after changing a colour, run `pnpm check:contrast`; it fails
   if any text/background pair drops below WCAG AA in either theme.
-- **Background photos**: only on welcome, auth, onboarding and empty-state
-  screens. Each file must be listed in
+- **Background photos**: only on welcome, auth (sign-in, sign-up, forgot
+  password, reset password) and onboarding. Never on any screen after sign-in,
+  including empty states. Each file must be listed in
   [`mobile/assets/backgrounds/CREDITS.md`](mobile/assets/backgrounds/CREDITS.md),
   and `pnpm check:contrast` measures it under its overlay (it uses `sharp`,
   a root dev dependency).

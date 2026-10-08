@@ -68,9 +68,20 @@ app continues with system fonts rather than staying on the splash screen.
 
 ### Background photos
 
-`Screen` accepts `background?: 'welcome' | 'auth' | 'onboarding' | 'empty'`. The union is
-closed on purpose: SOS, alert, map, list and settings screens cannot take a photo. A
-background screen draws the photo (or a dark fallback until one is chosen), a flat overlay,
+Photos appear only on welcome, auth (sign-in, sign-up, forgot password, reset password) and
+onboarding. No screen after sign-in takes one, empty states included: they stay icon and text
+(`ui/EmptyState`).
+
+Decided 2026-10-08: empty states get no photo. Almost every empty state sits on an alert or
+list screen (guardian home, past alerts, location history, contacts), which already stay
+plain, and emergency screens must stay plain and readable. "Auth" covers forgot password and
+reset password, which use `auth.webp` like sign-in and sign-up.
+
+`Screen` accepts `background?: ScreenBackground` from `theme/backgrounds.ts`: `welcome`,
+`auth`, and one onboarding photo per persona (`onboardingStudent`, `onboardingWorking`,
+`onboardingGuardian`). The union is closed on purpose, so SOS, alert, map, list and settings
+screens cannot take a photo. It still contains an unused `empty` value with no photo, which
+is due to be removed. A background screen draws the photo (or a dark fallback until one is chosen), a flat overlay,
 and a gradient (`PHOTO_GRADIENT`) that darkens the top behind the status bar and the bottom
 half where buttons and small print sit. The photo uses cover sizing, so on a shorter or
 wider screen the sides or the top and bottom are cropped; the gradient keeps the bottom
