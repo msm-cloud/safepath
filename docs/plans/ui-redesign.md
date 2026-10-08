@@ -13,17 +13,14 @@ Design boards: `docs/design/safepath-ui/`. Theme and components: see
 - PR 3: safety-critical screens (#97)
 - PR 4: fake call setup with in-app ringing (#107)
 - Keyboard fix for form screens under a navigation header (#110)
+- PR 5a: dashboard tokens, fonts and base components (#114)
+- PR 5b: dashboard public pages (#115)
+- PR 5c: dashboard shell and overview (#116)
 
 ## Remaining
 
-- PR 5: web dashboard redesign, in four parts. Styling only: no changes to Supabase
-  queries, auth, RLS, API routes, migrations or page text.
-  - 5a: tokens, fonts, `<html lang>`, base components and `/dev/ui-gallery`.
-  - 5b: public pages (sign-in, sign-up, forgot and reset password, guardian-only, landing,
-    privacy and terms; legal text unchanged).
-  - 5c: dashboard shell and overview (alerts, live sharing, past alerts, invite form,
-    recorded location, linked people). The sidebar label reuses `dashboardTitle`.
-  - 5d: settings.
+- PR 5d: dashboard settings and the `[userId]` placeholder. Like 5a to 5c, styling only:
+  no changes to Supabase queries, auth, RLS, API routes, migrations or page text.
 - Follow-up after 5d: an EN/বাংলা switch on the signed-out pages (sign-in, sign-up, password
   reset, guardian-only). They have none today and always start in Bangla, because the
   language comes from the signed-in profile. Signed-out visitors' choice would have to be

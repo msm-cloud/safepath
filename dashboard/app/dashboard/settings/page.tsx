@@ -6,6 +6,8 @@ import PasswordField from '@/components/PasswordField';
 import { useLanguage } from '@/lib/language-context';
 import { createClient } from '@/lib/supabase/client';
 import { isValidPhone } from '@/lib/validation';
+import { buttonClasses } from '@/components/ui/Button';
+import { inputClasses } from '@/components/ui/Input';
 
 // profiles.phone's unique index violation — see
 // supabase/migrations/20260828063528_phone_login_and_password_reset.sql.
@@ -199,15 +201,20 @@ export default function DashboardSettingsPage() {
   };
 
   if (!loaded) {
-    return <main className="flex flex-1 flex-col gap-6 p-16" />;
+    return (
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-gutter py-6 lg:px-8 lg:py-8" />
+    );
   }
 
   return (
-    <main className="flex flex-1 flex-col gap-10 p-16">
-      <h1 className="text-2xl font-semibold tracking-tight">{t('settingsTitle')}</h1>
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-gutter py-6 lg:px-8 lg:py-8">
+      <h1 className="type-h1 text-text">{t('settingsTitle')}</h1>
 
-      <form onSubmit={handleSaveName} className="flex w-full max-w-sm flex-col gap-3">
-        <label htmlFor="full-name" className="text-sm font-medium">
+      <form
+        onSubmit={handleSaveName}
+        className="flex w-full flex-col gap-3 rounded-lg border-[1.5px] border-border bg-surface p-4 shadow-sm sm:max-w-md"
+      >
+        <label htmlFor="full-name" className="type-label text-text">
           {t('fullNamePlaceholder')}
         </label>
         <input
@@ -218,21 +225,24 @@ export default function DashboardSettingsPage() {
             setFullName(event.target.value);
             setNameSaved(false);
           }}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          className={inputClasses()}
         />
-        {nameError && <p className="text-sm text-red-600">{nameError}</p>}
-        {nameSaved && <p className="text-sm text-green-700">{t('nameSavedMessage')}</p>}
+        {nameError && <p className="type-body-sm text-danger-text">{nameError}</p>}
+        {nameSaved && <p className="type-body-sm text-on-success-soft">{t('nameSavedMessage')}</p>}
         <button
           type="submit"
           disabled={savingName || fullName.trim() === fullName}
-          className="self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className={`self-start ${buttonClasses({ loading: savingName })}`}
         >
           {savingName ? t('savingButton') : t('saveButton')}
         </button>
       </form>
 
-      <form onSubmit={handleSavePhone} className="flex w-full max-w-sm flex-col gap-3">
-        <label htmlFor="phone" className="text-sm font-medium">
+      <form
+        onSubmit={handleSavePhone}
+        className="flex w-full flex-col gap-3 rounded-lg border-[1.5px] border-border bg-surface p-4 shadow-sm sm:max-w-md"
+      >
+        <label htmlFor="phone" className="type-label text-text">
           {t('phonePlaceholder')}
         </label>
         <input
@@ -243,21 +253,26 @@ export default function DashboardSettingsPage() {
             setPhone(event.target.value);
             setPhoneSaved(false);
           }}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          className={inputClasses()}
         />
-        {phoneError && <p className="text-sm text-red-600">{phoneError}</p>}
-        {phoneSaved && <p className="text-sm text-green-700">{t('phoneSavedMessage')}</p>}
+        {phoneError && <p className="type-body-sm text-danger-text">{phoneError}</p>}
+        {phoneSaved && (
+          <p className="type-body-sm text-on-success-soft">{t('phoneSavedMessage')}</p>
+        )}
         <button
           type="submit"
           disabled={savingPhone || phone.trim() === savedPhone}
-          className="self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className={`self-start ${buttonClasses({ loading: savingPhone })}`}
         >
           {savingPhone ? t('savingButton') : t('saveButton')}
         </button>
       </form>
 
-      <form onSubmit={handleChangePassword} className="flex w-full max-w-sm flex-col gap-3">
-        <h2 className="text-sm font-medium">{t('changePasswordLink')}</h2>
+      <form
+        onSubmit={handleChangePassword}
+        className="flex w-full flex-col gap-3 rounded-lg border-[1.5px] border-border bg-surface p-4 shadow-sm sm:max-w-md"
+      >
+        <h2 className="type-title text-text">{t('changePasswordLink')}</h2>
         <PasswordField
           name="currentPassword"
           placeholder={t('currentPasswordPlaceholder')}
@@ -273,12 +288,14 @@ export default function DashboardSettingsPage() {
           placeholder={t('confirmNewPasswordPlaceholder')}
           autoComplete="new-password"
         />
-        {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
-        {passwordSuccess && <p className="text-sm text-green-700">{t('passwordChangedMessage')}</p>}
+        {passwordError && <p className="type-body-sm text-danger-text">{passwordError}</p>}
+        {passwordSuccess && (
+          <p className="type-body-sm text-on-success-soft">{t('passwordChangedMessage')}</p>
+        )}
         <button
           type="submit"
           disabled={changingPassword}
-          className="self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className={`self-start ${buttonClasses({ loading: changingPassword })}`}
         >
           {changingPassword ? t('changingPasswordButton') : t('changePasswordLink')}
         </button>
