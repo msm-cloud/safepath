@@ -142,8 +142,44 @@ routes by the role from the server, or the copy cached on the device when offlin
 only covers the first auth resolution: token refreshes and app resumes for the same account
 swap in the new tokens without unmounting the navigator, and re-check the role in the
 background, so an SOS, journey, live sharing or fake call is never reset. The old `PasswordInput` and `LanguageToggle` are gone; `constants/Colors.ts`
-and the remaining components that use it are removed once nothing imports them. The dashboard will get the same values as Tailwind CSS
-variables when it is reworked.
+and the remaining components that use it are removed once nothing imports them. The dashboard uses the same values as CSS variables; see
+"Dashboard theme and UI components" below.
+
+## Dashboard theme and UI components
+
+```
+dashboard/app/theme.css       tokens: CSS variables (light, dark) exposed as Tailwind utilities
+dashboard/components/ui/      base components, styled only with those utilities
+dashboard/app/**              pages, built on components/ui/
+```
+
+`theme.css` copies the mobile tokens (`mobile/theme/colors.ts`, `spacing.ts`, `shadows.ts`,
+`typography.ts`) into `--sp-*` variables and maps them to Tailwind utilities with the mobile
+names: `bg-surface`, `text-text-muted`, `border-border-input`, `bg-danger`, `shadow-sos`.
+`pnpm test:dashboard` fails if a colour, shadow, radius or the screen gutter drifts from the
+mobile value, so contrast checked by `pnpm check:contrast` holds on the web too. Change a
+value on mobile first, then copy it.
+
+- Dark mode follows `prefers-color-scheme`; there is no manual switch.
+- Spacing uses Tailwind's 4 px scale (mobile 4/8/12/16/28/40 = `1`/`2`/`3`/`4`/`7`/`10`)
+  plus `gutter` for the 22 px page edge. Radii replace Tailwind's `sm` to `xl` with the
+  mobile 10/14/18/22 px, plus `pill`.
+- Text uses the `type-*` utilities (`type-h1`, `type-body`, `type-label`, ...), which carry
+  family, weight, size, line height and tracking together.
+- Fonts load through `next/font` in `app/layout.tsx`. Hind Siliguri sits second in every
+  font stack, so Bengali characters fall back to it even inside English text.
+- `<html lang>` follows the chosen language (`LanguageProvider` updates it on toggle). Under
+  `lang="bn"` text gets a 1.6 line height and no letter spacing. The privacy policy and
+  terms are English only and set `lang="en"` on their `<main>`.
+
+Base components: `Button` (and `buttonClasses()` for links styled as buttons), `Input`,
+`PasswordInput`, `Card`, `Banner`, `Badge` and `SegmentedControl`. Variants match the
+mobile components of the same name. `/dev/ui-gallery` renders them all with an EN/Bangla
+switch; production builds answer 404 there.
+
+Pages move to these components in separate PRs: public pages (sign-in, sign-up, password
+reset, privacy, terms), then the dashboard overview, then settings. Until a page moves it
+keeps its old Tailwind classes, but it already picks up the new fonts and page colours.
 
 ## Guardian links
 

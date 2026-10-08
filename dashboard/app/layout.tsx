@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Figtree, Hind_Siliguri, Sora } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import { LanguageProvider } from '@/lib/language-context';
@@ -8,14 +8,25 @@ import { createClient } from '@/lib/supabase/server';
 
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+// Same faces as the mobile app: Sora for headings, Figtree for body text,
+// Hind Siliguri for Bangla. next/font serves them from this app, so pages
+// make no request to Google at runtime.
+const sora = Sora({
+  variable: '--font-sora',
   subsets: ['latin'],
+  weight: ['600', '700'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const figtree = Figtree({
+  variable: '--font-figtree',
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+});
+
+const hindSiliguri = Hind_Siliguri({
+  variable: '--font-hind-siliguri',
+  subsets: ['bengali', 'latin'],
+  weight: ['400', '500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -48,7 +59,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   }
 
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    // lang drives the Bangla line-height rules in theme.css and screen reader
+    // pronunciation; LanguageProvider keeps it in step when the toggle changes.
+    <html
+      lang={initialLanguage}
+      className={`${sora.variable} ${figtree.variable} ${hindSiliguri.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col">
         <LanguageProvider initialLanguage={initialLanguage}>{children}</LanguageProvider>
       </body>

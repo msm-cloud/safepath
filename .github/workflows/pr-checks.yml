@@ -54,3 +54,6 @@ jobs:
 
       - name: Mobile unit tests
         run: pnpm test:mobile
+
+      - name: Dashboard unit tests
+        run: pnpm test:dashboard
