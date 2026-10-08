@@ -24,6 +24,10 @@ Design boards: `docs/design/safepath-ui/`. Theme and components: see
   - 5c: dashboard shell and overview (alerts, live sharing, past alerts, invite form,
     recorded location, linked people). The sidebar label reuses `dashboardTitle`.
   - 5d: settings.
+- Follow-up after 5d: an EN/বাংলা switch on the signed-out pages (sign-in, sign-up, password
+  reset, guardian-only). They have none today and always start in Bangla, because the
+  language comes from the signed-in profile. Signed-out visitors' choice would have to be
+  kept without a profile (for example a cookie the root layout reads).
 - PR 6: cleanup (below).
 
 ### PR 6 cleanup

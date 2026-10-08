@@ -223,26 +223,30 @@ export default function LiveSharing() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold tracking-tight">{t('liveLocationTitle')}</h2>
+      <h2 className="type-title text-text">{t('liveLocationTitle')}</h2>
       {shares.map((share) => {
         const stale = isStale(share.recordedAt);
 
         return (
           <div
             key={share.sessionId}
-            className={`flex flex-col gap-2 rounded-lg border-2 p-5 ${
-              stale ? 'border-amber-600 bg-amber-50' : 'border-green-600 bg-green-50'
+            className={`flex flex-col gap-2 rounded-lg border-[1.5px] bg-surface p-4 shadow-sm ${
+              stale ? 'border-warning' : 'border-border'
             }`}
           >
             <span
-              className={`w-fit rounded px-2 py-0.5 text-xs font-bold tracking-wide text-white ${
-                stale ? 'bg-amber-600' : 'bg-green-700'
+              className={`w-fit rounded-pill px-2.5 py-1 type-micro ${
+                stale
+                  ? 'bg-warning-soft text-on-warning-soft'
+                  : 'bg-success-soft text-on-success-soft'
               }`}
             >
               {stale ? t('liveLocationStaleBadge') : t('liveLocationBadge')}
             </span>
-            <p className="text-lg font-semibold text-zinc-900">{share.fullName}</p>
-            <p className={`text-sm ${stale ? 'font-medium text-amber-800' : 'text-zinc-600'}`}>
+            <p className="type-title text-text">{share.fullName}</p>
+            <p
+              className={`type-body-sm ${stale ? 'font-semibold text-on-warning-soft' : 'text-text-muted'}`}
+            >
               {!share.recordedAt
                 ? t('liveLocationWaiting')
                 : stale
@@ -254,7 +258,7 @@ export default function LiveSharing() {
                 href={`https://www.google.com/maps?q=${share.lat},${share.lng}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm font-medium text-blue-700 underline"
+                className="w-fit type-label text-primary underline hover:text-primary-pressed"
               >
                 {t('viewOnMap')}
               </a>

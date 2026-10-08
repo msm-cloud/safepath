@@ -6,6 +6,8 @@ import { type FormEvent, useState } from 'react';
 import { useLanguage } from '@/lib/language-context';
 import { createClient } from '@/lib/supabase/client';
 import type { TranslationKey } from '@/lib/translations';
+import { buttonClasses } from '@/components/ui/Button';
+import { inputClasses } from '@/components/ui/Input';
 
 // redeem_guardian_invite returns jsonb, which the Supabase type generator
 // can't know the shape of — this is the shape it actually returns, per
@@ -68,8 +70,11 @@ export default function RedeemInviteForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-3">
-      <label htmlFor="invite-code" className="text-sm font-medium">
+    <form
+      onSubmit={handleSubmit}
+      className="flex w-full flex-col gap-3 p-4 sm:max-w-md rounded-lg border-[1.5px] border-border bg-surface shadow-sm"
+    >
+      <label htmlFor="invite-code" className="type-label text-text">
         {t('linkToSomeoneLabel')}
       </label>
       <input
@@ -78,16 +83,16 @@ export default function RedeemInviteForm() {
         value={code}
         onChange={(event) => setCode(event.target.value.toUpperCase())}
         placeholder={t('inviteCodePlaceholder')}
-        className="rounded-md border border-zinc-300 px-3 py-2 text-sm uppercase tracking-widest outline-none focus:border-blue-500"
+        className={`${inputClasses()} uppercase tracking-widest`}
       />
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {confirmation && <p className="text-sm text-green-700">{confirmation}</p>}
+      {error && <p className="type-body-sm text-danger-text">{error}</p>}
+      {confirmation && <p className="type-body-sm text-on-success-soft">{confirmation}</p>}
 
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        className={buttonClasses({ fullWidth: true, loading: submitting })}
       >
         {submitting ? t('linkingButton') : t('linkButton')}
       </button>

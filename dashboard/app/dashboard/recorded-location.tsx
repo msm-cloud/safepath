@@ -167,8 +167,8 @@ export default function RecordedLocation() {
   return (
     <section className="flex flex-col gap-3">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">{t('recordedLocationTitle')}</h2>
-        <p className="mt-1 text-sm text-zinc-500">{t('recordedLocationSubtitle')}</p>
+        <h2 className="type-title text-text">{t('recordedLocationTitle')}</h2>
+        <p className="mt-1 type-body-sm text-text-muted">{t('recordedLocationSubtitle')}</p>
       </div>
 
       {users.map((u) => {
@@ -177,12 +177,17 @@ export default function RecordedLocation() {
         const open = openUserId === u.userId;
 
         return (
-          <div key={u.linkId} className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-5">
+          <div
+            key={u.linkId}
+            className="flex flex-col gap-3 p-4 rounded-lg border-[1.5px] border-border bg-surface shadow-sm"
+          >
             <div className="flex items-center justify-between gap-3">
-              <p className="text-base font-semibold text-zinc-900">{u.fullName}</p>
+              <p className="type-body font-bold text-text">{u.fullName}</p>
               <span
-                className={`text-sm font-medium ${
-                  u.recording ? 'text-green-700' : 'text-zinc-400'
+                className={`shrink-0 rounded-pill px-2.5 py-1 type-micro ${
+                  u.recording
+                    ? 'bg-success-soft text-on-success-soft'
+                    : 'bg-track text-text-secondary'
                 }`}
               >
                 {u.recording ? t('recordedLocationRecordingOn') : t('recordedLocationRecordingOff')}
@@ -190,7 +195,7 @@ export default function RecordedLocation() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-zinc-500">
+              <span className="type-caption font-semibold text-text-muted">
                 {t('recordedLocationRetentionLabel')}
               </span>
               <div className="flex flex-wrap gap-2">
@@ -201,10 +206,10 @@ export default function RecordedLocation() {
                       key={hours}
                       type="button"
                       onClick={() => setRetention(u.userId, hours)}
-                      className={`rounded-md border px-2.5 py-1 text-xs font-medium ${
+                      className={`min-h-10 rounded-pill border-[1.5px] px-3.5 type-label transition-colors ${
                         active
-                          ? 'border-blue-600 bg-blue-600 text-white'
-                          : 'border-zinc-300 text-zinc-600 hover:border-zinc-400'
+                          ? 'border-ink bg-ink text-on-ink'
+                          : 'border-border-input bg-surface text-text hover:bg-surface-muted'
                       }`}
                     >
                       {t(retentionLabelKey(hours))}
@@ -217,35 +222,38 @@ export default function RecordedLocation() {
             <button
               type="button"
               onClick={() => toggleTrail(u.userId)}
-              className="w-fit text-sm font-medium text-blue-700 underline"
+              className="w-fit type-label text-primary underline hover:text-primary-pressed"
             >
               {open ? t('recordedLocationHideTrail') : t('recordedLocationViewTrail')}
             </button>
 
             {open && (
-              <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3">
-                {trailLoading && <p className="text-sm text-zinc-400">…</p>}
+              <div className="flex flex-col gap-2 border-t border-border pt-3">
+                {trailLoading && <p className="type-body-sm text-text-muted">…</p>}
                 {!trailLoading && trail.length === 0 && (
-                  <p className="text-sm text-zinc-500">
+                  <p className="type-body-sm text-text-muted">
                     {t('recordedLocationNoPoints', { window: windowLabel })}
                   </p>
                 )}
                 {!trailLoading && trail.length > 0 && (
                   <>
-                    <p className="text-xs text-zinc-500">
+                    <p className="type-caption text-text-muted">
                       {t('recordedLocationPointCount', { n: trail.length, window: windowLabel })}
                     </p>
                     <ul className="flex flex-col gap-1.5">
                       {trail.map((p) => (
-                        <li key={p.id} className="flex items-center justify-between gap-3 text-sm">
-                          <span className="text-zinc-700">
+                        <li
+                          key={p.id}
+                          className="flex items-center justify-between gap-3 type-body-sm"
+                        >
+                          <span className="text-text">
                             {new Date(p.recorded_at).toLocaleString()}
                           </span>
                           <a
                             href={`https://www.google.com/maps?q=${p.lat},${p.lng}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="font-medium text-blue-700 underline"
+                            className="shrink-0 type-label text-primary underline hover:text-primary-pressed"
                           >
                             {t('viewOnMap')}
                           </a>

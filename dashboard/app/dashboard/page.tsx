@@ -46,10 +46,10 @@ export default async function DashboardPage() {
   const links = (data ?? []) as unknown as LinkedUserRow[];
 
   return (
-    <main className="flex flex-1 flex-col gap-10 p-16">
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-gutter py-6 lg:px-8 lg:py-8">
       <section>
-        <h1 className="text-2xl font-semibold tracking-tight">{t(language, 'dashboardTitle')}</h1>
-        <p className="mt-1 text-sm text-zinc-500">{t(language, 'dashboardSubtitle')}</p>
+        <h1 className="type-h1 text-text">{t(language, 'dashboardTitle')}</h1>
+        <p className="mt-1 type-body text-text-muted">{t(language, 'dashboardSubtitle')}</p>
       </section>
 
       {/* Own client-side data lifecycle (initial fetch + Realtime
@@ -74,19 +74,16 @@ export default async function DashboardPage() {
       <RecordedLocation />
 
       <section className="flex flex-col gap-3">
-        {error && <p className="text-sm text-red-600">{error.message}</p>}
+        {error && <p className="type-body-sm text-danger-text">{error.message}</p>}
 
         {!error && links.length === 0 && (
-          <p className="text-sm text-zinc-500">{t(language, 'noLinkedUsersYet')}</p>
+          <p className="type-body-sm text-text-muted">{t(language, 'noLinkedUsersYet')}</p>
         )}
 
         {!error && links.length > 0 && (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border-[1.5px] border-border bg-surface shadow-sm">
             {links.map((link) => (
-              <li
-                key={link.id}
-                className="rounded-md border border-zinc-200 px-4 py-3 text-sm font-medium"
-              >
+              <li key={link.id} className="px-4 py-3 type-body-sm font-semibold text-text">
                 {link.user?.full_name || t(language, 'unnamedUser')}
                 {/* An active alert for this user surfaces as its own card
                     at the top of the page — see <ActiveAlerts /> above.

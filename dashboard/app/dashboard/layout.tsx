@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
+import Banner from '@/components/ui/Banner';
 import { signOutAction } from '@/lib/auth-actions';
 import { createClient } from '@/lib/supabase/server';
 import { t, type Language } from '@/lib/translations';
@@ -44,17 +45,25 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const language: Language = profile.preferred_language ?? 'bn';
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col lg:flex-row">
       <DashboardHeader email={user.email} signOutAction={signOutAction} />
-      {phoneNotSaved && (
-        <div className="border-b border-amber-200 bg-amber-50 px-6 py-3 text-sm text-amber-900">
-          {t(language, 'phoneNotSavedMessage')}{' '}
-          <Link href="/dashboard/settings" className="font-medium underline">
-            {t(language, 'phoneNotSavedSettingsLink')}
-          </Link>
-        </div>
-      )}
-      <div className="flex flex-1 flex-col">{children}</div>
+      {/* The banner sits in the content column so the sidebar stays full
+          height on wide screens. */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {phoneNotSaved && (
+          <div className="mx-auto w-full max-w-4xl px-gutter pt-6 lg:px-8">
+            <Banner
+              tone="warning"
+              action={
+                <Link href="/dashboard/settings">{t(language, 'phoneNotSavedSettingsLink')}</Link>
+              }
+            >
+              {t(language, 'phoneNotSavedMessage')}
+            </Banner>
+          </div>
+        )}
+        {children}
+      </div>
     </div>
   );
 }

@@ -89,3 +89,40 @@ export function SparkleIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function GridIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" />
+    </Icon>
+  );
+}
+
+export function SettingsIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" />
+    </Icon>
+  );
+}
+
+// Brand mark from the design boards: a shield with a check.
+export function ShieldLogo({ size = 30 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        d="M12 2.5l8.5 3.2v6.1c0 5.3-3.7 8.6-8.5 9.7-4.8-1.1-8.5-4.4-8.5-9.7V5.7z"
+        fill="var(--color-primary)"
+      />
+      <path
+        d="M8.3 12.2l2.6 2.6 4.8-5"
+        fill="none"
+        stroke="var(--color-on-primary)"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
