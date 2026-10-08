@@ -178,7 +178,13 @@ mobile components of the same name. `/dev/ui-gallery` renders them all with an E
 switch; production builds answer 404 there.
 
 Pages move to these components in separate PRs: public pages (sign-in, sign-up, password
-reset, privacy, terms), then the dashboard overview, then settings. Until a page moves it
+reset, privacy, terms), then the dashboard overview, then settings.
+
+The signed-out pages are one centred card on the page background, with no photo. Their
+shared class strings live in `components/public-page-styles.ts`. Their inputs have no
+visible label (placeholders only), so they use `inputClasses()` on a plain `<input>`
+instead of `Input`; buttons use `buttonClasses({ loading })` so a pending submit keeps its
+colours. Until a page moves it
 keeps its old Tailwind classes, but it already picks up the new fonts and page colours.
 
 ## Guardian links

@@ -6,6 +6,18 @@ import { useActionState } from 'react';
 import PasswordField from '@/components/PasswordField';
 import { signInAction, type AuthActionState } from '@/lib/auth-actions';
 import { useLanguage } from '@/lib/language-context';
+import {
+  inlineLink,
+  publicCard,
+  publicError,
+  publicFootnote,
+  publicForm,
+  publicLink,
+  publicPrompt,
+  publicTitle,
+} from '@/components/public-page-styles';
+import { buttonClasses } from '@/components/ui/Button';
+import { inputClasses } from '@/components/ui/Input';
 
 const initialState: AuthActionState = { error: null, info: null };
 
@@ -19,17 +31,17 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(signInAction, initialState);
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 p-16">
-      <h1 className="text-2xl font-semibold tracking-tight">{t('signInTitle')}</h1>
+    <main className={publicCard}>
+      <h1 className={publicTitle}>{t('signInTitle')}</h1>
 
-      <form action={formAction} className="flex w-full max-w-sm flex-col gap-3">
+      <form action={formAction} className={publicForm}>
         <input
           type="text"
           name="email"
           placeholder={t('emailOrPhonePlaceholder')}
           autoComplete="username"
           required
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          className={inputClasses()}
         />
         <PasswordField
           name="password"
@@ -37,38 +49,38 @@ export default function LoginPage() {
           autoComplete="current-password"
         />
 
-        <Link href="/forgot-password" className="text-right text-sm text-blue-600 underline">
+        <Link href="/forgot-password" className={`self-end ${publicLink}`}>
           {t('forgotPasswordLink')}
         </Link>
 
         {/* state.error comes from the signInAction Server Action (business
             logic, out of scope for this UI-text-only pass) — Supabase's
             own auth error messages are always English regardless. */}
-        {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state.error && <p className={publicError}>{state.error}</p>}
 
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className={buttonClasses({ fullWidth: true, loading: pending })}
         >
           {pending ? t('signingInButton') : t('signInButton')}
         </button>
       </form>
 
-      <p className="text-sm text-zinc-500">
+      <p className={publicPrompt}>
         {t('noAccountQuestion')}{' '}
-        <Link href="/signup" className="font-medium text-blue-600 underline">
+        <Link href="/signup" className={`font-bold ${inlineLink}`}>
           {t('signUpNow')}
         </Link>
       </p>
 
-      <p className="max-w-sm text-center text-xs text-zinc-400">
+      <p className={publicFootnote}>
         {t('agreeToTermsPrefix')}{' '}
-        <Link href="/terms" className="underline">
+        <Link href="/terms" className={inlineLink}>
           {t('termsOfServiceLink')}
         </Link>{' '}
         {t('agreeToTermsAnd')}{' '}
-        <Link href="/privacy" className="underline">
+        <Link href="/privacy" className={inlineLink}>
           {t('privacyPolicyLink')}
         </Link>
         .
@@ -78,7 +90,7 @@ export default function LoginPage() {
         href={USER_MANUAL_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-zinc-400 underline"
+        className={`self-center text-center ${publicLink}`}
       >
         {t('userManualLink')}
       </a>

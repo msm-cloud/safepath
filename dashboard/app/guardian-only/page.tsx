@@ -2,6 +2,8 @@
 
 import { useLanguage } from '@/lib/language-context';
 import { signOutAction } from '@/lib/auth-actions';
+import { publicCard, publicSubtitle, publicTitle } from '@/components/public-page-styles';
+import { buttonClasses } from '@/components/ui/Button';
 
 // Reached only via the redirect in app/dashboard/layout.tsx, when a
 // signed-in account's profiles.role isn't 'guardian' — this dashboard was
@@ -19,15 +21,12 @@ export default function GuardianOnlyPage() {
   const { t } = useLanguage();
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4 p-16 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">{t('guardianOnlyTitle')}</h1>
-      <p className="max-w-sm text-sm text-zinc-500">{t('guardianOnlyMessage')}</p>
+    <main className={publicCard}>
+      <h1 className={publicTitle}>{t('guardianOnlyTitle')}</h1>
+      <p className={publicSubtitle}>{t('guardianOnlyMessage')}</p>
 
       <form action={signOutAction} className="mt-4">
-        <button
-          type="submit"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
-        >
+        <button type="submit" className={buttonClasses({ fullWidth: true })}>
           {t('signInWithGuardianAccountLink')}
         </button>
       </form>

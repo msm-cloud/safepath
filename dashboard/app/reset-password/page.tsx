@@ -7,6 +7,15 @@ import { type FormEvent, useEffect, useState } from 'react';
 import PasswordField from '@/components/PasswordField';
 import { useLanguage } from '@/lib/language-context';
 import { createClient } from '@/lib/supabase/client';
+import {
+  publicCard,
+  publicError,
+  publicForm,
+  publicLink,
+  publicSubtitle,
+  publicTitle,
+} from '@/components/public-page-styles';
+import { buttonClasses } from '@/components/ui/Button';
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -87,19 +96,17 @@ export default function ResetPasswordPage() {
 
   if (status === 'verifying') {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-4 p-16">
-        <p className="text-sm text-zinc-500">{t('resetLinkVerifying')}</p>
+      <main className={publicCard}>
+        <p className={publicSubtitle}>{t('resetLinkVerifying')}</p>
       </main>
     );
   }
 
   if (status === 'invalid') {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-4 p-16">
-        <p className="max-w-sm text-center text-sm text-red-600">
-          {t('invalidOrExpiredResetLink')}
-        </p>
-        <Link href="/forgot-password" className="text-sm font-medium text-blue-600 underline">
+      <main className={publicCard}>
+        <p className={publicError}>{t('invalidOrExpiredResetLink')}</p>
+        <Link href="/forgot-password" className={`self-center ${publicLink}`}>
           {t('requestNewResetLinkLink')}
         </Link>
       </main>
@@ -107,22 +114,22 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 p-16">
-      <h1 className="text-2xl font-semibold tracking-tight">{t('resetPasswordTitle')}</h1>
+    <main className={publicCard}>
+      <h1 className={publicTitle}>{t('resetPasswordTitle')}</h1>
 
-      <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-3">
+      <form onSubmit={handleSubmit} className={publicForm}>
         <PasswordField
           name="password"
           placeholder={t('newPasswordPlaceholder')}
           autoComplete="new-password"
         />
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className={publicError}>{error}</p>}
 
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className={buttonClasses({ fullWidth: true, loading: submitting })}
         >
           {submitting ? t('resettingPasswordButton') : t('resetPasswordButton')}
         </button>

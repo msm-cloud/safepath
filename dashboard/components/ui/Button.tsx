@@ -36,6 +36,9 @@ export type ButtonClassOptions = {
   variant?: ButtonVariant;
   size?: ButtonSize;
   fullWidth?: boolean;
+  // For a plain <button> disabled while its action runs: keeps the
+  // variant's colours instead of the grey disabled look.
+  loading?: boolean;
 };
 
 // Shared with links that should look like buttons (e.g. "View on map").
@@ -43,12 +46,15 @@ export function buttonClasses({
   variant = 'ink',
   size = 'default',
   fullWidth = false,
+  loading = false,
 }: ButtonClassOptions = {}): string {
   return [
     'inline-flex items-center justify-center gap-2 border-[1.5px] text-center no-underline transition-colors',
     // Grey disabled look, except while loading (aria-busy): the action is in
     // progress rather than unavailable, so it keeps its colours.
-    'disabled:not-aria-busy:bg-track disabled:not-aria-busy:text-text-disabled disabled:not-aria-busy:border-transparent disabled:cursor-not-allowed',
+    loading
+      ? 'disabled:cursor-wait'
+      : 'disabled:not-aria-busy:bg-track disabled:not-aria-busy:text-text-disabled disabled:not-aria-busy:border-transparent disabled:cursor-not-allowed',
     fullWidth ? 'w-full' : 'w-fit',
     SIZES[size],
     VARIANTS[variant],
@@ -79,7 +85,7 @@ export default function Button({
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`${buttonClasses({ variant, size, fullWidth })} ${className ?? ''}`}
+      className={`${buttonClasses({ variant, size, fullWidth, loading })} ${className ?? ''}`}
       {...rest}
     >
       {loading && <Spinner />}

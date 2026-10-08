@@ -5,26 +5,26 @@
 // through the bilingual t() system.
 export default function PrivacyPolicyPage() {
   return (
-    <main lang="en" className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">SafePath Privacy Policy</h1>
-      <p className="mt-2 text-sm text-zinc-500">Last updated: September 12, 2026</p>
+    <main lang="en" className="mx-auto w-full max-w-3xl flex-1 px-gutter py-12 sm:py-16">
+      <h1 className="type-h1 text-text">SafePath Privacy Policy</h1>
+      <p className="mt-2 type-caption text-text-muted">Last updated: September 12, 2026</p>
 
-      <p className="mt-8 text-sm leading-relaxed text-zinc-700">
+      <p className="mt-8 type-body text-text-secondary">
         SafePath (&ldquo;the App,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;) is operated by M. M.
         Shahidullah (&ldquo;the Developer&rdquo;). This Privacy Policy explains what information
         SafePath collects, how it is used, and who it is shared with.
       </p>
 
-      <h2 className="mt-10 text-xl font-semibold tracking-tight">1. What We Collect</h2>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <h2 className="mt-10 type-h2 text-text">1. What We Collect</h2>
+      <p className="mt-3 type-body text-text-secondary">
         <strong>Account information:</strong> email address, password (encrypted, never visible to
         us in plain text), full name, and whether you are using SafePath as a Student/at-risk user
         or as a Guardian.
       </p>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <p className="mt-3 type-body text-text-secondary">
         <strong>Location information:</strong>
       </p>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-zinc-700">
+      <ul className="mt-3 list-disc space-y-2 pl-5 type-body text-text-secondary">
         <li>Your device&apos;s location when you trigger an SOS alert</li>
         <li>A periodic location trail while an SOS alert is active</li>
         <li>Your location at the start of a Journey (check-in) and any time you extend it</li>
@@ -42,35 +42,35 @@ export default function PrivacyPolicyPage() {
           unless you turn it on. See Section 5 for full detail.
         </li>
       </ul>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <p className="mt-3 type-body text-text-secondary">
         <strong>Emergency contact information:</strong> names and phone numbers you choose to save
         for offline SOS text messages. These are people, not SafePath accounts, and we store this
         data solely so it can be used if you trigger an offline SOS.
       </p>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <p className="mt-3 type-body text-text-secondary">
         <strong>Guardian relationship information:</strong> if you are a Student, the guardians you
         invite and link to your account. If you are a Guardian, the students who have linked you.
       </p>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <p className="mt-3 type-body text-text-secondary">
         <strong>Alert history:</strong> records of when SOS or missed-check-in alerts were
         triggered, resolved, and by whom.
       </p>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <p className="mt-3 type-body text-text-secondary">
         <strong>App preferences:</strong> your chosen language (Bangla/English) and safety feature
         settings (e.g. whether Shake-to-Trigger, Fake Call Escape, or Location History are turned
         on, and your chosen Location History retention period).
       </p>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <p className="mt-3 type-body text-text-secondary">
         <strong>We do NOT collect:</strong> advertising identifiers, browsing history outside the
         App, contacts from your phone&apos;s address book (only what you manually type into
         Emergency Contacts), or any data unrelated to the App&apos;s safety purpose.
       </p>
 
-      <h2 className="mt-10 text-xl font-semibold tracking-tight">2. How We Use Your Information</h2>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <h2 className="mt-10 type-h2 text-text">2. How We Use Your Information</h2>
+      <p className="mt-3 type-body text-text-secondary">
         We use your information only to operate SafePath&apos;s safety features:
       </p>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-zinc-700">
+      <ul className="mt-3 list-disc space-y-2 pl-5 type-body text-text-secondary">
         <li>
           To notify your linked Guardian(s) when you trigger an SOS or miss a Journey check-in
         </li>
@@ -89,17 +89,15 @@ export default function PrivacyPolicyPage() {
         <li>To let you sign in, manage your account, and set your preferences</li>
         <li>To operate the automatic &ldquo;missed check-in&rdquo; safety check for Journeys</li>
       </ul>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <p className="mt-3 type-body text-text-secondary">
         <strong>
           We do not sell your data. We do not use your data for advertising. We do not share your
           data with any party except as described in this policy.
         </strong>
       </p>
 
-      <h2 className="mt-10 text-xl font-semibold tracking-tight">
-        3. Who Can See Your Information
-      </h2>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-zinc-700">
+      <h2 className="mt-10 type-h2 text-text">3. Who Can See Your Information</h2>
+      <ul className="mt-3 list-disc space-y-2 pl-5 type-body text-text-secondary">
         <li>
           <strong>Your linked Guardian(s)</strong> can see your name, your active/past alert
           history, your live location only while an alert is active, and — only if you have chosen
@@ -123,11 +121,11 @@ export default function PrivacyPolicyPage() {
         </li>
       </ul>
 
-      <h2 className="mt-10 text-xl font-semibold tracking-tight">4. Third-Party Services We Use</h2>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <h2 className="mt-10 type-h2 text-text">4. Third-Party Services We Use</h2>
+      <p className="mt-3 type-body text-text-secondary">
         SafePath relies on a small number of service providers to operate:
       </p>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-zinc-700">
+      <ul className="mt-3 list-disc space-y-2 pl-5 type-body text-text-secondary">
         <li>
           <strong>Supabase</strong> — our database, authentication, and backend hosting provider.
           Your account data, location data (including Location History, if enabled), and alert
@@ -151,17 +149,15 @@ export default function PrivacyPolicyPage() {
         </li>
       </ul>
 
-      <h2 className="mt-10 text-xl font-semibold tracking-tight">
-        5. Location Data — Extra Detail
-      </h2>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <h2 className="mt-10 type-h2 text-text">5. Location Data — Extra Detail</h2>
+      <p className="mt-3 type-body text-text-secondary">
         SafePath&apos;s location behavior differs depending on which features you use:
       </p>
 
-      <h3 className="mt-6 text-base font-semibold tracking-tight">
+      <h3 className="mt-6 type-title text-text">
         5a. Alert and Journey location (live, event-based)
       </h3>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-zinc-700">
+      <ul className="mt-3 list-disc space-y-2 pl-5 type-body text-text-secondary">
         <li>
           Your location is captured when you actively trigger an SOS, are in an active Journey, or
           tap a &ldquo;Nearest ___&rdquo; button.
@@ -180,10 +176,8 @@ export default function PrivacyPolicyPage() {
         </li>
       </ul>
 
-      <h3 className="mt-6 text-base font-semibold tracking-tight">
-        5b. Location History (optional, off by default)
-      </h3>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-zinc-700">
+      <h3 className="mt-6 type-title text-text">5b. Location History (optional, off by default)</h3>
+      <ul className="mt-3 list-disc space-y-2 pl-5 type-body text-text-secondary">
         <li>
           Location History does not record anything unless you turn it on. It is off by default for
           every user.
@@ -207,14 +201,12 @@ export default function PrivacyPolicyPage() {
         </li>
       </ul>
 
-      <h2 className="mt-10 text-xl font-semibold tracking-tight">
-        6. Minors and Guardian Awareness
-      </h2>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <h2 className="mt-10 type-h2 text-text">6. Minors and Guardian Awareness</h2>
+      <p className="mt-3 type-body text-text-secondary">
         SafePath does not enforce a strict minimum age, since its purpose includes protecting
         students who may be minors. However:
       </p>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-zinc-700">
+      <ul className="mt-3 list-disc space-y-2 pl-5 type-body text-text-secondary">
         <li>
           We strongly expect and design around every Student user having at least one Guardian aware
           of and linked to their account.
@@ -231,10 +223,8 @@ export default function PrivacyPolicyPage() {
         </li>
       </ul>
 
-      <h2 className="mt-10 text-xl font-semibold tracking-tight">
-        7. Data Retention and Your Rights
-      </h2>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-zinc-700">
+      <h2 className="mt-10 type-h2 text-text">7. Data Retention and Your Rights</h2>
+      <ul className="mt-3 list-disc space-y-2 pl-5 type-body text-text-secondary">
         <li>
           We retain your account and alert history data for as long as your account is active, so
           that alert history remains useful to you and your Guardian(s).
@@ -255,8 +245,8 @@ export default function PrivacyPolicyPage() {
         </li>
       </ul>
 
-      <h2 className="mt-10 text-xl font-semibold tracking-tight">8. Data Security</h2>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <h2 className="mt-10 type-h2 text-text">8. Data Security</h2>
+      <p className="mt-3 type-body text-text-secondary">
         We use industry-standard practices to protect your data, including encrypted storage,
         row-level access controls that restrict data visibility to only the people who should see it
         (e.g. only your accepted Guardian, never an unrelated user), and encrypted connections
@@ -264,20 +254,23 @@ export default function PrivacyPolicyPage() {
         reasonable, ongoing steps to protect your information.
       </p>
 
-      <h2 className="mt-10 text-xl font-semibold tracking-tight">9. Contact Us</h2>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <h2 className="mt-10 type-h2 text-text">9. Contact Us</h2>
+      <p className="mt-3 type-body text-text-secondary">
         For any question about this policy, or to request access, correction, or deletion of your
         data:
       </p>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+      <p className="mt-3 type-body text-text-secondary">
         <strong>Email:</strong>{' '}
-        <a href="mailto:mmshahidullah103@gmail.com" className="text-blue-600 underline">
+        <a
+          href="mailto:mmshahidullah103@gmail.com"
+          className="text-primary underline hover:text-primary-pressed"
+        >
           mmshahidullah103@gmail.com
         </a>
       </p>
 
-      <h2 className="mt-10 text-xl font-semibold tracking-tight">10. Changes to This Policy</h2>
-      <p className="mt-3 mb-10 text-sm leading-relaxed text-zinc-700">
+      <h2 className="mt-10 type-h2 text-text">10. Changes to This Policy</h2>
+      <p className="mt-3 mb-10 type-body text-text-secondary">
         If we make material changes to this policy, we will update the &ldquo;Last updated&rdquo;
         date above and, where practical, notify users within the App.
       </p>

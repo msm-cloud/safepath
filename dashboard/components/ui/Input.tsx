@@ -13,6 +13,21 @@ export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> & {
   id?: string;
 };
 
+// Shared with plain <input> elements that have no visible label of their
+// own (the sign-in and sign-up forms use placeholders only).
+export function inputClasses({
+  error = false,
+  trailing = false,
+}: { error?: boolean; trailing?: boolean } = {}): string {
+  return [
+    'type-body min-h-[54px] w-full rounded-md border-[1.5px] bg-surface px-4 text-text',
+    'placeholder:text-text-muted outline-none focus:border-focus',
+    'disabled:bg-surface-muted disabled:text-text-muted',
+    error ? 'border-danger-text' : 'border-border-input',
+    trailing ? 'pr-[52px]' : '',
+  ].join(' ');
+}
+
 export default function Input({
   label,
   helper,
@@ -37,14 +52,7 @@ export default function Input({
           id={inputId}
           aria-invalid={error ? true : undefined}
           aria-describedby={note ? noteId : undefined}
-          className={[
-            'type-body min-h-[54px] w-full rounded-md border-[1.5px] bg-surface px-4 text-text',
-            'placeholder:text-text-muted outline-none focus:border-focus',
-            'disabled:bg-surface-muted disabled:text-text-muted',
-            error ? 'border-danger-text' : 'border-border-input',
-            trailing ? 'pr-[52px]' : '',
-            className ?? '',
-          ].join(' ')}
+          className={`${inputClasses({ error: !!error, trailing: !!trailing })} ${className ?? ''}`}
           {...rest}
         />
         {trailing && (

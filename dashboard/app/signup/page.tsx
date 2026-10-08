@@ -6,6 +6,19 @@ import { useActionState } from 'react';
 import PasswordField from '@/components/PasswordField';
 import { signUpAction, type AuthActionState } from '@/lib/auth-actions';
 import { useLanguage } from '@/lib/language-context';
+import {
+  inlineLink,
+  publicCard,
+  publicError,
+  publicFootnote,
+  publicForm,
+  publicLink,
+  publicPrompt,
+  publicSuccess,
+  publicTitle,
+} from '@/components/public-page-styles';
+import { buttonClasses } from '@/components/ui/Button';
+import { inputClasses } from '@/components/ui/Input';
 
 const initialState: AuthActionState = { error: null, info: null };
 
@@ -19,17 +32,17 @@ export default function SignUpPage() {
   const [state, formAction, pending] = useActionState(signUpAction, initialState);
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 p-16">
-      <h1 className="text-2xl font-semibold tracking-tight">{t('signUpTitle')}</h1>
+    <main className={publicCard}>
+      <h1 className={publicTitle}>{t('signUpTitle')}</h1>
 
-      <form action={formAction} className="flex w-full max-w-sm flex-col gap-3">
+      <form action={formAction} className={publicForm}>
         <input
           type="text"
           name="fullName"
           placeholder={t('fullNamePlaceholder')}
           autoComplete="name"
           required
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          className={inputClasses()}
         />
         <input
           type="email"
@@ -37,7 +50,7 @@ export default function SignUpPage() {
           placeholder={t('emailPlaceholder')}
           autoComplete="email"
           required
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          className={inputClasses()}
         />
         <input
           type="tel"
@@ -45,7 +58,7 @@ export default function SignUpPage() {
           placeholder={t('phonePlaceholder')}
           autoComplete="tel"
           required
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          className={inputClasses()}
         />
         <PasswordField
           name="password"
@@ -57,32 +70,32 @@ export default function SignUpPage() {
             (business logic, out of scope for this UI-text-only pass) —
             Supabase's own auth error messages are always English
             regardless. */}
-        {state.error && <p className="text-sm text-red-600">{state.error}</p>}
-        {state.info && <p className="text-sm text-green-700">{state.info}</p>}
+        {state.error && <p className={publicError}>{state.error}</p>}
+        {state.info && <p className={publicSuccess}>{state.info}</p>}
 
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className={buttonClasses({ fullWidth: true, loading: pending })}
         >
           {pending ? t('creatingAccountButton') : t('signUpButton')}
         </button>
       </form>
 
-      <p className="text-sm text-zinc-500">
+      <p className={publicPrompt}>
         {t('hasAccountQuestion')}{' '}
-        <Link href="/login" className="font-medium text-blue-600 underline">
+        <Link href="/login" className={`font-bold ${inlineLink}`}>
           {t('signInNow')}
         </Link>
       </p>
 
-      <p className="max-w-sm text-center text-xs text-zinc-400">
+      <p className={publicFootnote}>
         {t('agreeToTermsPrefix')}{' '}
-        <Link href="/terms" className="underline">
+        <Link href="/terms" className={inlineLink}>
           {t('termsOfServiceLink')}
         </Link>{' '}
         {t('agreeToTermsAnd')}{' '}
-        <Link href="/privacy" className="underline">
+        <Link href="/privacy" className={inlineLink}>
           {t('privacyPolicyLink')}
         </Link>
         .
@@ -92,7 +105,7 @@ export default function SignUpPage() {
         href={USER_MANUAL_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-zinc-400 underline"
+        className={`self-center text-center ${publicLink}`}
       >
         {t('userManualLink')}
       </a>
