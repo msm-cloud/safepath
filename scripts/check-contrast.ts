@@ -110,6 +110,20 @@ const PAIRS: Pair[] = [
   { group: 'Avatar', label: 'Placeholder glyph', fg: 'textMuted', bg: 'track', level: 'ui' },
   { group: 'Badge', label: 'Role badge', fg: 'textSecondary', bg: 'track', level: 'text' },
 
+  // Fake call setup's caller rows: a tinted fill with a primary ring when
+  // selected, a plain card with a muted ring otherwise.
+  { group: 'Choice', label: 'Selected label', fg: 'text', bg: 'primarySoft', level: 'text' },
+  { group: 'Choice', label: 'Selected ring', fg: 'primary', bg: 'primarySoft', level: 'ui' },
+  { group: 'Choice', label: 'Empty ring', fg: 'textMuted', bg: 'surface', level: 'ui' },
+  { group: 'Choice', label: 'Initials on badge', fg: 'text', bg: 'warningSoft', level: 'text' },
+  {
+    group: 'Choice',
+    label: 'Glyph on badge',
+    fg: 'textSecondary',
+    bg: 'surfaceMuted',
+    level: 'ui',
+  },
+
   { group: 'Switch', label: 'Off thumb on track', fg: 'textMuted', bg: 'track', level: 'ui' },
   { group: 'Switch', label: 'On thumb on track', fg: 'onPrimary', bg: 'primary', level: 'ui' },
   { group: 'Switch', label: 'On track vs card', fg: 'primary', bg: 'surface', level: 'ui' },

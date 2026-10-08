@@ -36,9 +36,13 @@ type ScrollResponderHandle = {
   ) => void;
 };
 
+// React Native's calculation assumes the scroll view starts at the top of
+// the screen, so under a navigation header it stops short by the header's
+// height; `topInset` adds that back.
 export function scrollInputIntoView(
   scrollResponder: ScrollResponderHandle | null | undefined,
-  inputRef: RefObject<TextInput | null>
+  inputRef: RefObject<TextInput | null>,
+  topInset = 0
 ) {
   const input = inputRef.current;
   if (
@@ -51,7 +55,7 @@ export function scrollInputIntoView(
   try {
     scrollResponder.scrollResponderScrollNativeHandleToKeyboard(
       input,
-      KEYBOARD_SCROLL_OFFSET,
+      KEYBOARD_SCROLL_OFFSET + topInset,
       true
     );
   } catch {

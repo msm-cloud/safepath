@@ -256,9 +256,29 @@ export const translations = {
 
   // --- Fake call escape (Home screen) ---
   fakeCallButton: { en: 'Fake Call', bn: 'ভুয়া কল' },
-  fakeCallDelayPickerTitle: { en: 'When should it ring?', bn: 'কখন কল আসবে?' },
-  fakeCallDelayNow: { en: 'Now', bn: 'এখনই' },
-  fakeCallDelaySeconds: { en: '{n} seconds', bn: '{n} সেকেন্ড' },
+
+  // --- Fake call setup (app/(tabs)/fake-call.tsx) ---
+  fakeCallSetupTitle: { en: 'Fake call', bn: 'ভুয়া কল' },
+  fakeCallSetupIntro: {
+    en: 'Your phone rings like a normal call, so you have a reason to leave. SafePath does not appear on the call screen.',
+    bn: 'আপনার ফোনে সাধারণ কলের মতো রিং হবে, যাতে সেখান থেকে চলে যাওয়ার একটা কারণ পান। কল স্ক্রিনে SafePath দেখা যাবে না।',
+  },
+  fakeCallWhoIsCalling: { en: 'Who is calling', bn: 'কে কল করছে' },
+  fakeCallCallerAmmu: { en: 'Ammu', bn: 'আম্মু' },
+  fakeCallCallerAbbu: { en: 'Abbu', bn: 'আব্বু' },
+  // Two letters in the round badge next to each caller.
+  fakeCallCallerAmmuInitials: { en: 'AM', bn: 'মা' },
+  fakeCallCallerAbbuInitials: { en: 'AB', bn: 'বা' },
+  fakeCallCallerOther: { en: 'Other name', bn: 'অন্য নাম' },
+  fakeCallOtherNameMissing: {
+    en: 'Enter the name to show on the call.',
+    bn: 'কলে যে নাম দেখাবে, সেটি লিখুন।',
+  },
+  fakeCallRingOutLoud: { en: 'Ring out loud', bn: 'শব্দ করে রিং হবে' },
+  fakeCallRingOutLoudHint: { en: 'Off: vibrate only', bn: 'বন্ধ থাকলে শুধু ভাইব্রেট হবে' },
+  fakeCallRingNow: { en: 'Ring now', bn: 'এখনই রিং করুন' },
+
+  // --- Fake call screen (components/FakeCallFlow.tsx) ---
   fakeCallIncomingLabel: { en: 'Incoming call', bn: 'ইনকামিং কল' },
   fakeCallAcceptButton: { en: 'Accept', bn: 'গ্রহণ করুন' },
   fakeCallDeclineButton: { en: 'Decline', bn: 'প্রত্যাখ্যান করুন' },
@@ -610,7 +630,6 @@ export const translations = {
   },
   fakeCallToggleLabel: { en: 'Fake call escape', bn: 'ভুয়া কল এস্কেপ' },
   fakeCallCallerNameLabel: { en: 'Caller name', bn: 'কলারের নাম' },
-  fakeCallDefaultCallerName: { en: 'Mom', bn: 'আম্মু' },
   // Guardian-only — see the alarm_sound_enabled migration comment for why
   // this doesn't show for role='user' accounts.
   alarmSoundToggleLabel: {

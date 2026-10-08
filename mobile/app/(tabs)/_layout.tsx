@@ -135,6 +135,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="fake-call"
+        options={{
+          title: t('fakeCallSetupTitle'),
+          // Opened from the Home tile.
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="tutorial"
         options={{
           title: t('helpAndTutorialLink'),
