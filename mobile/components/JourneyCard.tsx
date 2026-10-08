@@ -35,6 +35,7 @@ export type JourneyCardProps = {
   onChangeDestinationNote: (note: string) => void;
   destinationNoteRef: Ref<TextInput>;
   onDestinationNoteFocus: () => void;
+  onDestinationNoteBlur: () => void;
   starting: boolean;
   createError: string | null;
   onStart: () => void;
@@ -134,6 +135,7 @@ function StartJourney({
   onChangeDestinationNote,
   destinationNoteRef,
   onDestinationNoteFocus,
+  onDestinationNoteBlur,
   starting,
   createError,
   onStart,
@@ -166,6 +168,7 @@ function StartJourney({
         value={destinationNote}
         onChangeText={onChangeDestinationNote}
         onFocus={onDestinationNoteFocus}
+        onBlur={onDestinationNoteBlur}
       />
 
       {createError && <Banner tone="danger" message={createError} />}

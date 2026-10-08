@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, type ScrollView, type TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HomeHeader from '@/components/HomeHeader';
 import JourneyCard from '@/components/JourneyCard';
@@ -17,9 +18,9 @@ import { useLanguage } from '@/lib/language-context';
 import { getBestEffortLocation } from '@/lib/location';
 import { isOnline } from '@/lib/network';
 import { cancelScheduledNotification, scheduleArrivalCheckNotification } from '@/lib/notifications';
-import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import { useAcceptedGuardians } from '@/lib/use-accepted-guardians';
+import { useInputScroll } from '@/lib/use-input-scroll';
 import { useLiveSharing } from '@/lib/use-live-sharing';
 import { useLocationHistory } from '@/lib/use-location-history';
 import { usePendingOnboarding } from '@/lib/use-pending-onboarding';
@@ -84,6 +85,10 @@ export default function HomeScreen() {
 
   const scrollViewRef = useRef<ScrollView>(null);
   const destinationNoteInputRef = useRef<TextInput>(null);
+  // Screen pads the top edge for the status bar here, so the scroll view
+  // starts below it.
+  const safeAreaTop = useSafeAreaInsets().top;
+  const { onInputFocus, onInputBlur } = useInputScroll(scrollViewRef, safeAreaTop);
 
   const [actionPending, setActionPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -369,9 +374,8 @@ export default function HomeScreen() {
           destinationNote={destinationNote}
           onChangeDestinationNote={setDestinationNote}
           destinationNoteRef={destinationNoteInputRef}
-          onDestinationNoteFocus={() =>
-            scrollInputIntoView(scrollViewRef.current, destinationNoteInputRef)
-          }
+          onDestinationNoteFocus={() => onInputFocus(destinationNoteInputRef)}
+          onDestinationNoteBlur={() => onInputBlur(destinationNoteInputRef)}
           starting={starting}
           createError={createError}
           onStart={handleStart}
