@@ -1,5 +1,6 @@
+import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useRef, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { Keyboard, Pressable, type ScrollView, type TextInput, View } from 'react-native';
 
 import FakeCallFlow, { type FakeCall } from '@/components/FakeCallFlow';
@@ -20,6 +21,7 @@ import {
 import { loadFakeCallPrefs, saveFakeCallPrefs } from '@/lib/fake-call-storage';
 import { useLanguage } from '@/lib/language-context';
 import { scrollInputIntoView } from '@/lib/scroll-to-input';
+import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 import { translations, type TranslationKey } from '@/lib/translations';
 import { useUserSettings } from '@/lib/user-settings-context';
 import { useTheme, type ThemeColors } from '@/theme';
@@ -77,6 +79,19 @@ export default function FakeCallSetupScreen() {
 
   const scrollViewRef = useRef<ScrollView>(null);
   const otherNameInputRef = useRef<TextInput>(null);
+  const [otherNameFocused, setOtherNameFocused] = useState(false);
+  const keyboardHeight = useKeyboardHeight();
+  const headerHeight = use(HeaderHeightContext) ?? 0;
+
+  // Screen only gains scroll range once it pads for the keyboard, which is
+  // after the focus-time scroll has already run, so scroll again then.
+  useEffect(() => {
+    if (!otherNameFocused || keyboardHeight === 0) return;
+    const frame = requestAnimationFrame(() =>
+      scrollInputIntoView(scrollViewRef.current, otherNameInputRef, headerHeight)
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [otherNameFocused, keyboardHeight, headerHeight]);
 
   useEffect(() => {
     let cancelled = false;
@@ -157,7 +172,8 @@ export default function FakeCallSetupScreen() {
             autoCapitalize="words"
             returnKeyType="done"
             maxLength={40}
-            onFocus={() => scrollInputIntoView(scrollViewRef.current, otherNameInputRef)}
+            onFocus={() => setOtherNameFocused(true)}
+            onBlur={() => setOtherNameFocused(false)}
           />
         )}
       </View>
