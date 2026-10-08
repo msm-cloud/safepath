@@ -8,8 +8,8 @@ import PasswordInput from '@/components/ui/PasswordInput';
 import Screen from '@/components/ui/Screen';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
-import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
+import { useInputScroll } from '@/lib/use-input-scroll';
 import { MIN_PASSWORD_LENGTH } from '@/lib/validation';
 import { useTheme } from '@/theme';
 
@@ -47,6 +47,7 @@ export default function ChangePasswordScreen() {
   const currentPasswordRef = useRef<TextInput>(null);
   const newPasswordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
+  const { onInputFocus, onInputBlur } = useInputScroll(scrollRef);
 
   const handleChangePassword = async () => {
     setError(null);
@@ -111,7 +112,8 @@ export default function ChangePasswordScreen() {
               returnKeyType="next"
               value={currentPassword}
               onChangeText={setCurrentPassword}
-              onFocus={() => scrollInputIntoView(scrollRef.current, currentPasswordRef)}
+              onFocus={() => onInputFocus(currentPasswordRef)}
+              onBlur={() => onInputBlur(currentPasswordRef)}
               onSubmitEditing={() => newPasswordRef.current?.focus()}
             />
             <PasswordInput
@@ -122,7 +124,8 @@ export default function ChangePasswordScreen() {
               returnKeyType="next"
               value={newPassword}
               onChangeText={setNewPassword}
-              onFocus={() => scrollInputIntoView(scrollRef.current, newPasswordRef)}
+              onFocus={() => onInputFocus(newPasswordRef)}
+              onBlur={() => onInputBlur(newPasswordRef)}
               onSubmitEditing={() => confirmPasswordRef.current?.focus()}
             />
             <PasswordInput
@@ -132,7 +135,8 @@ export default function ChangePasswordScreen() {
               returnKeyType="done"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              onFocus={() => scrollInputIntoView(scrollRef.current, confirmPasswordRef)}
+              onFocus={() => onInputFocus(confirmPasswordRef)}
+              onBlur={() => onInputBlur(confirmPasswordRef)}
               onSubmitEditing={handleChangePassword}
             />
             {error && <Banner tone="danger" message={error} />}

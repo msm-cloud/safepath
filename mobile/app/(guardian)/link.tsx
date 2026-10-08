@@ -7,9 +7,9 @@ import Input from '@/components/ui/Input';
 import Screen from '@/components/ui/Screen';
 import Text from '@/components/ui/Text';
 import { useLanguage } from '@/lib/language-context';
-import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
 import type { TranslationKey } from '@/lib/translations';
+import { useInputScroll } from '@/lib/use-input-scroll';
 import { useTheme } from '@/theme';
 
 // redeem_guardian_invite returns jsonb, which the generated Supabase types
@@ -38,6 +38,7 @@ export default function LinkToSomeoneScreen() {
 
   const scrollRef = useRef<ScrollView>(null);
   const codeRef = useRef<TextInput>(null);
+  const { onInputFocus, onInputBlur } = useInputScroll(scrollRef);
 
   const handleSubmit = async () => {
     setError(null);
@@ -93,7 +94,8 @@ export default function LinkToSomeoneScreen() {
           returnKeyType="done"
           value={code}
           onChangeText={(text) => setCode(text.toUpperCase())}
-          onFocus={() => scrollInputIntoView(scrollRef.current, codeRef)}
+          onFocus={() => onInputFocus(codeRef)}
+          onBlur={() => onInputBlur(codeRef)}
           onSubmitEditing={handleSubmit}
         />
         {error && <Banner tone="danger" message={error} />}

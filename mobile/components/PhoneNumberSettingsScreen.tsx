@@ -7,8 +7,8 @@ import Input from '@/components/ui/Input';
 import Screen from '@/components/ui/Screen';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
-import { scrollInputIntoView } from '@/lib/scroll-to-input';
 import { supabase } from '@/lib/supabase';
+import { useInputScroll } from '@/lib/use-input-scroll';
 import { useUserSettings } from '@/lib/user-settings-context';
 import { isValidPhone } from '@/lib/validation';
 import { useTheme } from '@/theme';
@@ -35,6 +35,7 @@ export default function PhoneNumberSettingsScreen() {
 
   const scrollRef = useRef<ScrollView>(null);
   const phoneInputRef = useRef<TextInput>(null);
+  const { onInputFocus, onInputBlur } = useInputScroll(scrollRef);
 
   const [phoneDraft, setPhoneDraft] = useState(phone ?? '');
   const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -88,7 +89,8 @@ export default function PhoneNumberSettingsScreen() {
             setPhoneDraft(value);
             setPhoneSaved(false);
           }}
-          onFocus={() => scrollInputIntoView(scrollRef.current, phoneInputRef)}
+          onFocus={() => onInputFocus(phoneInputRef)}
+          onBlur={() => onInputBlur(phoneInputRef)}
           onSubmitEditing={handleSavePhone}
         />
         {phoneSaved && <Banner tone="success" message={t('phoneSavedMessage')} />}
