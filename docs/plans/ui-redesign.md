@@ -16,7 +16,14 @@ Design boards: `docs/design/safepath-ui/`. Theme and components: see
 
 ## Remaining
 
-- PR 5: web dashboard redesign.
+- PR 5: web dashboard redesign, in four parts. Styling only: no changes to Supabase
+  queries, auth, RLS, API routes, migrations or page text.
+  - 5a: tokens, fonts, `<html lang>`, base components and `/dev/ui-gallery`.
+  - 5b: public pages (sign-in, sign-up, forgot and reset password, guardian-only, landing,
+    privacy and terms; legal text unchanged).
+  - 5c: dashboard shell and overview (alerts, live sharing, past alerts, invite form,
+    recorded location, linked people). The sidebar label reuses `dashboardTitle`.
+  - 5d: settings.
 - PR 6: cleanup (below).
 
 ### PR 6 cleanup

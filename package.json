@@ -12,6 +12,7 @@
     "test:rls": "node supabase/tests/rls.test.mjs",
     "test:auth-identifier": "node --test supabase/tests/auth-identifier.test.ts",
     "test:mobile": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test mobile/tests/*.test.ts",
+    "test:dashboard": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test dashboard/tests/*.test.ts",
     "check:contrast": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-contrast.ts"
   },
   "devDependencies": {

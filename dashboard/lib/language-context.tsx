@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { createContext, type ReactNode, useCallback, useContext, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 import { createClient } from '@/lib/supabase/client';
 import { t as translate, type Language, type TranslationKey } from '@/lib/translations';
@@ -29,6 +29,12 @@ export function LanguageProvider({
 }) {
   const router = useRouter();
   const [language, setLanguageState] = useState<Language>(initialLanguage);
+
+  // The root layout renders <html lang> from initialLanguage; this keeps it
+  // right after the toggle switches language without a full reload.
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   const setLanguage = useCallback(
     (next: Language) => {

@@ -5,7 +5,7 @@
 // through the bilingual t() system.
 export default function PrivacyPolicyPage() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <main lang="en" className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
       <h1 className="text-3xl font-semibold tracking-tight">SafePath Privacy Policy</h1>
       <p className="mt-2 text-sm text-zinc-500">Last updated: September 12, 2026</p>
 
