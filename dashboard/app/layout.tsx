@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 import { LanguageProvider } from '@/lib/language-context';
 import type { Language } from '@/lib/translations';
-import { createClient } from '@/lib/supabase/server';
+import { createPageClient, getAuthState } from '@/lib/supabase/auth-state';
 
 import './globals.css';
 
@@ -41,13 +41,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // immediately instead of flashing the 'bn' default first. Pre-auth
   // pages (login/signup) have no user yet, so they fall back to 'bn',
   // matching the profiles.preferred_language column default.
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const auth = await getAuthState();
+  const user = auth.status === 'signed-out' ? null : auth.user;
 
   let initialLanguage: Language = 'bn';
   if (user) {
+    const supabase = await createPageClient();
     const { data: profile } = await supabase
       .from('profiles')
       .select('preferred_language')

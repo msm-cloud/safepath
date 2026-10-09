@@ -107,6 +107,15 @@ export const translations = {
   },
   phoneNotSavedSettingsLink: { en: 'Go to Settings', bn: 'সেটিংসে যান' },
 
+  // --- Auth check failed on a slow network (dashboard/connection-problem.tsx) ---
+  connectionProblemTitle: { en: 'Connection problem', bn: 'সংযোগে সমস্যা' },
+  connectionProblemMessage: {
+    en: "We couldn't reach the server to check your sign-in. This page stays open while we keep trying.",
+    bn: 'আপনার সাইন-ইন যাচাই করতে সার্ভারের সাথে যোগাযোগ করা যায়নি। আমরা চেষ্টা চালিয়ে যাচ্ছি, ততক্ষণ এই পেজটি খোলা থাকবে।',
+  },
+  connectionRetryButton: { en: 'Try again', bn: 'আবার চেষ্টা করুন' },
+  connectionRetrying: { en: 'Retrying…', bn: 'আবার চেষ্টা করা হচ্ছে…' },
+
   // --- Dashboard home ---
   dashboardTitle: { en: 'Dashboard', bn: 'ড্যাশবোর্ড' },
   dashboardSubtitle: {

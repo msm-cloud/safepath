@@ -2,6 +2,12 @@ import type { Database } from '@safepath/shared-types';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { timeoutFetch } from '@/lib/supabase/timeout-fetch';
+
+// Short, because every request waits for this. A timeout here only skips
+// the refresh; the layout decides what a failed auth check means.
+const AUTH_REFRESH_TIMEOUT_MS = 3000;
+
 // Standard Supabase Next.js App Router pattern: the server client (used in
 // Server Components/Actions) can read cookies but can't reliably write a
 // refreshed session cookie back — only middleware, which runs before every
@@ -15,6 +21,7 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { fetch: timeoutFetch(AUTH_REFRESH_TIMEOUT_MS) },
       cookies: {
         getAll() {
           return request.cookies.getAll();
