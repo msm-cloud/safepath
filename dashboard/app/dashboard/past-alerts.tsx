@@ -1,6 +1,6 @@
 import { t } from '@/lib/translations';
 import type { Language } from '@/lib/translations';
-import { createClient } from '@/lib/supabase/server';
+import { createPageClient } from '@/lib/supabase/auth-state';
 
 const PAST_ALERTS_LIMIT = 20;
 
@@ -35,7 +35,7 @@ type PastAlertRow = {
 // plain prop from dashboard/page.tsx instead, and every string here uses
 // the pure t(language, key) function rather than the useLanguage() hook.
 export default async function PastAlerts({ language }: { language: Language }) {
-  const supabase = await createClient();
+  const supabase = await createPageClient();
 
   const { data, error } = await supabase
     .from('alerts')

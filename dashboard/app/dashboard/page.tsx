@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-import { createClient } from '@/lib/supabase/server';
+import { createPageClient, getAuthState } from '@/lib/supabase/auth-state';
 import { t, type Language } from '@/lib/translations';
 
 import ActiveAlerts from './active-alerts';
@@ -15,33 +15,36 @@ type LinkedUserRow = {
 };
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Defensive — dashboard/app/dashboard/layout.tsx already redirects
-  // unauthenticated visitors before this page ever renders.
-  if (!user) {
+  // Same check as the layout (cached per request). The layout already
+  // redirects visitors without a valid session before this page renders.
+  const auth = await getAuthState();
+  if (auth.status === 'signed-out') {
     redirect('/login');
   }
+
+  // `user` is null only when the auth check failed and the session cookie
+  // couldn't be read either. The queries are skipped, but the page keeps
+  // the same shape so the client-side sections (an active SOS among them)
+  // aren't remounted.
+  const { user } = auth;
+  const supabase = await createPageClient();
 
   // Server Component, so no LanguageContext access (Context is
   // Client-Component-only) — fetch the language directly here, and pass
   // it down to PastAlerts as a prop for the same reason.
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('preferred_language')
-    .eq('id', user.id)
-    .single();
+  const { data: profile } = user
+    ? await supabase.from('profiles').select('preferred_language').eq('id', user.id).single()
+    : { data: null };
   const language: Language = profile?.preferred_language ?? 'bn';
 
-  const { data, error } = await supabase
-    .from('guardian_links')
-    .select('id, user:profiles!guardian_links_user_id_fkey(id, full_name)')
-    .eq('guardian_id', user.id)
-    .eq('status', 'accepted')
-    .order('accepted_at', { ascending: false });
+  const { data, error } = user
+    ? await supabase
+        .from('guardian_links')
+        .select('id, user:profiles!guardian_links_user_id_fkey(id, full_name)')
+        .eq('guardian_id', user.id)
+        .eq('status', 'accepted')
+        .order('accepted_at', { ascending: false })
+    : { data: null, error: null };
 
   const links = (data ?? []) as unknown as LinkedUserRow[];
 
