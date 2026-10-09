@@ -1,6 +1,7 @@
 # Plan: UI redesign
 
-Status: mobile redesign merged; the web dashboard and the cleanup are still to do.
+Status: mobile and web dashboard redesign merged; the signed-out language switch and the
+cleanup are still to do.
 Design boards: `docs/design/safepath-ui/`. Theme and components: see
 `docs/ARCHITECTURE.md`.
 
@@ -16,12 +17,11 @@ Design boards: `docs/design/safepath-ui/`. Theme and components: see
 - PR 5a: dashboard tokens, fonts and base components (#114)
 - PR 5b: dashboard public pages (#115)
 - PR 5c: dashboard shell and overview (#116)
+- PR 5d: dashboard settings and the `[userId]` placeholder (#119)
 
 ## Remaining
 
-- PR 5d: dashboard settings and the `[userId]` placeholder. Like 5a to 5c, styling only:
-  no changes to Supabase queries, auth, RLS, API routes, migrations or page text.
-- Follow-up after 5d: an EN/বাংলা switch on the signed-out pages (sign-in, sign-up, password
+- Follow-up to PR 5: an EN/বাংলা switch on the signed-out pages (sign-in, sign-up, password
   reset, guardian-only). They have none today and always start in Bangla, because the
   language comes from the signed-in profile. Signed-out visitors' choice would have to be
   kept without a profile (for example a cookie the root layout reads).
