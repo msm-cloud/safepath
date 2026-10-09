@@ -90,6 +90,16 @@ export function SparkleIcon(props: IconProps) {
   );
 }
 
+export function SpeakerOffIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M11 5 6 9H2v6h4l5 4V5Z" />
+      <line x1="23" y1="9" x2="17" y2="15" />
+      <line x1="17" y1="9" x2="23" y2="15" />
+    </Icon>
+  );
+}
+
 export function GridIcon(props: IconProps) {
   return (
     <Icon {...props}>

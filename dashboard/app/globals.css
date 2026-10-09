@@ -31,3 +31,27 @@ body {
 .sos-alert-pulse {
   animation: sos-alert-pulse 1s ease-in-out infinite;
 }
+
+/* Full-screen alarm shown while an SOS is active and the sound is still
+   locked — see active-alerts.tsx. One slow fade per second, well under the
+   three-flashes-a-second limit. */
+@keyframes sos-overlay-flash {
+  0%,
+  100% {
+    background-color: var(--color-danger);
+  }
+  50% {
+    background-color: var(--color-danger-pressed);
+  }
+}
+
+.sos-overlay-flash {
+  animation: sos-overlay-flash 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sos-alert-pulse,
+  .sos-overlay-flash {
+    animation: none;
+  }
+}
