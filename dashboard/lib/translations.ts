@@ -111,7 +111,7 @@ export const translations = {
   connectionProblemTitle: { en: 'Connection problem', bn: 'সংযোগে সমস্যা' },
   connectionProblemMessage: {
     en: "We couldn't reach the server to check your sign-in. This page stays open while we keep trying.",
-    bn: 'আপনার সাইন-ইন যাচাই করতে সার্ভারের সাথে যোগাযোগ করা যায়নি। আমরা আবার চেষ্টা করছি, ততক্ষণ এই পেজটি খোলা থাকবে।',
+    bn: 'আপনার সাইন-ইন যাচাই করতে সার্ভারের সাথে যোগাযোগ করা যায়নি। আমরা চেষ্টা চালিয়ে যাচ্ছি, ততক্ষণ এই পেজটি খোলা থাকবে।',
   },
   connectionRetryButton: { en: 'Try again', bn: 'আবার চেষ্টা করুন' },
   connectionRetrying: { en: 'Retrying…', bn: 'আবার চেষ্টা করা হচ্ছে…' },
