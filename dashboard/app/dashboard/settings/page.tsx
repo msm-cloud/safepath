@@ -38,6 +38,7 @@ export default function DashboardSettingsPage() {
   const [email, setEmail] = useState<string | null>(null);
 
   const [fullName, setFullName] = useState('');
+  const [savedName, setSavedName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [nameSaved, setNameSaved] = useState(false);
   const [savingName, setSavingName] = useState(false);
@@ -72,6 +73,7 @@ export default function DashboardSettingsPage() {
       setUserId(user.id);
       setEmail(user.email ?? null);
       setFullName(data?.full_name ?? '');
+      setSavedName(data?.full_name ?? '');
       setPhone(data?.phone ?? '');
       setSavedPhone(data?.phone ?? '');
       setLoaded(true);
@@ -107,6 +109,7 @@ export default function DashboardSettingsPage() {
     }
 
     setFullName(trimmed);
+    setSavedName(trimmed);
     setNameSaved(true);
   };
 
@@ -231,7 +234,7 @@ export default function DashboardSettingsPage() {
         {nameSaved && <p className="type-body-sm text-on-success-soft">{t('nameSavedMessage')}</p>}
         <button
           type="submit"
-          disabled={savingName || fullName.trim() === fullName}
+          disabled={savingName || fullName.trim() === '' || fullName.trim() === savedName}
           className={`self-start ${buttonClasses({ loading: savingName })}`}
         >
           {savingName ? t('savingButton') : t('saveButton')}
