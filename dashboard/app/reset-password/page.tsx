@@ -14,7 +14,9 @@ import {
   publicLink,
   publicSubtitle,
   publicTitle,
+  publicToolbar,
 } from '@/components/public-page-styles';
+import LanguageToggle from '@/components/LanguageToggle';
 import { buttonClasses } from '@/components/ui/Button';
 
 const MIN_PASSWORD_LENGTH = 6;
@@ -97,6 +99,9 @@ export default function ResetPasswordPage() {
   if (status === 'verifying') {
     return (
       <main className={publicCard}>
+        <div className={publicToolbar}>
+          <LanguageToggle />
+        </div>
         <p className={publicSubtitle}>{t('resetLinkVerifying')}</p>
       </main>
     );
@@ -105,6 +110,9 @@ export default function ResetPasswordPage() {
   if (status === 'invalid') {
     return (
       <main className={publicCard}>
+        <div className={publicToolbar}>
+          <LanguageToggle />
+        </div>
         <p className={publicError}>{t('invalidOrExpiredResetLink')}</p>
         <Link href="/forgot-password" className={`self-center ${publicLink}`}>
           {t('requestNewResetLinkLink')}
@@ -115,6 +123,9 @@ export default function ResetPasswordPage() {
 
   return (
     <main className={publicCard}>
+      <div className={publicToolbar}>
+        <LanguageToggle />
+      </div>
       <h1 className={publicTitle}>{t('resetPasswordTitle')}</h1>
 
       <form onSubmit={handleSubmit} className={publicForm}>

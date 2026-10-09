@@ -171,6 +171,12 @@ value on mobile first, then copy it.
 - `<html lang>` follows the chosen language (`LanguageProvider` updates it on toggle). Under
   `lang="bn"` text gets a 1.6 line height and no letter spacing. The privacy policy and
   terms are English only and set `lang="en"` on their `<main>`.
+- Language source: a signed-in guardian's `profiles.preferred_language` wins. Signed-out
+  pages (sign-in, sign-up, password reset, guardian-only) have their own EN/Bangla switch
+  stored in the `sp-language` cookie, which sign-up copies into the new profile. The
+  cookie follows whatever is shown, so it is also the fallback when the profile can't be
+  read. The dashboard layout renders `ServerLanguageSync`, because the root layout (and
+  `LanguageProvider`) stays mounted across sign-in.
 
 Base components: `Button` (and `buttonClasses()` for links styled as buttons), `Input`,
 `PasswordInput`, `Card`, `Banner`, `Badge` and `SegmentedControl`. Variants match the

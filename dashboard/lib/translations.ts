@@ -241,6 +241,7 @@ export const translations = {
   settingsLink: { en: 'Settings', bn: 'সেটিংস' },
   languageBn: { en: 'বাংলা', bn: 'বাংলা' },
   languageEn: { en: 'English', bn: 'English' },
+  languageSwitchLabel: { en: 'Language', bn: 'ভাষা' },
 
   // --- Settings page ---
   settingsTitle: { en: 'Settings', bn: 'সেটিংস' },

@@ -1,14 +1,30 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from 'react';
 
+import { LANGUAGE_COOKIE, LANGUAGE_COOKIE_MAX_AGE_S } from '@/lib/language-cookie';
 import { createClient } from '@/lib/supabase/client';
 import { t as translate, type Language, type TranslationKey } from '@/lib/translations';
 
+type SetLanguageOptions = {
+  // Also write profiles.preferred_language. Only the dashboard's own toggle
+  // does this; on signed-out pages the cookie is the only store.
+  saveToProfile?: boolean;
+};
+
 type LanguageContextValue = {
   language: Language;
-  setLanguage: (language: Language) => void;
+  setLanguage: (language: Language, options?: SetLanguageOptions) => void;
+  followServerLanguage: (language: Language) => void;
   t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 };
 
@@ -31,17 +47,21 @@ export function LanguageProvider({
   const [language, setLanguageState] = useState<Language>(initialLanguage);
 
   // The root layout renders <html lang> from initialLanguage; this keeps it
-  // right after the toggle switches language without a full reload.
+  // right after the toggle switches language without a full reload. The
+  // cookie follows too, so it's the right fallback if the profile can't be
+  // read later.
   useEffect(() => {
     document.documentElement.lang = language;
+    document.cookie = `${LANGUAGE_COOKIE}=${language}; path=/; max-age=${LANGUAGE_COOKIE_MAX_AGE_S}; samesite=lax`;
   }, [language]);
 
   const setLanguage = useCallback(
-    (next: Language) => {
+    (next: Language, { saveToProfile = false }: SetLanguageOptions = {}) => {
       // Updates every Client Component reading from this Context
       // immediately (the toggle's own highlight, DashboardHeader's "Sign
       // out", etc.).
       setLanguageState(next);
+      if (!saveToProfile) return;
 
       (async () => {
         const supabase = createClient();
@@ -80,7 +100,9 @@ export function LanguageProvider({
   );
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider
+      value={{ language, setLanguage, followServerLanguage: setLanguageState, t }}
+    >
       {children}
     </LanguageContext.Provider>
   );
@@ -92,4 +114,16 @@ export function useLanguage() {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return ctx;
+}
+
+// Rendered by the dashboard layout with the profile's language. The root
+// layout (and this provider) stays mounted across sign-in, so without this
+// the client side would keep the signed-out page's language until a full
+// reload. Runs again whenever a refresh brings a different language.
+export function ServerLanguageSync({ language }: { language: Language }) {
+  const { followServerLanguage } = useLanguage();
+  useLayoutEffect(() => {
+    followServerLanguage(language);
+  }, [language, followServerLanguage]);
+  return null;
 }

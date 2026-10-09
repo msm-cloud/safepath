@@ -3,6 +3,7 @@ import { Figtree, Hind_Siliguri, Sora } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import { LanguageProvider } from '@/lib/language-context';
+import { cookieLanguage } from '@/lib/language-server';
 import type { Language } from '@/lib/translations';
 import { createPageClient, getAuthState } from '@/lib/supabase/auth-state';
 
@@ -38,13 +39,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // Read the signed-in user's saved language server-side, once, here at
   // the root — so LanguageProvider (a Client Component, since Server
   // Components can't use Context) starts with the right language
-  // immediately instead of flashing the 'bn' default first. Pre-auth
-  // pages (login/signup) have no user yet, so they fall back to 'bn',
-  // matching the profiles.preferred_language column default.
+  // immediately instead of flashing the 'bn' default first. Signed-out
+  // pages, and a profile that can't be read, use the language cookie.
   const auth = await getAuthState();
   const user = auth.status === 'signed-out' ? null : auth.user;
 
-  let initialLanguage: Language = 'bn';
+  let initialLanguage: Language = await cookieLanguage();
   if (user) {
     const supabase = await createPageClient();
     const { data: profile } = await supabase

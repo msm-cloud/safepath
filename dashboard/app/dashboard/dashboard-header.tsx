@@ -3,10 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import LanguageToggle from '@/components/LanguageToggle';
 import { GridIcon, SettingsIcon, ShieldLogo } from '@/components/ui/icons';
 import { useLanguage } from '@/lib/language-context';
-
-import LanguageToggle from './language-toggle';
 
 // One element for both layouts: a top bar on phones and tablets, the ink
 // sidebar from the design board on wide screens.
@@ -59,7 +58,7 @@ export default function DashboardHeader({
           <span className="min-w-0 flex-1 truncate type-caption opacity-80 lg:flex-none lg:px-2">
             {email}
           </span>
-          <LanguageToggle />
+          <LanguageToggle saveToProfile />
           <form action={signOutAction}>
             <button
               type="submit"

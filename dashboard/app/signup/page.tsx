@@ -16,7 +16,9 @@ import {
   publicPrompt,
   publicSuccess,
   publicTitle,
+  publicToolbar,
 } from '@/components/public-page-styles';
+import LanguageToggle from '@/components/LanguageToggle';
 import { buttonClasses } from '@/components/ui/Button';
 import { inputClasses } from '@/components/ui/Input';
 
@@ -33,6 +35,9 @@ export default function SignUpPage() {
 
   return (
     <main className={publicCard}>
+      <div className={publicToolbar}>
+        <LanguageToggle />
+      </div>
       <h1 className={publicTitle}>{t('signUpTitle')}</h1>
 
       <form action={formAction} className={publicForm}>

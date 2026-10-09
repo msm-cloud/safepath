@@ -5,6 +5,9 @@
 export const publicCard =
   'mx-4 my-6 flex flex-col gap-6 rounded-xl border-[1.5px] border-border bg-surface p-gutter shadow-sm sm:mx-auto sm:my-auto sm:w-full sm:max-w-md sm:p-10';
 
+// Top row of the card, holding the language switch.
+export const publicToolbar = 'flex justify-end';
+
 export const publicTitle = 'type-h1 text-text';
 
 export const publicSubtitle = 'type-body text-text-muted';

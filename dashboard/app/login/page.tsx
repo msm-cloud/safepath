@@ -15,7 +15,9 @@ import {
   publicLink,
   publicPrompt,
   publicTitle,
+  publicToolbar,
 } from '@/components/public-page-styles';
+import LanguageToggle from '@/components/LanguageToggle';
 import { buttonClasses } from '@/components/ui/Button';
 import { inputClasses } from '@/components/ui/Input';
 
@@ -32,6 +34,9 @@ export default function LoginPage() {
 
   return (
     <main className={publicCard}>
+      <div className={publicToolbar}>
+        <LanguageToggle />
+      </div>
       <h1 className={publicTitle}>{t('signInTitle')}</h1>
 
       <form action={formAction} className={publicForm}>
