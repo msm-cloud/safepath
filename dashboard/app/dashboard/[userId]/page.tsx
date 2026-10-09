@@ -3,9 +3,9 @@ export default async function UserDetailPage({ params }: { params: Promise<{ use
   const { userId } = await params;
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-2 p-16 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">User</h1>
-      <p className="text-zinc-500">Placeholder page for user id: {userId}</p>
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-gutter py-6 lg:px-8 lg:py-8">
+      <h1 className="type-h1 text-text">User</h1>
+      <p className="type-body text-text-muted">Placeholder page for user id: {userId}</p>
     </main>
   );
 }
