@@ -1,6 +1,6 @@
 # Plan: guardian invite requests (PR 3b)
 
-Status: backend (3b-1) built; app screens (3b-2) not built yet. Design boards: `Guardian-Invite`, `User-InviteAccept`,
+Status: backend (3b-1) merged and deployed; app screens (3b-2) built. Design boards: `Guardian-Invite`, `User-InviteAccept`,
 `User-Guardians` and `User-RemoveGuardian` in `docs/design/safepath-ui/`.
 
 ## Why
