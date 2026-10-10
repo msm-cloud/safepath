@@ -1,5 +1,4 @@
-import { FunctionRegion } from '@supabase/supabase-js';
-
+import { functionRegion } from '@/lib/function-region';
 import { supabase } from '@/lib/supabase';
 
 // Client for the auth-identifier edge function
@@ -57,14 +56,4 @@ async function callAuthIdentifier(
   } catch {
     return { data: null, status: null };
   }
-}
-
-const KNOWN_REGIONS = new Set<string>(Object.values(FunctionRegion));
-
-// The function makes several sequential database and GoTrue calls, so it
-// runs in the database's region rather than the one nearest the phone.
-// Pinned requests aren't rerouted during a regional outage.
-function functionRegion(): FunctionRegion | undefined {
-  const region = process.env.EXPO_PUBLIC_SUPABASE_FUNCTION_REGION?.trim();
-  return region && KNOWN_REGIONS.has(region) ? (region as FunctionRegion) : undefined;
 }
