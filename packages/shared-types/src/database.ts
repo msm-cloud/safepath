@@ -90,6 +90,27 @@ export type Database = {
           },
         ]
       }
+      auth_rate_limit_events: {
+        Row: {
+          bucket: string
+          created_at: string
+          id: number
+          key_hash: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          id?: never
+          key_hash: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          id?: never
+          key_hash?: string
+        }
+        Relationships: []
+      }
       emergency_contacts: {
         Row: {
           created_at: string
@@ -507,9 +528,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      accept_guardian_request: {
-        Args: { p_request_id: string }
-        Returns: Json
+      accept_guardian_request: { Args: { p_request_id: string }; Returns: Json }
+      auth_identifier_email_for_phone: {
+        Args: { p_phone: string }
+        Returns: string
+      }
+      auth_rate_limit_hit: {
+        Args: {
+          p_bucket: string
+          p_key_hash: string
+          p_max: number
+          p_window_secs: number
+        }
+        Returns: number
       }
       auth_rate_limit_record: {
         Args: { p_bucket: string; p_key_hash: string }
@@ -524,10 +555,7 @@ export type Database = {
         }
         Returns: number
       }
-      cancel_guardian_request: {
-        Args: { p_request_id: string }
-        Returns: Json
-      }
+      cancel_guardian_request: { Args: { p_request_id: string }; Returns: Json }
       check_overdue_journeys: { Args: never; Returns: undefined }
       claim_guardian_request: {
         Args: { p_code: string; p_student_id: string }
@@ -580,6 +608,7 @@ export type Database = {
         Returns: string
       }
       normalize_phone: { Args: { p_phone: string }; Returns: string }
+      purge_auth_rate_limit_events: { Args: never; Returns: undefined }
       purge_expired_location_history: { Args: never; Returns: undefined }
       purge_old_live_locations: { Args: never; Returns: undefined }
       redeem_guardian_invite: { Args: { p_invite_code: string }; Returns: Json }
