@@ -251,3 +251,18 @@ for one release cycle for installed 1.1/1.2 apps.
   15 minutes and 20 per day. Successful lookups and re-opens are not counted.
 - **Cron**: `expire-guardian-requests` (`expire_guardian_requests()`, every 15 minutes)
   marks open requests expired and deletes requests older than 30 days.
+- **Guardian app**: the Invite tab (`app/(guardian)/invite.tsx`) creates, shares and
+  cancels codes. The guardian can't receive `guardian_requests` over Realtime, so
+  `lib/use-guardian-requests.ts` re-fetches the list on focus, on return to the
+  foreground, when an accepted `guardian_links` row is inserted for them
+  (`useGuardianLinkAdded`), and when the earliest waiting code reaches its 24 hours.
+- **Student app**: the Guardians tab takes a code ("Have an invite code?") and lists open
+  requests as cards; `lib/use-my-guardian-requests.ts` subscribes to the student's own
+  `guardian_requests` rows, so a cancel or expiry removes the card at once. The review
+  screen (`app/(tabs)/guardian-request.tsx`) re-opens a request with `{ requestId }` and
+  shows the placeholder avatar if there is no photo or the signed URL has expired. The
+  student's **Invite guardian** button only shares a message; it creates nothing.
+- **Older apps**: until the removal milestone in the plan, the guardian's Invite tab can
+  still redeem a student-made code ("Have a code from an older SafePath?") and the
+  student's Guardians tab can still make one ("Guardian has an older SafePath?"). The
+  dashboard no longer links anyone; it tells web-only guardians to link from the app.

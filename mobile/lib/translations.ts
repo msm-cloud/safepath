@@ -533,10 +533,6 @@ export const translations = {
   copyButton: { en: 'Copy', bn: 'কপি করুন' },
   copiedButton: { en: 'Copied', bn: 'কপি হয়েছে' },
   howItWorksTitle: { en: 'How it works', bn: 'যেভাবে কাজ করে' },
-  howItWorksBody: {
-    en: 'Your guardian opens SafePath, taps Link to someone and enters this code. They are linked to you as soon as they enter it. You can remove a guardian any time.',
-    bn: 'আপনার অভিভাবক সেফপাথ খুলে "কারো সাথে যুক্ত হন"-এ ট্যাপ করে এই কোডটি লিখবেন। কোড লেখার সাথে সাথেই তিনি আপনার সাথে যুক্ত হবেন। আপনি যেকোনো সময় একজন অভিভাবককে সরিয়ে দিতে পারেন।',
-  },
   unusedCodesLabel: { en: 'Codes not used yet', bn: 'এখনো ব্যবহার না হওয়া কোড' },
   unusedCodeExpires: { en: 'Expires {time}', bn: 'মেয়াদ শেষ {time}' },
   cancelCodeButton: { en: 'Cancel', bn: 'বাতিল করুন' },
@@ -549,8 +545,8 @@ export const translations = {
   removeGuardianButton: { en: 'Remove', bn: 'সরান' },
   removeGuardianLabel: { en: 'Remove {name}', bn: '{name}-কে সরান' },
   noGuardiansYet: {
-    en: 'No guardians yet. Invite one and share the code with them.',
-    bn: 'এখনো কোনো অভিভাবক নেই। একজনকে আমন্ত্রণ জানিয়ে তাকে কোডটি দিন।',
+    en: 'No guardians yet. Ask a family member to install SafePath and send you an invite code.',
+    bn: 'এখনো কোনো অভিভাবক নেই। পরিবারের একজনকে সেফপাথ ইনস্টল করে আপনাকে একটি আমন্ত্রণ কোড পাঠাতে বলুন।',
   },
   unnamedGuardian: { en: 'Unnamed guardian', bn: 'নামহীন অভিভাবক' },
   shareInviteMessage: {
@@ -561,6 +557,87 @@ export const translations = {
     en: "Couldn't update your guardians. Check your connection and try again.",
     bn: 'অভিভাবকদের তথ্য আপডেট করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
   },
+  // Share-only: asks a family member to install the app and send a code.
+  inviteGuardianShareMessage: {
+    en: 'Can you be my guardian on SafePath? Install SafePath, sign up as a guardian, tap Invite and send me the code.',
+    bn: 'সেফপাথে আপনি কি আমার অভিভাবক হবেন? সেফপাথ ইনস্টল করে অভিভাবক হিসেবে সাইন আপ করুন, তারপর "আমন্ত্রণ"-এ ট্যাপ করে আমাকে কোডটি পাঠান।',
+  },
+  haveInviteCodeLabel: { en: 'Have an invite code?', bn: 'আমন্ত্রণ কোড আছে?' },
+  inviteCodeExample: { en: 'e.g. K7Q9 2MXZ', bn: 'যেমন K7Q9 2MXZ' },
+  checkCodeButton: { en: 'Check', bn: 'যাচাই করুন' },
+  checkingCode: { en: 'Checking…', bn: 'যাচাই করা হচ্ছে…' },
+  // One message whatever the reason, so a code's state can't be probed.
+  inviteCodeInvalid: {
+    en: "That code didn't work. Check it with your family member or ask them for a new one.",
+    bn: 'এই কোডটি কাজ করেনি। পরিবারের সদস্যের সাথে কোডটি মিলিয়ে দেখুন অথবা নতুন একটি কোড চেয়ে নিন।',
+  },
+  inviteCodeRateLimited: {
+    en: 'Too many tries. Try again in {n} min.',
+    bn: 'অনেকবার চেষ্টা করা হয়েছে। {n} মিনিট পরে আবার চেষ্টা করুন।',
+  },
+  inviteActionFailed: {
+    en: 'Something went wrong. Check your connection and try again.',
+    bn: 'কিছু একটা সমস্যা হয়েছে। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
+  },
+  requestCardTitle: { en: '{name} wants to be your guardian', bn: '{name} আপনার অভিভাবক হতে চান' },
+  requestCardSubtitle: { en: 'Review before accepting', bn: 'গ্রহণ করার আগে দেখে নিন' },
+  reviewButton: { en: 'Review', bn: 'দেখুন' },
+  // Older-app entry: a guardian on 1.1/1.2 can only redeem a student's code.
+  olderAppGuardianToggle: {
+    en: 'Guardian has an older SafePath?',
+    bn: 'অভিভাবকের ফোনে সেফপাথের পুরোনো ভার্সন?',
+  },
+  olderAppGuardianHint: {
+    en: "Older versions can't create invite codes. Make a code here and they enter it in Link to Someone. They're linked as soon as they enter it.",
+    bn: 'পুরোনো ভার্সনে আমন্ত্রণ কোড তৈরি করা যায় না। এখানে একটি কোড তৈরি করুন, তারপর তারা "কারো সাথে যুক্ত হন"-এ কোডটি লিখবেন। কোড লেখার সাথে সাথেই তারা যুক্ত হয়ে যাবেন।',
+  },
+  olderAppCreateCodeButton: { en: 'Create a code for them', bn: 'তাদের জন্য একটি কোড তৈরি করুন' },
+
+  // --- Guardian request review ---
+  guardianRequestTitle: { en: 'Guardian request', bn: 'অভিভাবক হওয়ার অনুরোধ' },
+  requestCodeLine: { en: 'Code {code}', bn: 'কোড {code}' },
+  requestCodePhoneLine: {
+    en: 'Code {code} · phone ending ••{digits}',
+    bn: 'কোড {code} · ফোন নম্বরের শেষে ••{digits}',
+  },
+  requestWillTitle: { en: 'If you accept, {name} will', bn: 'গ্রহণ করলে {name}' },
+  requestWillSos: {
+    en: 'Get your SOS alerts with your location',
+    bn: 'আপনার অবস্থানসহ SOS অ্যালার্ট পাবেন',
+  },
+  requestWillJourneys: {
+    en: 'Get journey check-ins and missed check-in alerts',
+    bn: 'যাত্রার চেক-ইন আর মিস হওয়া চেক-ইনের অ্যালার্ট পাবেন',
+  },
+  requestWillLive: {
+    en: 'See your live location only while you share it',
+    bn: 'আপনি শেয়ার করার সময়েই শুধু আপনার লাইভ লোকেশন দেখবেন',
+  },
+  requestWillHistory: {
+    en: 'See your location history only if you turn it on',
+    bn: 'আপনি চালু করলে তবেই আপনার অবস্থানের ইতিহাস দেখবেন',
+  },
+  requestPressureNote: {
+    en: "Don't know this person, or someone is pressuring you? Decline. You can remove a guardian any time.",
+    bn: 'এই ব্যক্তিকে চেনেন না, বা কেউ আপনাকে চাপ দিচ্ছে? প্রত্যাখ্যান করুন। আপনি যেকোনো সময় একজন অভিভাবককে সরিয়ে দিতে পারেন।',
+  },
+  acceptGuardianButton: {
+    en: 'Accept {name} as guardian',
+    bn: '{name}-কে অভিভাবক হিসেবে গ্রহণ করুন',
+  },
+  acceptingRequest: { en: 'Accepting…', bn: 'গ্রহণ করা হচ্ছে…' },
+  declineRequestButton: { en: 'Decline', bn: 'প্রত্যাখ্যান করুন' },
+  decliningRequest: { en: 'Declining…', bn: 'প্রত্যাখ্যান করা হচ্ছে…' },
+  requestNoLongerActive: {
+    en: 'This request is no longer active. Ask your family member for a new code.',
+    bn: 'এই অনুরোধটি আর সক্রিয় নেই। পরিবারের সদস্যের কাছে নতুন একটি কোড চেয়ে নিন।',
+  },
+  requestLoadFailed: {
+    en: "Couldn't load this request. Check your connection and try again.",
+    bn: 'অনুরোধটি লোড করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
+  },
+  tryAgainButton: { en: 'Try again', bn: 'আবার চেষ্টা করুন' },
+  backToGuardiansButton: { en: 'Back to Guardians', bn: 'অভিভাবক পাতায় ফিরে যান' },
 
   // --- Remove guardian ---
   removeGuardianTitle: {
@@ -740,18 +817,18 @@ export const translations = {
     en: 'Link your children or family members',
     bn: 'আপনার সন্তান বা পরিবারের সদস্যদের যুক্ত করুন',
   },
-  onboardingGuardianStep1Title: { en: 'Ask for their invite code', bn: 'তাদের আমন্ত্রণ কোড চান' },
+  onboardingGuardianStep1Title: { en: 'Create an invite code', bn: 'একটি আমন্ত্রণ কোড তৈরি করুন' },
   onboardingGuardianStep1Hint: {
-    en: 'They create it in SafePath › Guardians',
-    bn: 'তারা সেফপাথ › অভিভাবক থেকে কোডটি তৈরি করেন',
+    en: 'Tap Invite and share the code with them',
+    bn: '"আমন্ত্রণ"-এ ট্যাপ করে কোডটি তাদের পাঠান',
   },
   onboardingGuardianStep2Title: {
-    en: 'Enter it in Link to Someone',
-    bn: '"কারো সাথে যুক্ত হন"-এ কোডটি লিখুন',
+    en: 'They enter it and accept',
+    bn: 'তারা কোডটি লিখে গ্রহণ করেন',
   },
   onboardingGuardianStep2Hint: {
-    en: 'Each code works once, within 24 hours',
-    bn: 'প্রতিটি কোড ২৪ ঘণ্টার মধ্যে একবারই কাজ করে',
+    en: 'In SafePath › Guardians. Each code works once, within 24 hours',
+    bn: 'সেফপাথ › অভিভাবক-এ। প্রতিটি কোড ২৪ ঘণ্টার মধ্যে একবারই কাজ করে',
   },
   onboardingGuardianStep3Title: { en: 'You are linked', bn: 'আপনারা যুক্ত হয়ে গেলেন' },
   onboardingGuardianStep3Hint: {
@@ -762,7 +839,7 @@ export const translations = {
     en: 'You see their location only when they share it: during SOS, a journey, live sharing, or history they turn on.',
     bn: 'তারা শেয়ার করলেই শুধু আপনি তাদের অবস্থান দেখতে পান: SOS, যাত্রা, লাইভ শেয়ারিং বা তাদের চালু করা হিস্ট্রির সময়।',
   },
-  onboardingEnterCodeButton: { en: 'Enter invite code', bn: 'আমন্ত্রণ কোড লিখুন' },
+  onboardingCreateCodeButton: { en: 'Create invite code', bn: 'আমন্ত্রণ কোড তৈরি করুন' },
 
   // --- Emergency contacts screen ---
   emergencyContactsTitle: { en: 'Emergency Contacts', bn: 'জরুরি যোগাযোগ' },
@@ -808,11 +885,56 @@ export const translations = {
     bn: 'নিঃশব্দ করতে যেকোনো জায়গায় ট্যাপ করুন — সমাধান হিসেবে চিহ্নিত না করা পর্যন্ত অ্যালার্ট থাকবে',
   },
   guardianPastAlertsTitle: { en: 'Past Alerts', bn: 'পূর্ববর্তী অ্যালার্ট' },
-  guardianLinkTitle: { en: 'Link to Someone', bn: 'কারো সাথে যুক্ত হন' },
-  guardianLinkSubtitle: {
-    en: "Enter the invite code the person you're supporting shared with you.",
-    bn: 'আপনি যাকে সহায়তা করছেন তার দেওয়া আমন্ত্রণ কোডটি লিখুন।',
+
+  // --- Guardian: invite a family member ---
+  guardianInviteTitle: { en: 'Invite a family member', bn: 'পরিবারের একজনকে আমন্ত্রণ জানান' },
+  guardianInviteIntro: {
+    en: 'Create a code and share it with your family member. They enter it in SafePath and choose whether to accept.',
+    bn: 'একটি কোড তৈরি করে পরিবারের সদস্যকে পাঠান। তারা সেফপাথে কোডটি লিখে ঠিক করবেন গ্রহণ করবেন কি না।',
   },
+  createInviteCodeButton: { en: 'Create invite code', bn: 'আমন্ত্রণ কোড তৈরি করুন' },
+  creatingInviteCode: { en: 'Creating…', bn: 'তৈরি করা হচ্ছে…' },
+  createAnotherCodeButton: { en: 'Create another code', bn: 'আরেকটি কোড তৈরি করুন' },
+  guardianCodeHint: {
+    en: 'Works once · expires {time}',
+    bn: 'একবারই কাজ করে · মেয়াদ শেষ {time}',
+  },
+  guardianHowItWorksBody: {
+    en: 'Your family member opens SafePath › Guardians and enters this code. They see your name and choose to accept or decline. You are linked only after they accept.',
+    bn: 'আপনার পরিবারের সদস্য সেফপাথ › অভিভাবক খুলে এই কোডটি লিখবেন। তারা আপনার নাম দেখে গ্রহণ বা প্রত্যাখ্যান করবেন। তারা গ্রহণ করলেই কেবল আপনারা যুক্ত হবেন।',
+  },
+  // A declined request stays "waiting" until it expires, and every
+  // inactive code reads the same, so a decline is never given away.
+  waitingCodesLabel: { en: 'Waiting to accept', bn: 'গ্রহণের অপেক্ষায়' },
+  waitingCodeMeta: { en: 'Created {time}', bn: 'তৈরি {time}' },
+  inactiveCodesLabel: { en: 'Recent codes', bn: 'সাম্প্রতিক কোড' },
+  inactiveCodeMeta: { en: '{code} · Code no longer active', bn: '{code} · কোডটি আর সক্রিয় নেই' },
+  tooManyWaitingCodes: {
+    en: 'You can have 3 codes waiting at once. Cancel one to create another.',
+    bn: 'একসাথে ৩টি কোড অপেক্ষায় রাখা যায়। আরেকটি তৈরি করতে একটি বাতিল করুন।',
+  },
+  dailyCodeLimit: {
+    en: "You've created 10 codes in the last 24 hours. Try again later.",
+    bn: 'গত ২৪ ঘণ্টায় আপনি ১০টি কোড তৈরি করেছেন। পরে আবার চেষ্টা করুন।',
+  },
+  inviteListLoadFailed: {
+    en: "Couldn't load your codes. Check your connection and open this screen again.",
+    bn: 'আপনার কোডগুলো লোড করা যায়নি। ইন্টারনেট সংযোগ দেখে এই পাতাটি আবার খুলুন।',
+  },
+  guardianShareCodeMessage: {
+    en: "I'd like to be your guardian on SafePath. Open SafePath › Guardians, tap Have an invite code? and enter {code}. It works once, within 24 hours.",
+    bn: 'আমি সেফপাথে আপনার অভিভাবক হতে চাই। সেফপাথ › অভিভাবক খুলে "আমন্ত্রণ কোড আছে?"-এ এই কোডটি লিখুন: {code}। কোডটি ২৪ ঘণ্টার মধ্যে একবারই কাজ করে।',
+  },
+  // Older-app entry: a family member on 1.1/1.2 still creates the code.
+  olderAppCodeToggle: {
+    en: 'Have a code from an older SafePath?',
+    bn: 'সেফপাথের পুরোনো ভার্সনের কোড আছে?',
+  },
+  olderAppCodeHint: {
+    en: "If your family member's app gave them a code to send you, enter it here. You're linked as soon as you enter it.",
+    bn: 'পরিবারের সদস্যের অ্যাপ যদি আপনাকে পাঠানোর জন্য একটি কোড দিয়ে থাকে, তা এখানে লিখুন। লেখার সাথে সাথেই আপনারা যুক্ত হয়ে যাবেন।',
+  },
+
   sosAlertTypeLabel: { en: 'SOS', bn: 'SOS' },
   missedCheckinTypeLabel: { en: 'Missed Check-in', bn: 'চেক-ইন মিস হয়েছে' },
   guardianAlertNeedsHelp: { en: '{name} needs help', bn: '{name}-এর সাহায্য দরকার' },
@@ -847,8 +969,8 @@ export const translations = {
   },
   viewOnMapLink: { en: 'View on map', bn: 'ম্যাপে দেখুন' },
 
-  // --- Guardian: recorded live location (its own tab, between "Link to
-  // Someone" and "Settings") ---
+  // --- Guardian: recorded live location (its own tab, between "Invite"
+  // and "Settings") ---
   guardianLocationHistoryTitle: { en: 'Recorded Location', bn: 'রেকর্ড করা অবস্থান' },
   guardianLocationHistorySubtitle: {
     en: 'The saved location trail for each person you support who has recording turned on.',

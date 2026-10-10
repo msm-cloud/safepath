@@ -21,3 +21,20 @@ export function inviteCodeExpiresAt(createdAt: string): Date {
 export function isInviteCodeExpired(createdAt: string, now: number = Date.now()): boolean {
   return inviteCodeExpiresAt(createdAt).getTime() <= now;
 }
+
+// Codes are shown in two groups and often read out or retyped, so spaces,
+// dashes and case don't matter. The server normalizes the same way.
+export function normalizeInviteCode(input: string): string {
+  return input.replace(/[\s-]/g, '').toUpperCase();
+}
+
+// Milliseconds until the earliest of `times` (ISO strings) still ahead, or
+// null when none is. Used to refresh a list when its first item lapses.
+// Times already past are skipped: if the phone's clock runs ahead of the
+// server, re-fetching straight away would keep returning the same item.
+// setTimeout misbehaves above 2^31 - 1 ms, so the delay is capped there.
+export function msUntilEarliest(times: string[], now: number = Date.now()): number | null {
+  const ahead = times.map((time) => new Date(time).getTime() - now).filter((ms) => ms > 0);
+  if (ahead.length === 0) return null;
+  return Math.min(Math.min(...ahead), 2 ** 31 - 1);
+}

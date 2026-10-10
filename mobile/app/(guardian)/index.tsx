@@ -472,7 +472,7 @@ export default function GuardianActiveAlertsScreen() {
                   variant="primary"
                   size="small"
                   fullWidth={false}
-                  onPress={() => router.navigate('/link')}
+                  onPress={() => router.navigate('/invite')}
                 />
               </View>
               <PhoneNotSavedNotice />

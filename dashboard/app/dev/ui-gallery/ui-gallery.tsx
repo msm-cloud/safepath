@@ -36,14 +36,14 @@ const TYPE_SCALE: { className: string; key: TranslationKey }[] = [
   { className: 'type-button', key: 'signInButton' },
   { className: 'type-body', key: 'dashboardSubtitle' },
   { className: 'type-body-sm', key: 'recordedLocationSubtitle' },
-  { className: 'type-label', key: 'linkToSomeoneLabel' },
+  { className: 'type-label', key: 'linkFromAppTitle' },
   { className: 'type-caption', key: 'noResolvedAlertsYet' },
   { className: 'type-micro', key: 'liveLocationBadge' },
 ];
 
 const SURFACE_BUTTONS: { variant: ButtonVariant; key: TranslationKey }[] = [
   { variant: 'ink', key: 'signInButton' },
-  { variant: 'primary', key: 'linkButton' },
+  { variant: 'primary', key: 'saveButton' },
   { variant: 'secondary', key: 'saveButton' },
   { variant: 'ghost', key: 'forgotPasswordLink' },
   { variant: 'danger', key: 'markResolvedButton' },
@@ -114,8 +114,8 @@ export default function UiGallery() {
           <Button size="small" variant="secondary">
             {t('settingsLink')}
           </Button>
-          <Button loading loadingTitle={t('linkingButton')}>
-            {t('linkButton')}
+          <Button loading loadingTitle={t('savingButton')}>
+            {t('saveButton')}
           </Button>
           <Button disabled>{t('signInButton')}</Button>
           <a href="#buttons" className={buttonClasses({ variant: 'secondary', size: 'small' })}>
@@ -135,12 +135,8 @@ export default function UiGallery() {
 
       <Section title="Inputs">
         <div className="grid max-w-md gap-4">
-          <Input label={t('linkToSomeoneLabel')} placeholder={t('inviteCodePlaceholder')} />
-          <Input
-            label={t('linkToSomeoneLabel')}
-            defaultValue="ABCD EFGH"
-            error={t('invalidOrUsedCode')}
-          />
+          <Input label={t('fullNamePlaceholder')} placeholder={t('fullNamePlaceholder')} />
+          <Input label={t('phonePlaceholder')} defaultValue="+880" error={t('invalidPhone')} />
           <Input
             label={t('settingsTitle')}
             helper={t('phonePlaceholder')}

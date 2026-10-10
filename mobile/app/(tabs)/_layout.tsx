@@ -94,6 +94,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="guardian-request"
+        options={{
+          title: t('guardianRequestTitle'),
+          // Opened from the Guardians tab; same href: null reasoning as
+          // emergency-contacts below.
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="emergency-contacts"
         options={{
           title: t('emergencyContactsTitle'),

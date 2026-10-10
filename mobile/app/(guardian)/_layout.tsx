@@ -62,9 +62,10 @@ export default function GuardianTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="link"
+        name="invite"
         options={{
-          title: t('guardianLinkTitle'),
+          title: t('guardianInviteTitle'),
+          tabBarLabel: t('guardianHomeInviteButton'),
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'person.badge.plus', android: 'person_add', web: 'person_add' }}
