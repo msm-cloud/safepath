@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/language-context';
 import { createClient } from '@/lib/supabase/client';
 import type { TranslationKey } from '@/lib/translations';
 import { buttonClasses } from '@/components/ui/Button';
+import { SpeakerOffIcon } from '@/components/ui/icons';
 
 // Same synthesized siren asset as mobile (mobile/assets/sounds/sos-alarm.wav)
 // — served from public/ so a plain <audio src> can reach it. No vibration
@@ -82,6 +83,11 @@ export default function ActiveAlerts() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
+  // The full-screen alarm below covers the page until it's clicked once.
+  // Reset on every new alert, like `acknowledged`.
+  const [overlayDismissed, setOverlayDismissed] = useState(false);
+  const overlayButtonRef = useRef<HTMLButtonElement | null>(null);
+
   const handleEnableSound = () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -113,6 +119,37 @@ export default function ActiveAlerts() {
       audio.pause();
     }
   }, [isAlarming, audioUnlocked]);
+
+  const showOverlay = isAlarming && !audioUnlocked && !overlayDismissed;
+  const firstAlert = alerts[0];
+
+  useEffect(() => {
+    if (showOverlay) overlayButtonRef.current?.focus();
+  }, [showOverlay]);
+
+  // Flashing tab title, so an alarm in a background tab still shows.
+  const alarmTitle = firstAlert ? t('sosTabTitle', { name: firstAlert.full_name }) : null;
+  useEffect(() => {
+    if (!isAlarming || !alarmTitle) return;
+    const original = document.title;
+    let flashOn = false;
+    const id = setInterval(() => {
+      flashOn = !flashOn;
+      document.title = flashOn ? alarmTitle : original;
+    }, 1000);
+    return () => {
+      clearInterval(id);
+      document.title = original;
+    };
+  }, [isAlarming, alarmTitle]);
+
+  // One click anywhere on the alarm turns the sound on (a click is the
+  // gesture browsers need) and uncovers the page. It's dismissed even if the
+  // browser still refuses to play, so it can never trap the guardian.
+  const handleOverlayClick = () => {
+    setOverlayDismissed(true);
+    handleEnableSound();
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -215,6 +252,7 @@ export default function ActiveAlerts() {
             // already acknowledged — see the `acknowledged` state's own
             // comment above.
             setAcknowledged(false);
+            setOverlayDismissed(false);
 
             const { data: profile } = await supabase
               .from('profiles')
@@ -309,16 +347,29 @@ export default function ActiveAlerts() {
   if (alerts.length === 0 && audioUnlocked) return null;
 
   return (
-    <section className="flex flex-col gap-3">
+    <>
       {/* Always mounted (not just while alarming) so the unlock click below
           and the alarm-start effect above are both acting on one stable
           element for the page's whole lifetime — swapping it in and out of
           the tree would lose the unlock. Hidden from view; it's audio-only. */}
       <audio ref={audioRef} src={ALARM_SOUND_SRC} preload="auto" className="hidden" />
 
+      {/* A direct child of the page's <main>, so sticky keeps "alerts are
+          silent" in view however far the page scrolls. */}
       {!audioUnlocked && (
-        <div className="flex flex-col gap-3 rounded-md bg-warning-soft p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="type-body-sm text-on-warning-soft">{t('enableSoundAlertsHint')}</p>
+        <div
+          role="status"
+          className="sticky top-0 z-10 flex flex-col gap-3 rounded-md border-2 border-warning bg-warning-soft p-4 text-on-warning-soft shadow-sm sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex gap-3">
+            <span className="mt-0.5 shrink-0">
+              <SpeakerOffIcon size={24} />
+            </span>
+            <div>
+              <p className="type-label">{t('soundAlertsOffTitle')}</p>
+              <p className="type-body-sm">{t('enableSoundAlertsHint')}</p>
+            </div>
+          </div>
           <button
             type="button"
             onClick={handleEnableSound}
@@ -329,55 +380,91 @@ export default function ActiveAlerts() {
         </div>
       )}
 
-      {isAlarming && (
-        <button
-          type="button"
-          onClick={() => setAcknowledged(true)}
-          className={`self-start ${buttonClasses({ variant: 'dangerOutline', size: 'small' })}`}
-        >
-          {t('silenceAlarmButton')}
-        </button>
-      )}
-
-      {alerts.map((alert) => (
+      {showOverlay && firstAlert && (
         <div
-          key={alert.id}
-          className={`flex flex-col gap-4 rounded-xl bg-danger p-4 text-on-danger shadow-sos sm:flex-row sm:items-center sm:justify-between sm:p-5 ${
-            isAlarming ? 'sos-alert-pulse' : ''
-          }`}
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="sos-overlay-title"
+          aria-describedby="sos-overlay-hint"
+          onClick={handleOverlayClick}
+          className="sos-overlay-flash fixed inset-0 z-50 flex cursor-pointer flex-col items-center justify-center gap-4 p-gutter text-center text-on-danger"
         >
-          <div>
-            <p className="type-label tracking-wide uppercase">
-              {alert.trigger_type === 'journey_overdue'
-                ? t('missedCheckinLabel')
-                : t('activeAlertLabel')}
-            </p>
-            <p className="mt-1 type-title">{alert.full_name}</p>
-            <p className="type-body-sm">{relativeTime(alert.created_at, t)}</p>
-            {alert.last_lat != null && alert.last_lng != null ? (
-              <a
-                href={`https://www.google.com/maps?q=${alert.last_lat},${alert.last_lng}`}
-                target="_blank"
-                rel="noreferrer"
-                className="type-label underline"
-              >
-                {t('viewLastKnownLocation')}
-              </a>
-            ) : (
-              <p className="type-body-sm">{t('noLocationAvailableYet')}</p>
-            )}
-          </div>
+          <p className="type-label tracking-wide uppercase">
+            {firstAlert.trigger_type === 'journey_overdue'
+              ? t('missedCheckinLabel')
+              : t('activeAlertLabel')}
+          </p>
+          <p id="sos-overlay-title" className="type-h1">
+            {firstAlert.full_name}
+            {alerts.length > 1 && ` +${alerts.length - 1}`}
+          </p>
+          <SpeakerOffIcon size={32} />
+          <p id="sos-overlay-hint" className="max-w-md type-body">
+            {t('sosOverlayHint')}
+          </p>
           <button
+            ref={overlayButtonRef}
             type="button"
-            onClick={() => handleResolve(alert.id)}
-            disabled={resolvingId === alert.id}
-            className={`shrink-0 ${buttonClasses({ variant: 'emergencyCall', size: 'small', loading: resolvingId === alert.id })}`}
+            className={buttonClasses({ variant: 'emergencyCall' })}
           >
-            {resolvingId === alert.id ? t('markingResolvedButton') : t('markResolvedButton')}
+            {t('sosOverlayButton')}
           </button>
         </div>
-      ))}
-    </section>
+      )}
+
+      {alerts.length > 0 && (
+        <section className="flex flex-col gap-3">
+          {isAlarming && (
+            <button
+              type="button"
+              onClick={() => setAcknowledged(true)}
+              className={`self-start ${buttonClasses({ variant: 'dangerOutline', size: 'small' })}`}
+            >
+              {t('silenceAlarmButton')}
+            </button>
+          )}
+
+          {alerts.map((alert) => (
+            <div
+              key={alert.id}
+              className={`flex flex-col gap-4 rounded-xl bg-danger p-4 text-on-danger shadow-sos sm:flex-row sm:items-center sm:justify-between sm:p-5 ${
+                isAlarming ? 'sos-alert-pulse' : ''
+              }`}
+            >
+              <div>
+                <p className="type-label tracking-wide uppercase">
+                  {alert.trigger_type === 'journey_overdue'
+                    ? t('missedCheckinLabel')
+                    : t('activeAlertLabel')}
+                </p>
+                <p className="mt-1 type-title">{alert.full_name}</p>
+                <p className="type-body-sm">{relativeTime(alert.created_at, t)}</p>
+                {alert.last_lat != null && alert.last_lng != null ? (
+                  <a
+                    href={`https://www.google.com/maps?q=${alert.last_lat},${alert.last_lng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="type-label underline"
+                  >
+                    {t('viewLastKnownLocation')}
+                  </a>
+                ) : (
+                  <p className="type-body-sm">{t('noLocationAvailableYet')}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleResolve(alert.id)}
+                disabled={resolvingId === alert.id}
+                className={`shrink-0 ${buttonClasses({ variant: 'emergencyCall', size: 'small', loading: resolvingId === alert.id })}`}
+              >
+                {resolvingId === alert.id ? t('markingResolvedButton') : t('markResolvedButton')}
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
+    </>
   );
 }
 

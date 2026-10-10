@@ -144,6 +144,13 @@ export const translations = {
     bn: 'এই ট্যাব খোলা থাকা অবস্থায় নতুন SOS অ্যালার্ট শোনার জন্য শব্দ চালু করুন।',
   },
   silenceAlarmButton: { en: 'Silence', bn: 'নিঃশব্দ করুন' },
+  soundAlertsOffTitle: { en: 'Sound alerts are off', bn: 'শব্দ সতর্কতা বন্ধ আছে' },
+  sosOverlayHint: {
+    en: 'Sound is off. Click anywhere to turn on the alarm sound.',
+    bn: 'শব্দ বন্ধ আছে। অ্যালার্মের শব্দ চালু করতে যেকোনো জায়গায় ক্লিক করুন।',
+  },
+  sosOverlayButton: { en: 'Turn on alarm sound', bn: 'অ্যালার্মের শব্দ চালু করুন' },
+  sosTabTitle: { en: 'SOS: {name}', bn: 'SOS: {name}' },
   secondsAgo: { en: '{n}s ago', bn: '{n} সেকেন্ড আগে' },
   minutesAgo: { en: '{n}m ago', bn: '{n} মিনিট আগে' },
   hoursAgo: { en: '{n}h ago', bn: '{n} ঘণ্টা আগে' },
