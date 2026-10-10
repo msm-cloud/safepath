@@ -15,15 +15,32 @@ type GuardianLinkChangeRow = {
 // already stops new data from arriving; this clears what is on screen.
 // Nothing is shown about who did it or why.
 export function useGuardianLinkRevoked(onRevoked: (userId: string) => void): void {
+  useGuardianLinkChange('UPDATE', (row) => {
+    if (row.status === 'revoked') onRevoked(row.user_id);
+  });
+}
+
+// Calls onAdded(userId) when a student accepts the signed-in guardian's
+// invite request, which inserts an accepted link.
+export function useGuardianLinkAdded(onAdded: (userId: string) => void): void {
+  useGuardianLinkChange('INSERT', (row) => {
+    if (row.status === 'accepted') onAdded(row.user_id);
+  });
+}
+
+function useGuardianLinkChange(
+  event: 'INSERT' | 'UPDATE',
+  onChange: (row: GuardianLinkChangeRow) => void
+): void {
   const { session } = useAuth();
   const guardianId = session?.user.id;
   const accessToken = session?.access_token;
 
   // Keeps the subscription stable when callers pass an inline callback.
-  const onRevokedRef = useRef(onRevoked);
+  const onChangeRef = useRef(onChange);
   useEffect(() => {
-    onRevokedRef.current = onRevoked;
-  }, [onRevoked]);
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     if (!guardianId) return;
@@ -36,26 +53,23 @@ export function useGuardianLinkRevoked(onRevoked: (userId: string) => void): voi
 
       // Per-mount topic, same reason as the active alerts channel in
       // app/(guardian)/index.tsx.
-      const topic = `mobile-guardian-links-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const topic = `mobile-guardian-links-${event.toLowerCase()}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       channel = supabase
         .channel(topic)
         .on(
           'postgres_changes',
           {
-            event: 'UPDATE',
+            event,
             schema: 'public',
             table: 'guardian_links',
             filter: `guardian_id=eq.${guardianId}`,
           },
-          (payload) => {
-            const row = payload.new as GuardianLinkChangeRow;
-            if (row.status === 'revoked') onRevokedRef.current(row.user_id);
-          }
+          (payload) => onChangeRef.current(payload.new as GuardianLinkChangeRow)
         )
         .subscribe((status, err) => {
           if (status === 'SUBSCRIBED') return;
           console.error(
-            `[GuardianLinkRevoked] Realtime subscription (${topic}) status: ${status}`,
+            `[GuardianLinkChange] Realtime subscription (${topic}) status: ${status}`,
             err
           );
         });
@@ -65,5 +79,5 @@ export function useGuardianLinkRevoked(onRevoked: (userId: string) => void): voi
       cancelled = true;
       if (channel) supabase.removeChannel(channel);
     };
-  }, [guardianId, accessToken]);
+  }, [event, guardianId, accessToken]);
 }

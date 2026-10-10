@@ -222,7 +222,7 @@ export default function OnboardingScreen({
       note: <Banner tone="info" message={t('onboardingGuardianLocationNote')} />,
       actions: (
         <>
-          <Button title={t('onboardingEnterCodeButton')} onPress={() => finishTo('/link')} />
+          <Button title={t('onboardingCreateCodeButton')} onPress={() => finishTo('/invite')} />
           {later}
         </>
       ),
