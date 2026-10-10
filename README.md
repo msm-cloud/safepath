@@ -97,6 +97,27 @@ pnpm --filter mobile dev
 Then press `i` (iOS simulator), `a` (Android emulator), or `w` (web) in the
 Expo CLI, or scan the QR code with Expo Go.
 
+### Testing on a device
+
+Before trusting any result from a phone, confirm it is running the code you
+just changed:
+
+1. Start Metro with file watching on: `pnpm --filter mobile dev`, never with
+   `CI=1` or `CI=true`. In CI mode Metro prints "reloads are disabled" and keeps
+   serving the bundle it built at startup, so later edits never reach the
+   phone, even after a force-stop and relaunch.
+2. Launch the app only after Metro shows `Waiting on http://localhost:8081`;
+   an app started earlier stays on the splash screen or loads an old bundle.
+3. Check that the phone loaded the current bundle: Metro logs a new
+   `Android Bundled ...` line after the launch, and the change is visible.
+   When a fix is not visible, confirm it is in the served bundle:
+
+   ```bash
+   curl -s "http://localhost:8081/mobile/index.bundle?platform=android&dev=true" | grep -c "<identifier from your change>"
+   ```
+
+   If it is missing, restart Metro with `-c` to clear its cache.
+
 ### Run the dashboard (Next.js)
 
 ```bash
