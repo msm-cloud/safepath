@@ -276,9 +276,6 @@ export async function startLocationHistory(
       // Time-based only — a stationary person still needs a periodic
       // breadcrumb. 0 disables the distance filter.
       distanceInterval: 0,
-      // Android: let the OS batch deliveries to cut wake-ups; a few minutes
-      // of slack on a 5-minute cadence is fine.
-      deferredUpdatesInterval: SNAPSHOT_INTERVAL_MS,
       pausesUpdatesAutomatically: false,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
