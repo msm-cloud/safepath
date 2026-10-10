@@ -14,6 +14,7 @@ out/
 .expo/
 .expo-shared/
 .turbo/
+*.apk
 
 # Logs
 npm-debug.log*
