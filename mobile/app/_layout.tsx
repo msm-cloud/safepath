@@ -2,11 +2,11 @@ import { Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { useColorScheme } from 'react-native';
 import 'react-native-reanimated';
 
 import AppUpdatePrompts from '@/components/AppUpdatePrompts';
 import ShakeSosListener from '@/components/ShakeSosListener';
-import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { rootRoute } from '@/lib/auth-session';
 import { LanguageProvider, useLanguage } from '@/lib/language-context';

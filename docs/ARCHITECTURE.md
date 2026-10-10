@@ -31,7 +31,8 @@ tokens do not have, add a token rather than an inline value.
 
 ### Colour schemes
 
-`useTheme()` follows the system setting through `components/useColorScheme.ts`. Light
+`useTheme()` follows the system setting through React Native's `useColorScheme`; an
+unknown scheme falls back to light. Light
 values come from the design boards. The boards have no dark theme, so the dark set is
 derived from the fake call board's surfaces. A few tokens deliberately differ between
 schemes in more than brightness:
@@ -49,8 +50,8 @@ schemes in more than brightness:
 in both schemes, and fails below WCAG AA. It also measures each background photo (see
 below).
 
-On web, `components/useColorScheme.web.ts` always returns `light`, so dark mode can only
-be checked on a device or simulator.
+On web, the scheme follows the browser's `prefers-color-scheme`. The mobile web build is
+not shipped anywhere, so check both schemes on a device or simulator.
 
 ### Typography and Bangla
 
@@ -80,8 +81,7 @@ reset password, which use `auth.webp` like sign-in and sign-up.
 `Screen` accepts `background?: ScreenBackground` from `theme/backgrounds.ts`: `welcome`,
 `auth`, and one onboarding photo per persona (`onboardingStudent`, `onboardingWorking`,
 `onboardingGuardian`). The union is closed on purpose, so SOS, alert, map, list and settings
-screens cannot take a photo. It still contains an unused `empty` value with no photo, which
-is due to be removed. A background screen draws the photo (or a dark fallback until one is chosen), a flat overlay,
+screens cannot take a photo. A background screen draws the photo (or a dark fallback until one is chosen), a flat overlay,
 and a gradient (`PHOTO_GRADIENT`) that darkens the top behind the status bar and the bottom
 half where buttons and small print sit. The photo uses cover sizing, so on a shorter or
 wider screen the sides or the top and bottom are cropped; the gradient keeps the bottom
@@ -141,8 +141,7 @@ routes by the role from the server, or the copy cached on the device when offlin
 `lib/auth-session.ts` turns auth events into what the root layout routes on. The splash
 only covers the first auth resolution: token refreshes and app resumes for the same account
 swap in the new tokens without unmounting the navigator, and re-check the role in the
-background, so an SOS, journey, live sharing or fake call is never reset. The old `PasswordInput` and `LanguageToggle` are gone; `constants/Colors.ts`
-and the remaining components that use it are removed once nothing imports them. The dashboard uses the same values as CSS variables; see
+background, so an SOS, journey, live sharing or fake call is never reset. The old `PasswordInput`, `LanguageToggle` and `constants/Colors.ts` are gone. The dashboard uses the same values as CSS variables; see
 "Dashboard theme and UI components" below.
 
 ## Dashboard theme and UI components

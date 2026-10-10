@@ -1,7 +1,7 @@
 # Plan: UI redesign
 
-Status: mobile and web dashboard redesign merged; the signed-out language switch and the
-cleanup are still to do.
+Status: the visual redesign is complete. The only original goal still open is 3b, guardian
+invite requests (plan #89, `guardian-invite-requests.md`), which is not started.
 Design boards: `docs/design/safepath-ui/`. Theme and components: see
 `docs/ARCHITECTURE.md`.
 
@@ -18,18 +18,19 @@ Design boards: `docs/design/safepath-ui/`. Theme and components: see
 - PR 5b: dashboard public pages (#115)
 - PR 5c: dashboard shell and overview (#116)
 - PR 5d: dashboard settings and the `[userId]` placeholder (#119)
+- Follow-up to PR 5: an EN/বাংলা switch on the signed-out pages (#124, e431c7e)
+- PR 6: cleanup (this PR, below)
+
+Related fix, outside the redesign steps: the locked dashboard alarm sound can no longer be
+missed (#125, c1f1750, closes #118).
 
 ## Remaining
 
-- Follow-up to PR 5: an EN/বাংলা switch on the signed-out pages (sign-in, sign-up, password
-  reset, guardian-only). They have none today and always start in Bangla, because the
-  language comes from the signed-in profile. Signed-out visitors' choice would have to be
-  kept without a profile (for example a cookie the root layout reads).
-- PR 6: cleanup (below).
+- 3b: guardian invite requests (plan #89), not started.
 
-### PR 6 cleanup
+### PR 6 cleanup (done)
 
-Checked against `main` at 789c2d5:
+Checked against `main` at 1c76089:
 
 - Delete `mobile/constants/Colors.ts`. Nothing on `main` imports it any more. Check the
   uncommitted `Colors.ts` edits in the `diag/locdebug-live-sharing` checkout first, so

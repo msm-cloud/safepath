@@ -1,4 +1,4 @@
-import { useColorScheme } from '@/components/useColorScheme';
+import { useColorScheme } from 'react-native';
 
 import { colors, type ColorScheme, type ThemeColors } from './colors';
 import { shadows, type ShadowLevel } from './shadows';

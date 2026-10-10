@@ -22,7 +22,7 @@ import { SurfaceToneContext } from '@/theme/surface-tone';
 
 export type ScreenProps = {
   children: ReactNode;
-  // Only for welcome, auth, onboarding and empty-state screens; see
+  // Only for welcome, auth and onboarding screens; see
   // theme/backgrounds.ts.
   background?: ScreenBackground;
   scroll?: boolean;
