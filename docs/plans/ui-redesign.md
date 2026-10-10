@@ -19,7 +19,7 @@ Design boards: `docs/design/safepath-ui/`. Theme and components: see
 - PR 5c: dashboard shell and overview (#116)
 - PR 5d: dashboard settings and the `[userId]` placeholder (#119)
 - Follow-up to PR 5: an EN/বাংলা switch on the signed-out pages (#124, e431c7e)
-- PR 6: cleanup (this PR, below)
+- PR 6: cleanup (#128, below)
 
 Related fix, outside the redesign steps: the locked dashboard alarm sound can no longer be
 missed (#125, c1f1750, closes #118).
