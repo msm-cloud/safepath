@@ -2,7 +2,13 @@
 
 import { useLanguage } from '@/lib/language-context';
 import { signOutAction } from '@/lib/auth-actions';
-import { publicCard, publicSubtitle, publicTitle } from '@/components/public-page-styles';
+import LanguageToggle from '@/components/LanguageToggle';
+import {
+  publicCard,
+  publicSubtitle,
+  publicTitle,
+  publicToolbar,
+} from '@/components/public-page-styles';
 import { buttonClasses } from '@/components/ui/Button';
 
 // Reached only via the redirect in app/dashboard/layout.tsx, when a
@@ -22,6 +28,9 @@ export default function GuardianOnlyPage() {
 
   return (
     <main className={publicCard}>
+      <div className={publicToolbar}>
+        <LanguageToggle />
+      </div>
       <h1 className={publicTitle}>{t('guardianOnlyTitle')}</h1>
       <p className={publicSubtitle}>{t('guardianOnlyMessage')}</p>
 

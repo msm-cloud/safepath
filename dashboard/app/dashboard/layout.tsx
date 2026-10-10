@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 
 import Banner from '@/components/ui/Banner';
 import { signOutAction } from '@/lib/auth-actions';
+import { ServerLanguageSync } from '@/lib/language-context';
+import { cookieLanguage } from '@/lib/language-server';
 import { createPageClient, getAuthState } from '@/lib/supabase/auth-state';
 import { t, type Language } from '@/lib/translations';
 
@@ -50,10 +52,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const signedUpWithPhone =
     auth.status === 'signed-in' && typeof auth.user.user_metadata?.phone === 'string';
   const phoneNotSaved = signedUpWithPhone && profile !== null && !profile.phone;
-  const language: Language = profile?.preferred_language ?? 'bn';
+  const language: Language = profile?.preferred_language ?? (await cookieLanguage());
 
   return (
     <div className="flex flex-1 flex-col lg:flex-row">
+      <ServerLanguageSync language={language} />
       <DashboardHeader email={user?.email} signOutAction={signOutAction} />
       {/* The banner sits in the content column so the sidebar stays full
           height on wide screens. */}

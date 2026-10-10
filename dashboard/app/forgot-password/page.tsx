@@ -13,7 +13,9 @@ import {
   publicSubtitle,
   publicSuccess,
   publicTitle,
+  publicToolbar,
 } from '@/components/public-page-styles';
+import LanguageToggle from '@/components/LanguageToggle';
 import { buttonClasses } from '@/components/ui/Button';
 import { inputClasses } from '@/components/ui/Input';
 
@@ -26,6 +28,9 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className={publicCard}>
+      <div className={publicToolbar}>
+        <LanguageToggle />
+      </div>
       <h1 className={publicTitle}>{t('forgotPasswordTitle')}</h1>
       <p className={publicSubtitle}>{t('forgotPasswordSubtitle')}</p>
 

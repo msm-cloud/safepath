@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 
 import { phoneReset, phoneSignIn } from '@/lib/auth-identifier';
+import { cookieLanguage } from '@/lib/language-server';
 import { isValidPhone } from '@/lib/validation';
 import { createClient } from '@/lib/supabase/server';
 
@@ -136,6 +137,8 @@ export async function signUpAction(
   }
 
   const supabase = await createClient();
+  // The language picked on the signed-out pages becomes the profile's.
+  const preferredLanguage = await cookieLanguage();
 
   // No phone-availability check here: an anonymous "is this number taken?"
   // answer would let anyone enumerate registered phones. If the number is
@@ -159,12 +162,14 @@ export async function signUpAction(
       // `coalesce(raw_user_meta_data->>'role', 'user')` silently
       // defaulted every dashboard signup to 'user' — and since the
       // post-signup UPDATE below never runs without a session, nothing
-      // ever corrected it. preferred_language is included too even
-      // though its trigger default ('bn') already matches what this
-      // dashboard's own post-signup UPDATE sets — no behavior change
-      // today, just closing the same class of gap before a future
-      // default change could reopen it.
-      data: { full_name: fullName, phone, role: 'guardian', preferred_language: 'bn' },
+      // ever corrected it. preferred_language carries the language the
+      // guardian chose on the signed-out pages.
+      data: {
+        full_name: fullName,
+        phone,
+        role: 'guardian',
+        preferred_language: preferredLanguage,
+      },
     },
   });
 
@@ -189,7 +194,7 @@ export async function signUpAction(
       role: 'guardian',
       full_name: fullName,
       phone,
-      preferred_language: 'bn',
+      preferred_language: preferredLanguage,
     })
     .eq('id', data.session.user.id);
 

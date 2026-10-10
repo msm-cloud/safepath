@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import { cookieLanguage } from '@/lib/language-server';
 import { createPageClient, getAuthState } from '@/lib/supabase/auth-state';
 import { t, type Language } from '@/lib/translations';
 
@@ -35,7 +36,7 @@ export default async function DashboardPage() {
   const { data: profile } = user
     ? await supabase.from('profiles').select('preferred_language').eq('id', user.id).single()
     : { data: null };
-  const language: Language = profile?.preferred_language ?? 'bn';
+  const language: Language = profile?.preferred_language ?? (await cookieLanguage());
 
   const { data, error } = user
     ? await supabase

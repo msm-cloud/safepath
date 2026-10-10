@@ -3,16 +3,21 @@
 import { useLanguage } from '@/lib/language-context';
 
 // Simple two-option switch — বাংলা / English. Updates the Context
-// immediately; persistence to profiles.preferred_language happens inside
-// setLanguage itself (see lib/language-context.tsx).
-export default function LanguageToggle() {
+// immediately. The choice is always kept in a cookie (see
+// lib/language-context.tsx); the dashboard's toggle also saves it to
+// profiles.preferred_language.
+export default function LanguageToggle({ saveToProfile = false }: { saveToProfile?: boolean }) {
   const { language, setLanguage, t } = useLanguage();
 
   return (
-    <div className="flex w-fit shrink-0 items-center gap-0.5 rounded-pill bg-track p-1">
+    <div
+      role="group"
+      aria-label={t('languageSwitchLabel')}
+      className="flex w-fit shrink-0 items-center gap-0.5 rounded-pill bg-track p-1"
+    >
       <button
         type="button"
-        onClick={() => setLanguage('bn')}
+        onClick={() => setLanguage('bn', { saveToProfile })}
         aria-pressed={language === 'bn'}
         className={`min-h-9 rounded-pill px-3 type-label transition-colors ${
           language === 'bn' ? 'bg-ink text-on-ink' : 'text-text hover:bg-surface-muted'
@@ -22,7 +27,7 @@ export default function LanguageToggle() {
       </button>
       <button
         type="button"
-        onClick={() => setLanguage('en')}
+        onClick={() => setLanguage('en', { saveToProfile })}
         aria-pressed={language === 'en'}
         className={`min-h-9 rounded-pill px-3 type-label transition-colors ${
           language === 'en' ? 'bg-ink text-on-ink' : 'text-text hover:bg-surface-muted'
