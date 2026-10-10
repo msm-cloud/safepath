@@ -256,6 +256,21 @@ deploy workflow; each one is deployed by hand after its PR merges.
   pnpm test:auth-identifier
   ```
 
+- **`claim-guardian-request`** — the student's side of a guardian invite
+  request: claims a guardian's code, or re-opens a request the student
+  already claimed, and returns the review details with a 10-minute signed
+  avatar URL (the storage path never reaches the app). Roles, expiry and the
+  failed-lookup limits are enforced by `claim_guardian_request` and
+  `get_claimed_guardian_request`, which only the service role can call (see
+  [`20261010120000_guardian_requests.sql`](supabase/migrations/20261010120000_guardian_requests.sql)
+  and [Guardian invite requests](docs/ARCHITECTURE.md#guardian-invite-requests)).
+  Deployed with JWT verification on; needs no secrets beyond the runtime
+  defaults. Tested the same way:
+
+  ```bash
+  pnpm test:claim-guardian-request
+  ```
+
 ## Design system (mobile)
 
 Colours, spacing, radius, type and shadows live in
