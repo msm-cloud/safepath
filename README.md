@@ -263,8 +263,7 @@ Colours, spacing, radius, type and shadows live in
 components (`Text`, `Button`, `Input`, `PasswordInput`, `Card`, `Screen`,
 `Banner`, `SegmentedControl`, `IconTile`) live in
 [`mobile/components/ui/`](mobile/components/ui/). New and reworked screens
-use these instead of inline colours and styles; the older
-`mobile/constants/Colors.ts` stays only until every screen has moved over.
+use these instead of inline colours and styles.
 
 - **Fonts**: Sora (headings), Figtree (body) and Hind Siliguri (Bangla), all
   under the SIL Open Font License 1.1, loaded at startup from the

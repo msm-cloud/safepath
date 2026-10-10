@@ -4,7 +4,7 @@
 // type error rather than a review comment.
 // Onboarding has one photo per persona (see components/OnboardingScreen.tsx).
 export type ScreenBackground =
-  'welcome' | 'auth' | 'onboardingStudent' | 'onboardingWorking' | 'onboardingGuardian' | 'empty';
+  'welcome' | 'auth' | 'onboardingStudent' | 'onboardingWorking' | 'onboardingGuardian';
 
 // The `overlay` colour token uses the lower bound. A brighter photo can ask
 // for a darker overlay, chosen so every text pair on it passes WCAG AA;
@@ -34,7 +34,6 @@ export const backgroundPhotoSpecs: Record<ScreenBackground, BackgroundPhotoSpec 
   onboardingStudent: { file: 'onboarding-student.webp', overlayOpacity: 0.55 },
   onboardingWorking: { file: 'onboarding-working.webp', overlayOpacity: 0.58 },
   onboardingGuardian: { file: 'onboarding-guardian.webp', overlayOpacity: 0.55 },
-  empty: null,
 };
 
 // Drawn over the flat overlay. It darkens the top behind the status bar and
