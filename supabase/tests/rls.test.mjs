@@ -2550,5 +2550,753 @@ console.log('\n--- one accepted link per user and guardian ---');
   check('the migration recreates the unique index after cleaning up', index.rows.length === 1);
 }
 
+// Guardian invite requests (20261010120000). Every scenario gets fresh
+// guardians so the 3-at-once and 10-per-day caps never leak between them.
+{
+  const json = (raw) => (typeof raw === 'string' ? JSON.parse(raw) : raw);
+  const keysOf = (obj) => Object.keys(obj).sort().join(',');
+
+  const createReq = (guardianId) =>
+    asUser(guardianId, async () =>
+      json((await db.query(`select public.create_guardian_request() as r`)).rows[0].r)
+    );
+  const listReqs = (guardianId) =>
+    asUser(
+      guardianId,
+      async () => (await db.query(`select * from public.list_guardian_requests()`)).rows
+    );
+  const stateOf = async (guardianId, requestId) =>
+    (await listReqs(guardianId)).find((r) => r.id === requestId)?.state;
+  const cancelReq = (guardianId, requestId) =>
+    asUser(guardianId, async () =>
+      json(
+        (await db.query(`select public.cancel_guardian_request($1) as r`, [requestId])).rows[0].r
+      )
+    );
+  const claimReq = (studentId, code) =>
+    asServiceRole(async () =>
+      json(
+        (await db.query(`select public.claim_guardian_request($1, $2) as r`, [studentId, code]))
+          .rows[0].r
+      )
+    );
+  const getClaimed = (studentId, requestId) =>
+    asServiceRole(async () =>
+      json(
+        (
+          await db.query(`select public.get_claimed_guardian_request($1, $2) as r`, [
+            studentId,
+            requestId,
+          ])
+        ).rows[0].r
+      )
+    );
+  const decide = (studentId, fn, requestId) =>
+    asUser(studentId, async () =>
+      json((await db.query(`select public.${fn}($1) as r`, [requestId])).rows[0].r)
+    );
+  const listMine = (studentId) =>
+    asUser(
+      studentId,
+      async () => (await db.query(`select * from public.list_my_guardian_requests()`)).rows
+    );
+  const statusOf = async (requestId) =>
+    (await db.query(`select status from public.guardian_requests where id = $1`, [requestId]))
+      .rows[0]?.status;
+  // Moves a request back in time as the table owner, as if it had been
+  // created that long ago.
+  const age = (requestId, interval) =>
+    db.query(
+      `update public.guardian_requests
+          set created_at = created_at - $2::interval,
+              expires_at = expires_at - $2::interval,
+              claimed_at = claimed_at - $2::interval
+        where id = $1`,
+      [requestId, interval]
+    );
+  const lookupKey = async (studentId) =>
+    (
+      await db.query(
+        `select encode(extensions.digest('invite_lookup:' || $1::text, 'sha256'), 'hex') as k`,
+        [studentId]
+      )
+    ).rows[0].k;
+  const lookupEvents = async (studentId) =>
+    (
+      await db.query(
+        `select count(*)::int as n from public.auth_rate_limit_events
+          where bucket = 'invite_lookup' and key_hash = $1`,
+        [await lookupKey(studentId)]
+      )
+    ).rows[0].n;
+  const clearLookups = () =>
+    db.query(`delete from public.auth_rate_limit_events where bucket = 'invite_lookup'`);
+  const acceptedLinks = async (studentId, guardianId) =>
+    (
+      await db.query(
+        `select id from public.guardian_links
+          where user_id = $1 and guardian_id = $2 and status = 'accepted'`,
+        [studentId, guardianId]
+      )
+    ).rows;
+  // The whole error response, so a test fails if a code's state leaks
+  // through any extra field.
+  const isOnly = (result, error) =>
+    keysOf(result) === 'error,success' && result.success === false && result.error === error;
+
+  console.log('\n--- guardian requests: privileges ---');
+  {
+    const privs = await db.query(
+      `select r.role,
+              has_function_privilege(r.role, 'public.claim_guardian_request(uuid, text)', 'execute') as claim_fn,
+              has_function_privilege(r.role, 'public.get_claimed_guardian_request(uuid, uuid)', 'execute') as get_claimed_fn,
+              has_function_privilege(r.role, 'public.create_guardian_request()', 'execute') as create_fn,
+              has_function_privilege(r.role, 'public.list_guardian_requests()', 'execute') as list_fn,
+              has_function_privilege(r.role, 'public.cancel_guardian_request(uuid)', 'execute') as cancel_fn,
+              has_function_privilege(r.role, 'public.list_my_guardian_requests()', 'execute') as list_my_fn,
+              has_function_privilege(r.role, 'public.accept_guardian_request(uuid)', 'execute') as accept_fn,
+              has_function_privilege(r.role, 'public.decline_guardian_request(uuid)', 'execute') as decline_fn,
+              has_function_privilege(r.role, 'public.expire_guardian_requests()', 'execute') as expire_fn,
+              has_function_privilege(r.role, 'public.generate_guardian_request_code()', 'execute') as gen_fn,
+              has_function_privilege(r.role, 'public.guardian_request_details(uuid)', 'execute') as details_fn,
+              has_function_privilege(r.role, 'public.auth_rate_limit_wait(text, text, integer, integer)', 'execute') as wait_fn,
+              has_function_privilege(r.role, 'public.auth_rate_limit_record(text, text)', 'execute') as record_fn
+         from (values ('anon'), ('authenticated'), ('service_role')) as r(role)`
+    );
+    const by = Object.fromEntries(privs.rows.map((r) => [r.role, r]));
+    check(
+      'only service_role can execute claim_guardian_request and get_claimed_guardian_request',
+      ['claim_fn', 'get_claimed_fn'].every(
+        (k) => !by.anon[k] && !by.authenticated[k] && by.service_role[k]
+      )
+    );
+    check(
+      'authenticated can execute the guardian and student functions; anon cannot',
+      ['create_fn', 'list_fn', 'cancel_fn', 'list_my_fn', 'accept_fn', 'decline_fn'].every(
+        (k) => by.authenticated[k] && !by.anon[k]
+      )
+    );
+    check(
+      'neither anon nor authenticated can run the expiry job or the internal helpers',
+      ['expire_fn', 'gen_fn', 'details_fn', 'wait_fn', 'record_fn'].every(
+        (k) => !by.anon[k] && !by.authenticated[k]
+      )
+    );
+
+    const rls = await db.query(
+      `select relrowsecurity from pg_class where oid = 'public.guardian_requests'::regclass`
+    );
+    check('guardian_requests has RLS enabled', rls.rows[0].relrowsecurity === true);
+    const policies = await db.query(
+      `select cmd, qual from pg_policies where tablename = 'guardian_requests'`
+    );
+    check(
+      'guardian_requests has exactly one policy, a SELECT on claimed_by',
+      policies.rows.length === 1 &&
+        policies.rows[0].cmd === 'SELECT' &&
+        /claimed_by = auth\.uid\(\)/.test(policies.rows[0].qual)
+    );
+  }
+
+  console.log('\n--- guardian requests: create ---');
+  {
+    const g = await mkUser('QG1', 'guardian');
+    const s = await mkUser('QS1', 'user');
+
+    check('a user (student) cannot create a code', isOnly(await createReq(s), 'not_allowed'));
+    check(
+      'an unauthenticated caller cannot create a code',
+      isOnly(await createReq(null), 'not_authenticated')
+    );
+
+    const first = await createReq(g);
+    check(
+      'a guardian creates a code of 8 characters from the 32-symbol alphabet',
+      first.success === true && /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/.test(first.code)
+    );
+    check(
+      'create returns only success, id, code and created_at',
+      keysOf(first) === 'code,created_at,id,success'
+    );
+
+    const rows = await listReqs(g);
+    check(
+      'list_guardian_requests returns only id, code, created_at and state',
+      rows.length === 1 && keysOf(rows[0]) === 'code,created_at,id,state'
+    );
+    check('a new code is waiting', rows[0].state === 'waiting');
+
+    await asUser(g, async () => {
+      const direct = await db.query(`select * from public.guardian_requests`);
+      check('a raw select by the guardian returns no rows', direct.rows.length === 0);
+    });
+    await asUser(g, async () => {
+      await expectError(
+        'the guardian cannot insert into guardian_requests',
+        `insert into public.guardian_requests (guardian_id, code) values ('${g}', 'AAAAAAAA')`,
+        /permission denied/
+      );
+    });
+    await asUser(g, async () => {
+      await expectError(
+        'the guardian cannot update guardian_requests',
+        `update public.guardian_requests set status = 'cancelled'`,
+        /permission denied/
+      );
+    });
+    await asUser(g, async () => {
+      await expectError(
+        'the guardian cannot delete from guardian_requests',
+        `delete from public.guardian_requests`,
+        /permission denied/
+      );
+    });
+    await asUser(s, async () => {
+      await expectError(
+        'authenticated cannot call claim_guardian_request directly',
+        `select public.claim_guardian_request('${s}', '${first.code}')`,
+        /permission denied/
+      );
+    });
+
+    await createReq(g);
+    await createReq(g);
+    check('a fourth waiting code is refused', isOnly(await createReq(g), 'too_many_waiting'));
+
+    const other = await mkUser('QG1b', 'guardian');
+    check('the cap is per guardian', (await createReq(other)).success === true);
+    check(
+      "list_guardian_requests returns only the caller's own requests",
+      (await listReqs(other)).length === 1 && (await listReqs(g)).length === 3
+    );
+
+    // Counted from created_at: cancelling frees a slot under the 3-code cap
+    // but not under the daily limit.
+    const daily = await mkUser('QG1c', 'guardian');
+    let created = 0;
+    for (let i = 0; i < 10; i++) {
+      const r = await createReq(daily);
+      if (r.success) created++;
+      await cancelReq(daily, r.id);
+    }
+    check('ten codes can be created in a day', created === 10);
+    check('the eleventh code in a day is refused', isOnly(await createReq(daily), 'daily_limit'));
+    const oldest = (await listReqs(daily)).at(-1);
+    await age(oldest.id, '25 hours');
+    check(
+      'a code created more than 24 hours ago no longer counts toward the daily limit',
+      (await createReq(daily)).success === true
+    );
+    await age(oldest.id, '7 days');
+    check(
+      'list_guardian_requests leaves out requests older than 7 days',
+      !(await listReqs(daily)).some((r) => r.id === oldest.id)
+    );
+
+    const codes = (
+      await db.query(
+        `select public.generate_guardian_request_code() as code from generate_series(1, 200)`
+      )
+    ).rows.map((r) => r.code);
+    check(
+      '200 generated request codes are valid and all different',
+      codes.every((c) => /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/.test(c)) &&
+        new Set(codes).size === codes.length
+    );
+  }
+
+  console.log('\n--- guardian requests: claim ---');
+  {
+    const g = await mkUser('QG2', 'guardian');
+    const gNoPhone = await mkUser('QG2b', 'guardian');
+    const s = await mkUser('QS2', 'user');
+    const s2 = await mkUser('QS2b', 'user');
+    await db.query(
+      `update public.profiles set phone = '+8801711000542', avatar_url = $2 where id = $1`,
+      [g, `${g}/avatar.jpg`]
+    );
+    await clearLookups();
+
+    const req = await createReq(g);
+    const typed = `${req.code.slice(0, 4).toLowerCase()} -${req.code.slice(4)}`;
+    const claimed = await claimReq(s, typed);
+    check(
+      'a student claims a valid code typed in lower case with a space and a dash',
+      claimed.success === true && claimed.request_id === req.id
+    );
+    check(
+      'claim returns the request id, code, expiry, guardian name, avatar path and phone ending',
+      keysOf(claimed) ===
+        'avatar_path,code,expires_at,guardian_name,phone_last2,request_id,success' &&
+        claimed.guardian_name === 'QG2' &&
+        claimed.avatar_path === `${g}/avatar.jpg` &&
+        claimed.phone_last2 === '42' &&
+        claimed.code === req.code
+    );
+    check(
+      'a claimed code still shows as waiting to the guardian',
+      (await stateOf(g, req.id)) === 'waiting'
+    );
+    check('a successful claim is not counted as a failed lookup', (await lookupEvents(s)) === 0);
+
+    const noPhone = await createReq(gNoPhone);
+    const claimedNoPhone = await claimReq(s, noPhone.code);
+    check(
+      'with no phone or photo on file, phone_last2 and avatar_path are null',
+      claimedNoPhone.success === true &&
+        claimedNoPhone.phone_last2 === null &&
+        claimedNoPhone.avatar_path === null
+    );
+
+    const ownReq = await createReq(g);
+    const otherGuardianReq = await createReq(gNoPhone);
+    const expiredReq = await createReq(gNoPhone);
+    await age(expiredReq.id, '25 hours');
+    const cancelledReq = await createReq(gNoPhone);
+    await cancelReq(gNoPhone, cancelledReq.id);
+
+    check(
+      'a code another student already claimed cannot be claimed again',
+      isOnly(await claimReq(s2, req.code), 'invalid_code')
+    );
+    check(
+      'the claiming student cannot look the same code up again',
+      isOnly(await claimReq(s, req.code), 'invalid_code')
+    );
+    check(
+      'an unknown code gives the generic error',
+      isOnly(await claimReq(s2, 'ZZZZZZZZ'), 'invalid_code')
+    );
+    check(
+      'a guardian cannot claim their own code',
+      isOnly(await claimReq(g, ownReq.code), 'invalid_code')
+    );
+    check(
+      "a guardian cannot claim another guardian's code (students only)",
+      isOnly(await claimReq(g, otherGuardianReq.code), 'invalid_code')
+    );
+    check(
+      'an expired code gives the generic error',
+      isOnly(await claimReq(s2, expiredReq.code), 'invalid_code')
+    );
+    check(
+      'a cancelled code gives the generic error',
+      isOnly(await claimReq(s2, cancelledReq.code), 'invalid_code')
+    );
+    check(
+      'failed claims leave the requests untouched',
+      (await statusOf(ownReq.id)) === 'waiting' &&
+        (await statusOf(otherGuardianReq.id)) === 'waiting' &&
+        (await statusOf(expiredReq.id)) === 'waiting' &&
+        (await statusOf(cancelledReq.id)) === 'cancelled'
+    );
+    await clearLookups();
+  }
+
+  console.log('\n--- guardian requests: lookup rate limit ---');
+  {
+    const g = await mkUser('QG3', 'guardian');
+    const s = await mkUser('QS3', 'user');
+    await clearLookups();
+
+    const valid = await createReq(g);
+    for (let i = 0; i < 5; i++) await claimReq(s, 'ZZZZZZZZ');
+    check('five failed lookups are recorded', (await lookupEvents(s)) === 5);
+    const blocked = await claimReq(s, valid.code);
+    check(
+      'the 6th lookup in 15 minutes is refused, even for a valid code',
+      blocked.success === false && blocked.error === 'rate_limited' && blocked.retry_after_secs > 0
+    );
+    check('a blocked lookup claims nothing', (await statusOf(valid.id)) === 'waiting');
+    check('a blocked lookup is not recorded', (await lookupEvents(s)) === 5);
+
+    await clearLookups();
+    for (let i = 0; i < 4; i++) await claimReq(s, 'ZZZZZZZZ');
+    check('a lookup after 4 failures succeeds', (await claimReq(s, valid.code)).success === true);
+    check('the successful lookup was not recorded', (await lookupEvents(s)) === 4);
+    check('a 5th failure is still allowed', isOnly(await claimReq(s, 'ZZZZZZZZ'), 'invalid_code'));
+    check(
+      'the lookup after that is refused',
+      (await claimReq(s, 'ZZZZZZZZ')).error === 'rate_limited'
+    );
+
+    // 20 a day, even when spread out past the 15-minute window.
+    await clearLookups();
+    await db.query(
+      `insert into public.auth_rate_limit_events (bucket, key_hash, created_at)
+       select 'invite_lookup', $1, now() - interval '1 hour' from generate_series(1, 19)`,
+      [await lookupKey(s)]
+    );
+    check(
+      'the 20th failure in a day is still allowed',
+      isOnly(await claimReq(s, 'ZZZZZZZZ'), 'invalid_code')
+    );
+    check(
+      'after 20 failures in a day lookups are refused',
+      (await claimReq(s, (await createReq(g)).code)).error === 'rate_limited'
+    );
+    check(
+      "another student's failures don't count against this one",
+      isOnly(await claimReq(await mkUser('QS3b', 'user'), 'ZZZZZZZZ'), 'invalid_code')
+    );
+
+    // PGlite has a single connection, so parallel lookups can't be raced
+    // here. Check that the claim takes the per-key lock before it counts.
+    const src = (
+      await db.query(`select prosrc from pg_proc where proname = 'claim_guardian_request'`)
+    ).rows[0].prosrc;
+    check(
+      'claim_guardian_request takes the per-key advisory lock before counting',
+      src.includes('pg_advisory_xact_lock') &&
+        src.indexOf('pg_advisory_xact_lock') < src.indexOf('auth_rate_limit_wait')
+    );
+    await expectError(
+      'the rate-limit table still rejects unknown buckets',
+      `insert into public.auth_rate_limit_events (bucket, key_hash) values ('other', 'x')`,
+      /auth_rate_limit_events_bucket_check/
+    );
+    await clearLookups();
+  }
+
+  console.log('\n--- guardian requests: re-open a claimed request ---');
+  {
+    const g = await mkUser('QG4', 'guardian');
+    const s = await mkUser('QS4', 'user');
+    const s2 = await mkUser('QS4b', 'user');
+    await clearLookups();
+
+    const req = await createReq(g);
+    const claimed = await claimReq(s, req.code);
+    const again = await getClaimed(s, req.id);
+    check(
+      'the claiming student gets the same details again by request id',
+      again.success === true && JSON.stringify(again) === JSON.stringify(claimed)
+    );
+    check(
+      "another student cannot open someone else's request",
+      isOnly(await getClaimed(s2, req.id), 'not_found')
+    );
+    check(
+      'the guardian cannot open it as a student',
+      isOnly(await getClaimed(g, req.id), 'not_found')
+    );
+
+    const expiredReq = await createReq(g);
+    await claimReq(s, expiredReq.code);
+    await age(expiredReq.id, '25 hours');
+    check(
+      'an expired request cannot be re-opened',
+      isOnly(await getClaimed(s, expiredReq.id), 'not_found')
+    );
+
+    const cancelledReq = await createReq(g);
+    await claimReq(s, cancelledReq.code);
+    await cancelReq(g, cancelledReq.id);
+    check(
+      'a cancelled request cannot be re-opened',
+      isOnly(await getClaimed(s, cancelledReq.id), 'not_found')
+    );
+
+    check(
+      're-opening never counts as a failed lookup',
+      (await lookupEvents(s)) === 0 && (await lookupEvents(s2)) === 0
+    );
+  }
+
+  console.log('\n--- guardian requests: what the student can see ---');
+  {
+    const g = await mkUser('QG5', 'guardian');
+    const s = await mkUser('QS5', 'user');
+    const s2 = await mkUser('QS5b', 'user');
+    await clearLookups();
+
+    const mine = await createReq(g);
+    const theirs = await createReq(g);
+    const unclaimed = await createReq(g);
+    await claimReq(s, mine.code);
+    await claimReq(s2, theirs.code);
+
+    await asUser(s, async () => {
+      const rows = (await db.query(`select id, claimed_by from public.guardian_requests`)).rows;
+      check(
+        'a student sees only the requests they claimed',
+        rows.length === 1 && rows[0].id === mine.id && rows[0].claimed_by === s
+      );
+      const others = await db.query(
+        `select id from public.guardian_requests where id = any($1::uuid[])`,
+        [[theirs.id, unclaimed.id]]
+      );
+      check(
+        "a student cannot see another student's request or an unclaimed one",
+        others.rows.length === 0
+      );
+    });
+
+    const cards = await listMine(s);
+    check(
+      'list_my_guardian_requests returns the open request with only id, guardian_name, created_at and expires_at',
+      cards.length === 1 &&
+        cards[0].id === mine.id &&
+        cards[0].guardian_name === 'QG5' &&
+        keysOf(cards[0]) === 'created_at,expires_at,guardian_name,id'
+    );
+
+    await cancelReq(g, mine.id);
+    check("a cancelled request leaves the student's list", (await listMine(s)).length === 0);
+    await asUser(s, async () => {
+      const row = await db.query(`select status from public.guardian_requests where id = $1`, [
+        mine.id,
+      ]);
+      check(
+        'the student can still read the cancelled row, so Realtime delivers the change',
+        row.rows[0]?.status === 'cancelled'
+      );
+    });
+
+    const lapsing = await createReq(g);
+    await claimReq(s, lapsing.code);
+    await age(lapsing.id, '25 hours');
+    check(
+      "a claimed request leaves the student's list at expires_at, before the cron runs",
+      (await listMine(s)).length === 0 && (await statusOf(lapsing.id)) === 'claimed'
+    );
+  }
+
+  console.log('\n--- guardian requests: accept and decline ---');
+  {
+    const g = await mkUser('QG6', 'guardian');
+    const s = await mkUser('QS6', 'user');
+    const s2 = await mkUser('QS6b', 'user');
+    await clearLookups();
+
+    const req = await createReq(g);
+    await claimReq(s, req.code);
+    check(
+      'another student cannot accept it',
+      isOnly(await decide(s2, 'accept_guardian_request', req.id), 'not_found')
+    );
+    check(
+      'the guardian cannot accept it',
+      isOnly(await decide(g, 'accept_guardian_request', req.id), 'not_found')
+    );
+    check(
+      'another student cannot decline it',
+      isOnly(await decide(s2, 'decline_guardian_request', req.id), 'not_found')
+    );
+    check(
+      'an unauthenticated caller cannot accept it',
+      isOnly(await decide(null, 'accept_guardian_request', req.id), 'not_authenticated')
+    );
+
+    check(
+      'the claiming student accepts',
+      (await decide(s, 'accept_guardian_request', req.id)).success === true
+    );
+    check('accept creates one accepted link', (await acceptedLinks(s, g)).length === 1);
+    check('the request is marked accepted', (await statusOf(req.id)) === 'accepted');
+    check(
+      'an accepted code turns inactive for the guardian',
+      (await stateOf(g, req.id)) === 'inactive'
+    );
+    check(
+      'accepting the same request again does nothing',
+      isOnly(await decide(s, 'accept_guardian_request', req.id), 'not_found') &&
+        (await acceptedLinks(s, g)).length === 1
+    );
+    await asUser(g, async () => {
+      const link = await db.query(
+        `select status from public.guardian_links where user_id = $1 and guardian_id = $2`,
+        [s, g]
+      );
+      check('the guardian can see the new accepted link', link.rows[0]?.status === 'accepted');
+    });
+
+    const second = await createReq(g);
+    await claimReq(s, second.code);
+    check(
+      'accepting while already linked reports success',
+      (await decide(s, 'accept_guardian_request', second.id)).success === true
+    );
+    check('and does not create a second link', (await acceptedLinks(s, g)).length === 1);
+
+    const [link] = await acceptedLinks(s, g);
+    await asUser(s, async () => {
+      await db.query(`select public.revoke_guardian_link($1)`, [link.id]);
+    });
+    const third = await createReq(g);
+    await claimReq(s, third.code);
+    check(
+      'accepting after a removal succeeds',
+      (await decide(s, 'accept_guardian_request', third.id)).success === true
+    );
+    const rows = (
+      await db.query(
+        `select id, status from public.guardian_links where user_id = $1 and guardian_id = $2`,
+        [s, g]
+      )
+    ).rows;
+    check(
+      'the revoked link stays revoked and a new accepted link is added',
+      rows.length === 2 &&
+        rows.find((r) => r.id === link.id)?.status === 'revoked' &&
+        rows.filter((r) => r.status === 'accepted').length === 1
+    );
+
+    const late = await createReq(await mkUser('QG6b', 'guardian'));
+    await claimReq(s2, late.code);
+    await age(late.id, '25 hours');
+    check(
+      'a request cannot be accepted after expires_at',
+      isOnly(await decide(s2, 'accept_guardian_request', late.id), 'not_found')
+    );
+    check(
+      'a request cannot be declined after expires_at',
+      isOnly(await decide(s2, 'decline_guardian_request', late.id), 'not_found')
+    );
+  }
+
+  console.log('\n--- guardian requests: a decline looks like an unused code ---');
+  {
+    const g = await mkUser('QG7', 'guardian');
+    const s = await mkUser('QS7', 'user');
+    await clearLookups();
+
+    const declined = await createReq(g);
+    const unused = await createReq(g);
+    await claimReq(s, declined.code);
+    check(
+      'the student declines',
+      (await decide(s, 'decline_guardian_request', declined.id)).success === true
+    );
+    check('a decline creates no link', (await acceptedLinks(s, g)).length === 0);
+    check("the declined request leaves the student's list", (await listMine(s)).length === 0);
+
+    const view = async () => {
+      const rows = await listReqs(g);
+      return {
+        declined: rows.find((r) => r.id === declined.id),
+        unused: rows.find((r) => r.id === unused.id),
+      };
+    };
+    let rows = await view();
+    check(
+      'before expires_at the guardian sees the declined request as waiting, like the unused one',
+      rows.declined.state === 'waiting' && rows.unused.state === 'waiting'
+    );
+    check(
+      'the declined and unused rows carry exactly the same fields',
+      keysOf(rows.declined) === keysOf(rows.unused)
+    );
+    await createReq(g);
+    check(
+      'the declined request still counts toward the 3-code cap',
+      isOnly(await createReq(g), 'too_many_waiting')
+    );
+
+    await age(declined.id, '24 hours 1 minute');
+    await age(unused.id, '24 hours 1 minute');
+    rows = await view();
+    check(
+      'after expires_at both turn inactive at the same moment',
+      rows.declined.state === 'inactive' && rows.unused.state === 'inactive'
+    );
+    check('the freed slots can be used again', (await createReq(g)).success === true);
+  }
+
+  console.log('\n--- guardian requests: cancel ---');
+  {
+    const g = await mkUser('QG8', 'guardian');
+    const g2 = await mkUser('QG8b', 'guardian');
+    const s = await mkUser('QS8', 'user');
+    await clearLookups();
+
+    const waiting = await createReq(g);
+    const claimed = await createReq(g);
+    const declined = await createReq(g);
+    await claimReq(s, claimed.code);
+    await claimReq(s, declined.code);
+    await decide(s, 'decline_guardian_request', declined.id);
+
+    check(
+      "another guardian cannot cancel someone else's code",
+      isOnly(await cancelReq(g2, waiting.id), 'not_found')
+    );
+    const results = [
+      await cancelReq(g, waiting.id),
+      await cancelReq(g, claimed.id),
+      await cancelReq(g, declined.id),
+    ];
+    check(
+      'cancel returns the same result for waiting, claimed and declined requests',
+      results.every((r) => JSON.stringify(r) === JSON.stringify({ success: true }))
+    );
+    check(
+      'all three are now inactive',
+      (await listReqs(g)).every((r) => r.state === 'inactive')
+    );
+    check(
+      'cancelling an inactive request gives the generic error',
+      isOnly(await cancelReq(g, waiting.id), 'not_found')
+    );
+    check(
+      "cancelling a claimed request clears it from the student's list",
+      (await listMine(s)).length === 0
+    );
+  }
+
+  console.log('\n--- guardian requests: expire and purge ---');
+  {
+    const g = await mkUser('QG9', 'guardian');
+    const s = await mkUser('QS9', 'user');
+    await clearLookups();
+
+    const waiting = await createReq(g);
+    const claimed = await createReq(g);
+    const declined = await createReq(g);
+    await claimReq(s, claimed.code);
+    await claimReq(s, declined.code);
+    await decide(s, 'decline_guardian_request', declined.id);
+    for (const r of [waiting, claimed, declined]) await age(r.id, '25 hours');
+    const fresh = await createReq(g);
+    const ancient = await createReq(g);
+    await age(ancient.id, '31 days');
+
+    await db.query(`select public.expire_guardian_requests()`);
+    check('the job expires a waiting code', (await statusOf(waiting.id)) === 'expired');
+    check(
+      'the job expires an undecided claimed request',
+      (await statusOf(claimed.id)) === 'expired'
+    );
+    check(
+      'the job leaves a declined request declined',
+      (await statusOf(declined.id)) === 'declined'
+    );
+    check('the job leaves a fresh code waiting', (await statusOf(fresh.id)) === 'waiting');
+    check(
+      'the job deletes requests older than 30 days',
+      (await statusOf(ancient.id)) === undefined
+    );
+  }
+
+  console.log('\n--- guardian requests: the old invite flow still works ---');
+  {
+    const s = await mkUser('QS10', 'user');
+    const g = await mkUser('QG10', 'guardian');
+    const code = await asUser(s, async () => {
+      const ins = await db.query(
+        `insert into public.guardian_links (user_id) values ('${s}') returning invite_code`
+      );
+      return ins.rows[0].invite_code;
+    });
+    await asUser(g, async () => {
+      check(
+        'a code created the old way can still be redeemed by a guardian',
+        (await redeem(db, code)).success === true
+      );
+    });
+    check('the old flow creates one accepted link', (await acceptedLinks(s, g)).length === 1);
+  }
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;

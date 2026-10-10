@@ -224,3 +224,30 @@ at the database.
 
 `supabase/tests/rls.test.mjs` covers access before and after revoking, who may revoke, and
 that a revoked or cancelled code cannot be redeemed or reactivated.
+
+### Guardian invite requests
+
+The newer direction (plan: `docs/plans/guardian-invite-requests.md`): the guardian creates
+a code, the student enters it, reviews who is asking, and accepts or declines. Accepting
+inserts an accepted `guardian_links` row, so everything above (revoking, SOS recipients,
+the one-accepted-link-per-pair index) applies unchanged. The old flow stays on the server
+for one release cycle for installed 1.1/1.2 apps.
+
+- **Table**: `guardian_requests`, status `waiting` → `claimed` → `accepted` or `declined`,
+  or `cancelled` / `expired`. Codes are 8 characters from the invite alphabet, unique while
+  waiting or claimed, and expire 24 hours after creation (`expires_at`).
+- **Guardian**: no policies on the table. `create_guardian_request()` (3 waiting at once,
+  10 a day), `list_guardian_requests()` (id, code, created_at and `waiting`/`inactive`,
+  last 7 days) and `cancel_guardian_request()`. A declined request reads as `waiting` and
+  keeps its slot under the cap until `expires_at`, exactly like an unused code.
+- **Student**: SELECT on rows they claimed (any status, so Realtime delivers cancels);
+  `list_my_guardian_requests()` for the open ones with the guardian's name;
+  `accept_guardian_request()` and `decline_guardian_request()` before `expires_at`.
+- **Lookup**: only through the `claim-guardian-request` Edge Function, which calls the
+  service-role-only `claim_guardian_request` (by code) or `get_claimed_guardian_request`
+  (by request id, to re-open the review screen) and signs the guardian's avatar for 600
+  seconds. Every failed code lookup gives the same `invalid_code` error and is recorded in
+  `auth_rate_limit_events` (bucket `invite_lookup`, key = SHA-256 of the student id): 5 per
+  15 minutes and 20 per day. Successful lookups and re-opens are not counted.
+- **Cron**: `expire-guardian-requests` (`expire_guardian_requests()`, every 15 minutes)
+  marks open requests expired and deletes requests older than 30 days.

@@ -167,6 +167,57 @@ export type Database = {
           },
         ]
       }
+      guardian_requests: {
+        Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          code: string
+          created_at: string
+          decided_at: string | null
+          expires_at: string
+          guardian_id: string
+          id: string
+          status: Database["public"]["Enums"]["guardian_request_status"]
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          code: string
+          created_at?: string
+          decided_at?: string | null
+          expires_at?: string
+          guardian_id: string
+          id?: string
+          status?: Database["public"]["Enums"]["guardian_request_status"]
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          code?: string
+          created_at?: string
+          decided_at?: string | null
+          expires_at?: string
+          guardian_id?: string
+          id?: string
+          status?: Database["public"]["Enums"]["guardian_request_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guardian_requests_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_requests_guardian_id_fkey"
+            columns: ["guardian_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       journeys: {
         Row: {
           created_at: string
@@ -456,9 +507,78 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_guardian_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      auth_rate_limit_record: {
+        Args: { p_bucket: string; p_key_hash: string }
+        Returns: undefined
+      }
+      auth_rate_limit_wait: {
+        Args: {
+          p_bucket: string
+          p_key_hash: string
+          p_max: number
+          p_window_secs: number
+        }
+        Returns: number
+      }
+      cancel_guardian_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
       check_overdue_journeys: { Args: never; Returns: undefined }
+      claim_guardian_request: {
+        Args: { p_code: string; p_student_id: string }
+        Returns: Json
+      }
+      create_guardian_request: { Args: never; Returns: Json }
+      decline_guardian_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
       expire_guardian_invites: { Args: never; Returns: undefined }
+      expire_guardian_requests: { Args: never; Returns: undefined }
+      generate_guardian_request_code: { Args: never; Returns: string }
       generate_invite_code: { Args: never; Returns: string }
+      get_claimed_guardian_request: {
+        Args: { p_request_id: string; p_student_id: string }
+        Returns: Json
+      }
+      guardian_request_details: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      guardian_request_is_waiting: {
+        Args: {
+          p_expires_at: string
+          p_status: Database["public"]["Enums"]["guardian_request_status"]
+        }
+        Returns: boolean
+      }
+      list_guardian_requests: {
+        Args: never
+        Returns: {
+          code: string
+          created_at: string
+          id: string
+          state: string
+        }[]
+      }
+      list_my_guardian_requests: {
+        Args: never
+        Returns: {
+          created_at: string
+          expires_at: string
+          guardian_name: string
+          id: string
+        }[]
+      }
+      normalize_guardian_request_code: {
+        Args: { p_code: string }
+        Returns: string
+      }
       normalize_phone: { Args: { p_phone: string }; Returns: string }
       purge_expired_location_history: { Args: never; Returns: undefined }
       purge_old_live_locations: { Args: never; Returns: undefined }
@@ -477,6 +597,13 @@ export type Database = {
       alert_status: "active" | "resolved" | "false_alarm"
       alert_trigger_type: "manual" | "journey_overdue"
       guardian_link_status: "pending" | "accepted" | "revoked"
+      guardian_request_status:
+        | "waiting"
+        | "claimed"
+        | "accepted"
+        | "declined"
+        | "cancelled"
+        | "expired"
       journey_status:
         | "active"
         | "arrived_safe"
@@ -614,6 +741,14 @@ export const Constants = {
       alert_status: ["active", "resolved", "false_alarm"],
       alert_trigger_type: ["manual", "journey_overdue"],
       guardian_link_status: ["pending", "accepted", "revoked"],
+      guardian_request_status: [
+        "waiting",
+        "claimed",
+        "accepted",
+        "declined",
+        "cancelled",
+        "expired",
+      ],
       journey_status: [
         "active",
         "arrived_safe",
@@ -632,6 +767,7 @@ export const Constants = {
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Alert = Database['public']['Tables']['alerts']['Row'];
 export type GuardianLink = Database['public']['Tables']['guardian_links']['Row'];
+export type GuardianRequest = Database['public']['Tables']['guardian_requests']['Row'];
 export type EmergencyContact = Database['public']['Tables']['emergency_contacts']['Row'];
 export type LiveSharingSession = Database['public']['Tables']['live_sharing_sessions']['Row'];
 export type LiveLocation = Database['public']['Tables']['live_locations']['Row'];

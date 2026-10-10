@@ -1,6 +1,6 @@
 # Plan: guardian invite requests (PR 3b)
 
-Status: draft for review, not built. Design boards: `Guardian-Invite`, `User-InviteAccept`,
+Status: backend (3b-1) built; app screens (3b-2) not built yet. Design boards: `Guardian-Invite`, `User-InviteAccept`,
 `User-Guardians` and `User-RemoveGuardian` in `docs/design/safepath-ui/`.
 
 ## Why
@@ -120,8 +120,10 @@ The code then goes inactive on the next focus or refresh, which is fine.
    `expires_at`, `claimed_by`, `claimed_at`, `decided_at`. RLS:
    - **Guardian**: no SELECT, INSERT, UPDATE or DELETE policy. All reads and actions go
      through the functions below.
-   - **Student**: SELECT only on rows where `claimed_by = auth.uid()` and the status is
-     `claimed`, so the Guardians tab can list open requests and get live updates.
+   - **Student**: SELECT on rows where `claimed_by = auth.uid()`, whatever the status, so
+     a cancel or expiry still reaches the Guardians tab over Realtime (Realtime checks an
+     UPDATE against the new row). The app shows only claimed, unexpired rows (decided
+     2026-10-10).
    - No direct client writes for anyone.
 2. Functions (security definer, fixed `search_path`, `anon` revoked):
    - `create_guardian_request()`: guardian only. It enforces the 3-at-once cap (counting
@@ -137,6 +139,12 @@ The code then goes inactive on the next focus or refresh, which is fine.
      revoked from `authenticated`). Called by the Edge Function below, never by the app
      directly. It checks the role and the limits, claims the code, and returns the request
      id, the guardian's name, `avatar_url` path and phone ending (or null).
+   - `get_claimed_guardian_request(p_student_id, p_request_id)`: **service role only**.
+     Returns the same details again so the student can re-open the review screen, but only
+     for the claiming student while the request is claimed and unexpired; otherwise one
+     generic error. Not counted as a lookup (decided 2026-10-10).
+   - `list_my_guardian_requests()`: the student's open requests (`id`, guardian name,
+     `created_at`, `expires_at`) for the Guardians tab cards (decided 2026-10-10).
    - `accept_guardian_request(p_request_id)` and `decline_guardian_request(p_request_id)`:
      the claiming student only, and only while `now() < expires_at`.
 3. Edge Function `claim-guardian-request` (same pattern as `auth-identifier`). It verifies
@@ -144,7 +152,9 @@ The code then goes inactive on the next focus or refresh, which is fine.
    student's id. If the guardian has a photo, it signs the avatar path with
    `createSignedUrl(path, 600)`. It returns the request id, name, phone ending and signed
    URL (or null), so the storage path never reaches the app. The avatar storage policy
-   (`avatars_select_own_or_linked`) is not changed.
+   (`avatars_select_own_or_linked`) is not changed. Called with `{ requestId }` instead of
+   a code, it uses `get_claimed_guardian_request` and returns the same details with a fresh
+   signed URL.
 4. Lookup limits in `auth_rate_limit_events`:
    - Widen the `bucket` CHECK constraint (today `ip`, `signin`, `reset`) to add
      `invite_lookup`.
