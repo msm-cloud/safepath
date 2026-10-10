@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
+import { isSnapshotDue, SNAPSHOT_INTERVAL_MS, snapshotTime } from '@/lib/location-history-throttle';
 import { supabase } from '@/lib/supabase';
 
 // Recorded live location ("location history") — the device half. Separate
@@ -50,15 +51,6 @@ export const LOCATION_HISTORY_TASK = 'safepath-location-history';
 // stays the real source of truth; the hook keeps this flag in sync.
 const ENABLED_KEY = 'safepath.locationHistory.enabled';
 const LAST_WRITE_KEY = 'safepath.locationHistory.lastWriteAt';
-
-// One snapshot per 5 minutes, from either write path.
-const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000;
-
-// Slack on the throttle check. The OS delivers the 5-minute task updates
-// with a few ms of jitter either way, so a strict `< SNAPSHOT_INTERVAL_MS`
-// check drops any fix that lands just early and the next write waits for
-// the following update — a 10-minute gap instead of 5.
-const SNAPSHOT_THROTTLE_SLACK_MS = 30 * 1000;
 
 // Coarser than live sharing's High — a breadcrumb trail doesn't need a hot
 // GPS fix, and Balanced leans on the fused/network provider, which is far
@@ -173,15 +165,16 @@ async function insertHistoryPoint(location: Location.LocationObject): Promise<vo
   console.log('[location-history] snapshot recorded');
 }
 
-// Throttled write shared by both paths. Stamps the timestamp BEFORE the
-// async insert so two fixes arriving close together (e.g. the live-sharing
-// stream right at the 5-minute boundary) can't both get through. A failed
-// insert just means a gap until the next attempt 5 min later — acceptable
-// for a breadcrumb trail.
+// Throttled write shared by both paths, spaced by fix time (see
+// location-history-throttle.ts). Stamps BEFORE the async insert so two
+// fixes arriving close together (e.g. the live-sharing stream right at the
+// 5-minute boundary) can't both get through. A failed insert just means a
+// gap until the next attempt 5 min later — acceptable for a breadcrumb
+// trail.
 async function recordThrottled(location: Location.LocationObject): Promise<void> {
-  const last = await getLastWriteAt();
-  if (Date.now() - last < SNAPSHOT_INTERVAL_MS - SNAPSHOT_THROTTLE_SLACK_MS) return;
-  await setLastWriteAt(Date.now());
+  const fixTime = snapshotTime(location.timestamp, Date.now());
+  if (!isSnapshotDue(fixTime, await getLastWriteAt())) return;
+  await setLastWriteAt(fixTime);
   await insertHistoryPoint(location);
 }
 
@@ -283,9 +276,6 @@ export async function startLocationHistory(
       // Time-based only — a stationary person still needs a periodic
       // breadcrumb. 0 disables the distance filter.
       distanceInterval: 0,
-      // Android: let the OS batch deliveries to cut wake-ups; a few minutes
-      // of slack on a 5-minute cadence is fine.
-      deferredUpdatesInterval: SNAPSHOT_INTERVAL_MS,
       pausesUpdatesAutomatically: false,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
