@@ -3,12 +3,12 @@ import { redirect } from 'next/navigation';
 import { cookieLanguage } from '@/lib/language-server';
 import { createPageClient, getAuthState } from '@/lib/supabase/auth-state';
 import { t, type Language } from '@/lib/translations';
+import Banner from '@/components/ui/Banner';
 
 import ActiveAlerts from './active-alerts';
 import LiveSharing from './live-sharing';
 import PastAlerts from './past-alerts';
 import RecordedLocation from './recorded-location';
-import RedeemInviteForm from './redeem-invite-form';
 
 type LinkedUserRow = {
   id: string;
@@ -68,12 +68,16 @@ export default async function DashboardPage() {
       {/* Plain server-side fetch, not Realtime — see past-alerts.tsx. */}
       <PastAlerts language={language} />
 
-      <section>
-        <RedeemInviteForm />
+      {/* Guardians create invite codes in the mobile app, where the family
+          member reviews and accepts them; the web has no way to link. */}
+      <section className="sm:max-w-md">
+        <Banner tone="info" title={t(language, 'linkFromAppTitle')}>
+          {t(language, 'linkFromAppBody')}
+        </Banner>
       </section>
 
       {/* Own client-side fetch — renders nothing until this guardian has
-          at least one linked person. Sits between "link to someone" above
+          at least one linked person. Sits between the link-from-the-app note above
           and the linked-users list / header Settings link. */}
       <RecordedLocation />
 

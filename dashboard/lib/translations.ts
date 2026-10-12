@@ -123,8 +123,8 @@ export const translations = {
     bn: 'আপনি যাদের সাথে অভিভাবক হিসেবে যুক্ত আছেন।',
   },
   noLinkedUsersYet: {
-    en: "You're not linked to anyone yet — use the form above to link to someone using the invite code they share with you.",
-    bn: 'আপনি এখনো কারো সাথে যুক্ত নন — উপরের ফর্ম ব্যবহার করে তাদের দেওয়া আমন্ত্রণ কোড দিয়ে যুক্ত হন।',
+    en: "You're not linked to anyone yet.",
+    bn: 'আপনি এখনো কারো সাথে যুক্ত নন।',
   },
   unnamedUser: { en: 'Unnamed user', bn: 'নামহীন ব্যবহারকারী' },
 
@@ -222,26 +222,19 @@ export const translations = {
   activeForHours: { en: 'Active for {h} hour{s}', bn: '{h} ঘণ্টা সক্রিয় ছিল' },
   activeForDays: { en: 'Active for {d} day{s}', bn: '{d} দিন সক্রিয় ছিল' },
 
-  // --- Link to someone form ---
-  linkToSomeoneLabel: { en: 'Link to someone', bn: 'কারো সাথে যুক্ত হন' },
-  inviteCodePlaceholder: { en: 'Invite code', bn: 'আমন্ত্রণ কোড' },
-  enterInviteCode: { en: 'Enter an invite code.', bn: 'একটি আমন্ত্রণ কোড লিখুন।' },
-  invalidOrUsedCode: {
-    en: 'That invite code is invalid, expired or already used. Ask for a new code.',
-    bn: 'এই আমন্ত্রণ কোডটি সঠিক নয়, মেয়াদোত্তীর্ণ অথবা ইতিমধ্যে ব্যবহৃত। একটি নতুন কোড চেয়ে নিন।',
+  // --- Linking happens in the mobile app ---
+  linkFromAppTitle: {
+    en: 'Link from the SafePath app',
+    bn: 'সেফপাথ অ্যাপ থেকে যুক্ত হন',
   },
-  alreadyLinkedCode: {
-    en: "You're already linked to this person, so this code wasn't used.",
-    bn: 'আপনি ইতিমধ্যে এই ব্যক্তির সাথে যুক্ত আছেন, তাই এই কোডটি ব্যবহার করা হয়নি।',
+  linkFromAppBody: {
+    en: 'To link with a family member, install SafePath on your phone, sign in, tap Invite and send them the code. Once they accept, they show up here too.',
+    bn: 'পরিবারের কারো সাথে যুক্ত হতে ফোনে সেফপাথ ইনস্টল করে সাইন ইন করুন, "আমন্ত্রণ"-এ ট্যাপ করে তাদের কোডটি পাঠান। তারা গ্রহণ করলে এখানেও তাদের দেখতে পাবেন।',
   },
   sessionExpired: {
     en: 'Your session may have expired. Try signing in again.',
     bn: 'আপনার সেশনের মেয়াদ শেষ হয়ে থাকতে পারে। আবার সাইন ইন করার চেষ্টা করুন।',
   },
-  nowLinkedTo: { en: "You're now linked to {name}.", bn: 'আপনি এখন {name}-এর সাথে যুক্ত।' },
-  thisUserFallback: { en: 'this user', bn: 'এই ব্যবহারকারী' },
-  linkButton: { en: 'Link', bn: 'যুক্ত করুন' },
-  linkingButton: { en: 'Linking…', bn: 'যুক্ত করা হচ্ছে…' },
 
   // --- Header ---
   signOutLink: { en: 'Sign out', bn: 'সাইন আউট' },

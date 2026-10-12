@@ -1,6 +1,16 @@
 import * as Location from 'expo-location';
+import { Platform } from 'react-native';
 
 const LOCATION_FETCH_TIMEOUT_MS = 10000;
+
+// expo-location has no background task API on web; there the app only
+// tracks while the page is open, the same as a foreground-only grant.
+const BACKGROUND_LOCATION_SUPPORTED = Platform.OS !== 'web';
+
+export async function hasStartedBackgroundLocationTask(taskName: string): Promise<boolean> {
+  if (!BACKGROUND_LOCATION_SUPPORTED) return false;
+  return Location.hasStartedLocationUpdatesAsync(taskName);
+}
 
 export type Coordinates = { lat: number; lng: number };
 
@@ -24,6 +34,7 @@ export type LiveSharingPermission = 'granted' | 'foreground-only' | 'denied';
 export async function requestLiveSharingPermissions(): Promise<LiveSharingPermission> {
   const foreground = await Location.requestForegroundPermissionsAsync();
   if (!foreground.granted) return 'denied';
+  if (!BACKGROUND_LOCATION_SUPPORTED) return 'foreground-only';
 
   const background = await Location.requestBackgroundPermissionsAsync();
   return background.granted ? 'granted' : 'foreground-only';
@@ -35,6 +46,7 @@ export async function requestLiveSharingPermissions(): Promise<LiveSharingPermis
 export async function getLiveSharingPermission(): Promise<LiveSharingPermission> {
   const foreground = await Location.getForegroundPermissionsAsync();
   if (!foreground.granted) return 'denied';
+  if (!BACKGROUND_LOCATION_SUPPORTED) return 'foreground-only';
 
   const background = await Location.getBackgroundPermissionsAsync();
   return background.granted ? 'granted' : 'foreground-only';

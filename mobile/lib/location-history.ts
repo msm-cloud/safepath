@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
+import { hasStartedBackgroundLocationTask } from '@/lib/location';
 import { isSnapshotDue, SNAPSHOT_INTERVAL_MS, snapshotTime } from '@/lib/location-history-throttle';
 import { supabase } from '@/lib/supabase';
 
@@ -210,8 +211,7 @@ TaskManager.defineTask(LOCATION_HISTORY_TASK, async ({ data, error }) => {
 export async function isLocationHistoryActive(mode?: LocationHistoryMode): Promise<boolean> {
   const running = foregroundSubscription
     ? true
-    : trackingStartedThisProcess &&
-      (await Location.hasStartedLocationUpdatesAsync(LOCATION_HISTORY_TASK));
+    : trackingStartedThisProcess && (await hasStartedBackgroundLocationTask(LOCATION_HISTORY_TASK));
   if (!running) return false;
   if (mode && activeMode !== mode) return false;
   return true;
@@ -298,7 +298,7 @@ export async function startLocationHistory(
 
 export async function stopLocationHistory(): Promise<void> {
   await stopForegroundHistoryWatch();
-  if (await Location.hasStartedLocationUpdatesAsync(LOCATION_HISTORY_TASK)) {
+  if (await hasStartedBackgroundLocationTask(LOCATION_HISTORY_TASK)) {
     try {
       await Location.stopLocationUpdatesAsync(LOCATION_HISTORY_TASK);
     } catch (err) {

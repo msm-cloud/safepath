@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
+import { useState } from 'react';
 import { View } from 'react-native';
 
 import { useSignedAvatarUrl } from '@/lib/use-signed-avatar-url';
@@ -9,7 +10,8 @@ import Text from './Text';
 
 // Profile photo for students and guardians. Given the stored
 // profiles.avatar_url path (a bucket path, not a URL), it shows, in order:
-//   1. the photo, via a signed URL minted from the private bucket
+//   1. the photo, via a signed URL minted from the private bucket (or one
+//      already signed elsewhere, passed as signedUrl)
 //   2. initials from `name` on a colour picked from that name, so a person
 //      keeps the same colour everywhere
 //   3. a generic person glyph when there is no photo and no name
@@ -49,26 +51,33 @@ function toneFromName(name: string): Tone {
 export type AvatarProps = {
   name: string | null | undefined;
   // The stored profiles.avatar_url value.
-  url: string | null | undefined;
+  url?: string | null;
+  // A URL another service already signed, used instead of url. It may
+  // expire while the screen is open; the fallback below covers that.
+  signedUrl?: string | null;
   size: number;
 };
 
-export default function Avatar({ name, url, size }: AvatarProps) {
+export default function Avatar({ name, url, signedUrl, size }: AvatarProps) {
   const { colors } = useTheme();
-  const signedUrl = useSignedAvatarUrl(url ?? null);
+  const mintedUrl = useSignedAvatarUrl(signedUrl ? null : (url ?? null));
+  const imageUrl = signedUrl ?? mintedUrl;
+  // A photo that fails to load shows the initials, never a broken image.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const initials = initialsFromName(name);
   const circle = { width: size, height: size, borderRadius: size / 2 };
 
-  if (signedUrl) {
+  if (imageUrl && imageUrl !== failedUrl) {
     return (
       <Image
         // The bucket path is stable while the signed URL's token changes on
         // every mint, so caching by path keeps the disk cache warm and a
         // replaced photo (new path) still busts it.
-        source={{ uri: signedUrl, cacheKey: url ?? undefined }}
+        source={{ uri: imageUrl, cacheKey: signedUrl ? undefined : (url ?? undefined) }}
         style={[circle, { backgroundColor: colors.track }]}
         contentFit="cover"
         transition={150}
+        onError={() => setFailedUrl(imageUrl)}
       />
     );
   }

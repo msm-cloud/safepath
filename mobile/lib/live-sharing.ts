@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
+import { hasStartedBackgroundLocationTask } from '@/lib/location';
 import { maybeRecordHistoryPoint } from '@/lib/location-history';
 import { supabase } from '@/lib/supabase';
 
@@ -331,7 +332,7 @@ async function startForegroundWatch(): Promise<void> {
 }
 
 async function stopBackgroundTask(): Promise<void> {
-  if (await Location.hasStartedLocationUpdatesAsync(LIVE_SHARING_TASK)) {
+  if (await hasStartedBackgroundLocationTask(LIVE_SHARING_TASK)) {
     try {
       await Location.stopLocationUpdatesAsync(LIVE_SHARING_TASK);
     } catch (err) {
@@ -349,7 +350,7 @@ async function stopBackgroundTask(): Promise<void> {
 export async function isLiveSharingActive(): Promise<boolean> {
   if (foregroundSubscription) return true;
   if (!trackingStartedThisProcess) return false;
-  return Location.hasStartedLocationUpdatesAsync(LIVE_SHARING_TASK);
+  return hasStartedBackgroundLocationTask(LIVE_SHARING_TASK);
 }
 
 // Registers whichever delivery path `mode` calls for. Idempotent — clears
@@ -381,7 +382,7 @@ async function startTracking(
         notificationColor: '#2f95dc',
       },
     });
-    const started = await Location.hasStartedLocationUpdatesAsync(LIVE_SHARING_TASK);
+    const started = await hasStartedBackgroundLocationTask(LIVE_SHARING_TASK);
     console.log(
       `[live-sharing] startLocationUpdatesAsync resolved — hasStarted=${started} ` +
         `interval=${PING_INTERVAL_MS}ms deferred=${DEFERRED_UPDATE_MS}ms distance=0`
